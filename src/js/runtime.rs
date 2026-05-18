@@ -1,5 +1,5 @@
 use rquickjs::{
-    Coerced, Ctx, Function, Object, Value,
+    Ctx, Function, Object, Value,
     function::{Async, Opt, Rest},
 };
 
@@ -211,18 +211,47 @@ pub fn inject_globals(ctx: Ctx<'_>) {
         crate::log_error!("Failed to inject execFile global: {:?}", e);
     }
 
-    if let Err(e) = globals.set(
-        "log",
-        Function::new(ctx.clone(), |args: Rest<Coerced<String>>| {
-            let msg = args
-                .0
-                .into_iter()
-                .map(|c| c.0)
-                .collect::<Vec<_>>()
-                .join(" ");
-            crate::logger::write_log(crate::logger::LogLevel::JsLog, &msg);
-        }),
-    ) {
+    // 提取为一个显式声明同生命周期 'js 的内部函数，解决闭包生命周期推断歧义
+    fn js_log<'js>(ctx: Ctx<'js>, args: Rest<Value<'js>>) {
+        let mut parts = Vec::with_capacity(args.0.len());
+        for arg in args.0 {
+            // 如果是原生字符串，直接提取（避免被序列化带上双引号）
+            if let Some(s) = arg.as_string() {
+                if let Ok(s_str) = s.to_string() {
+                    parts.push(s_str);
+                    continue;
+                }
+            }
+
+            // 如果是对象或数组，尝试优雅地 JSON.stringify
+            if arg.is_object() || arg.is_array() {
+                if let Ok(json) = ctx.globals().get::<_, Object>("JSON") {
+                    if let Ok(stringify) = json.get::<_, Function>("stringify") {
+                        // 传入 Option::<String>::None 相当于传 null 作为 replacer，2 作为 space
+                        if let Ok(s) =
+                            stringify.call::<_, String>((arg.clone(), Option::<String>::None, 2))
+                        {
+                            parts.push(s);
+                            continue;
+                        }
+                    }
+                }
+            }
+
+            // 兜底：使用 JS 的 String() 强转 (例如处理 boolean, number, undefined, null 等)
+            if let Ok(string_func) = ctx.globals().get::<_, Function>("String") {
+                if let Ok(s) = string_func.call::<_, String>((arg,)) {
+                    parts.push(s);
+                    continue;
+                }
+            }
+
+            parts.push(String::from("[unknown]"));
+        }
+        crate::logger::write_log(crate::logger::LogLevel::JsLog, &parts.join(" "));
+    }
+
+    if let Err(e) = globals.set("log", Function::new(ctx.clone(), js_log)) {
         crate::log_error!("Failed to inject log global: {:?}", e);
     }
 }
@@ -235,7 +264,9 @@ mod tests {
     #[tokio::test]
     async fn test_inject_globals() {
         let rt = AsyncRuntime::new().expect("Failed to create Runtime");
-        let ctx = AsyncContext::full(&rt).await.expect("Failed to create Context");
+        let ctx = AsyncContext::full(&rt)
+            .await
+            .expect("Failed to create Context");
 
         async fn async_with_fn(ctx: Ctx<'_>) {
             inject_globals(ctx.clone());
@@ -265,7 +296,9 @@ mod tests {
     #[tokio::test]
     async fn test_exec_file_basic() {
         let rt = AsyncRuntime::new().expect("Failed to create Runtime");
-        let ctx = AsyncContext::full(&rt).await.expect("Failed to create Context");
+        let ctx = AsyncContext::full(&rt)
+            .await
+            .expect("Failed to create Context");
 
         async fn async_with_fn(ctx: Ctx<'_>) {
             inject_globals(ctx.clone());
@@ -326,7 +359,10 @@ mod tests {
                 "#;
                 let promise3: rquickjs::Promise = ctx.eval(script3).unwrap();
                 let result3: String = promise3.into_future().await.unwrap();
-                assert_eq!(result3, "ok", "execFile called without args should return a string");
+                assert_eq!(
+                    result3, "ok",
+                    "execFile called without args should return a string"
+                );
             }
 
             // 场景 5：显式传空数组效果等价
@@ -340,7 +376,10 @@ mod tests {
                 "#;
                 let promise4: rquickjs::Promise = ctx.eval(script4).unwrap();
                 let result4: String = promise4.into_future().await.unwrap();
-                assert_eq!(result4, "", "/bin/echo called without args should output empty");
+                assert_eq!(
+                    result4, "",
+                    "/bin/echo called without args should output empty"
+                );
             }
         }
 
@@ -350,7 +389,9 @@ mod tests {
     #[tokio::test]
     async fn test_exec_file_error_handling() {
         let rt = AsyncRuntime::new().expect("Failed to create Runtime");
-        let ctx = AsyncContext::full(&rt).await.expect("Failed to create Context");
+        let ctx = AsyncContext::full(&rt)
+            .await
+            .expect("Failed to create Context");
 
         async fn async_with_fn(ctx: Ctx<'_>) {
             inject_globals(ctx.clone());
@@ -379,7 +420,9 @@ mod tests {
         use tempfile::tempdir;
 
         let rt = AsyncRuntime::new().expect("Failed to create Runtime");
-        let ctx = AsyncContext::full(&rt).await.expect("Failed to create Context");
+        let ctx = AsyncContext::full(&rt)
+            .await
+            .expect("Failed to create Context");
 
         async fn async_with_fn(ctx: Ctx<'_>) {
             inject_globals(ctx.clone());
