@@ -1,0 +1,6 @@
+{
+  "run_desc": "运行容器",
+  "ps_desc": "列出容器",
+  "stop_desc": "停止容器",
+  "container_desc": "运行中的容器"
+}

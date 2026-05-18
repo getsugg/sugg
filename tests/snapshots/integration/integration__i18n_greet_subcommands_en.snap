@@ -1,0 +1,16 @@
+---
+source: tests/integration.rs
+expression: items
+---
+[
+  {
+    "value": "install ",
+    "display_override": "install",
+    "description": "Install dependencies"
+  },
+  {
+    "value": "run ",
+    "display_override": "run",
+    "description": "Run a script"
+  }
+]

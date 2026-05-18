@@ -1,0 +1,21 @@
+---
+source: tests/integration.rs
+expression: items
+---
+[
+  {
+    "value": "hw",
+    "display_override": "Hello World",
+    "description": "explicit value"
+  },
+  {
+    "value": "OnlyDisplay ",
+    "display_override": "OnlyDisplay",
+    "description": "no explicit value"
+  },
+  {
+    "value": "",
+    "display_override": "EmptyValue",
+    "description": "empty value"
+  }
+]

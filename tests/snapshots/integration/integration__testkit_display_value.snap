@@ -1,0 +1,17 @@
+---
+source: tests/integration.rs
+assertion_line: 381
+expression: items
+---
+[
+  {
+    "value": "add",
+    "display_override": "Add",
+    "description": "Add an item"
+  },
+  {
+    "value": "rm",
+    "display_override": "Remove",
+    "description": "Remove an item"
+  }
+]

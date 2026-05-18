@@ -1,0 +1,49 @@
+---
+source: tests/integration.rs
+expression: "normalize_items(&items, &sandbox.project_dirs[\"bun\"])"
+---
+[
+  {
+    "value": "acorn.exe ",
+    "display_override": "acorn.exe",
+    "description": "bin"
+  },
+  {
+    "value": "build ",
+    "display_override": "build",
+    "description": "npm script: bun build"
+  },
+  {
+    "value": "dev ",
+    "display_override": "dev",
+    "description": "npm script: bun dev"
+  },
+  {
+    "value": "index.ts ",
+    "display_override": "index.ts",
+    "description": "file"
+  },
+  {
+    "value": "node_modules/",
+    "display_override": "node_modules/",
+    "description": "directory",
+    "style": {
+      "fg": "blue"
+    }
+  },
+  {
+    "value": "package.json ",
+    "display_override": "package.json",
+    "description": "file"
+  },
+  {
+    "value": "server.js ",
+    "display_override": "server.js",
+    "description": "file"
+  },
+  {
+    "value": "test ",
+    "display_override": "test",
+    "description": "npm script: bun test"
+  }
+]

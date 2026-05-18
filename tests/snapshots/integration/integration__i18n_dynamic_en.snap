@@ -1,0 +1,16 @@
+---
+source: tests/integration.rs
+expression: items
+---
+[
+  {
+    "value": "hello ",
+    "display_override": "hello",
+    "description": "Hello description"
+  },
+  {
+    "value": "bye ",
+    "display_override": "bye",
+    "description": "Bye description"
+  }
+]

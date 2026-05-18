@@ -1,0 +1,17 @@
+---
+source: tests/i18n_gen.rs
+expression: read_dts(&completions_dir)
+---
+declare const i18n: {
+  /**
+   * - 🚩 **en**: Install dependencies
+   * - **zh**: 安装依赖
+   */
+  readonly greet_install: string;
+  /**
+   * - 🚩 **en**: Run a script
+   * - **zh**: 运行脚本
+   */
+  readonly greet_run: string;
+  readonly [key: string]: any;
+};

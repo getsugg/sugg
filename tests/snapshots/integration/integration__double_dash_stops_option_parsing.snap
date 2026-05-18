@@ -1,0 +1,29 @@
+---
+source: tests/integration.rs
+expression: all
+---
+[
+  {
+    "name": "without_dash",
+    "input": "opts --mode ",
+    "result": [
+      {
+        "value": "dev ",
+        "display_override": "dev"
+      },
+      {
+        "value": "prod ",
+        "display_override": "prod"
+      },
+      {
+        "value": "test ",
+        "display_override": "test"
+      }
+    ]
+  },
+  {
+    "name": "with_dash",
+    "input": "opts -- --mode ",
+    "result": []
+  }
+]

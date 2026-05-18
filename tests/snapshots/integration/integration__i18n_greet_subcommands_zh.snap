@@ -1,0 +1,16 @@
+---
+source: tests/integration.rs
+expression: items
+---
+[
+  {
+    "value": "install ",
+    "display_override": "install",
+    "description": "安装依赖"
+  },
+  {
+    "value": "run ",
+    "display_override": "run",
+    "description": "运行脚本"
+  }
+]

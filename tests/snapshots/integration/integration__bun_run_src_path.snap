@@ -1,0 +1,24 @@
+---
+source: tests/integration.rs
+expression: "normalize_items(&items, project_path)"
+---
+[
+  {
+    "value": "src/components/",
+    "display_override": "src/components/",
+    "description": "directory",
+    "style": {
+      "fg": "blue"
+    }
+  },
+  {
+    "value": "src/main.ts ",
+    "display_override": "src/main.ts",
+    "description": "file"
+  },
+  {
+    "value": "src/utils.ts ",
+    "display_override": "src/utils.ts",
+    "description": "file"
+  }
+]

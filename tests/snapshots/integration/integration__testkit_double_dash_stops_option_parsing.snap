@@ -1,0 +1,123 @@
+---
+source: tests/integration.rs
+assertion_line: 417
+expression: all
+---
+[
+  {
+    "name": "no_dash",
+    "input": "testkit ",
+    "result": [
+      {
+        "value": "displayValue ",
+        "display_override": "displayValue",
+        "description": "Test display/value separation"
+      },
+      {
+        "value": "dynamicReuse ",
+        "display_override": "dynamicReuse",
+        "description": "Test reusing dynamic functions (subcommand args)"
+      },
+      {
+        "value": "emptyArgs ",
+        "display_override": "emptyArgs",
+        "description": "Command with an option that takes a value but no suggestions"
+      },
+      {
+        "value": "hybrid ",
+        "display_override": "hybrid",
+        "description": "Has both subcommands and args"
+      },
+      {
+        "value": "opts ",
+        "display_override": "opts",
+        "description": "Test option value completion"
+      },
+      {
+        "value": "optsinfo ",
+        "display_override": "optsinfo",
+        "description": "Test ctx.options passed to dynamic"
+      }
+    ]
+  },
+  {
+    "name": "dash_only",
+    "input": "testkit -- ",
+    "result": [
+      {
+        "value": "displayValue ",
+        "display_override": "displayValue",
+        "description": "Test display/value separation"
+      },
+      {
+        "value": "dynamicReuse ",
+        "display_override": "dynamicReuse",
+        "description": "Test reusing dynamic functions (subcommand args)"
+      },
+      {
+        "value": "emptyArgs ",
+        "display_override": "emptyArgs",
+        "description": "Command with an option that takes a value but no suggestions"
+      },
+      {
+        "value": "hybrid ",
+        "display_override": "hybrid",
+        "description": "Has both subcommands and args"
+      },
+      {
+        "value": "opts ",
+        "display_override": "opts",
+        "description": "Test option value completion"
+      },
+      {
+        "value": "optsinfo ",
+        "display_override": "optsinfo",
+        "description": "Test ctx.options passed to dynamic"
+      }
+    ]
+  },
+  {
+    "name": "dash_prefix_o",
+    "input": "testkit -- o",
+    "result": [
+      {
+        "value": "opts ",
+        "display_override": "opts",
+        "description": "Test option value completion"
+      },
+      {
+        "value": "optsinfo ",
+        "display_override": "optsinfo",
+        "description": "Test ctx.options passed to dynamic"
+      }
+    ]
+  },
+  {
+    "name": "dash_opts",
+    "input": "testkit -- opts ",
+    "result": []
+  },
+  {
+    "name": "dash_dyn_cmd1",
+    "input": "testkit -- dynamicReuse cmd1 ",
+    "result": [
+      {
+        "value": "shared-a",
+        "display_override": "shared-a"
+      },
+      {
+        "value": "shared-b",
+        "display_override": "shared-b"
+      },
+      {
+        "value": "shared-c",
+        "display_override": "shared-c"
+      }
+    ]
+  },
+  {
+    "name": "with_dash",
+    "input": "testkit opts -- --mode ",
+    "result": []
+  }
+]

@@ -1,0 +1,94 @@
+---
+source: tests/integration.rs
+expression: all
+---
+[
+  {
+    "name": "no_options",
+    "input": "opttest ",
+    "result": [
+      {
+        "value": "{} ",
+        "display_override": "{}",
+        "description": "ctx.options content"
+      }
+    ]
+  },
+  {
+    "name": "with_g",
+    "input": "opttest -g ",
+    "result": [
+      {
+        "value": "{\"--global\":true,\"-g\":true} ",
+        "display_override": "{\"--global\":true,\"-g\":true}",
+        "description": "ctx.options content"
+      }
+    ]
+  },
+  {
+    "name": "with_global",
+    "input": "opttest --global ",
+    "result": [
+      {
+        "value": "{\"--global\":true,\"-g\":true} ",
+        "display_override": "{\"--global\":true,\"-g\":true}",
+        "description": "ctx.options content"
+      }
+    ]
+  },
+  {
+    "name": "with_c",
+    "input": "opttest -c ",
+    "result": [
+      {
+        "value": "{\"--config\":true,\"-c\":true} ",
+        "display_override": "{\"--config\":true,\"-c\":true}",
+        "description": "ctx.options content"
+      }
+    ]
+  },
+  {
+    "name": "with_config",
+    "input": "opttest --config ",
+    "result": [
+      {
+        "value": "{\"--config\":true,\"-c\":true} ",
+        "display_override": "{\"--config\":true,\"-c\":true}",
+        "description": "ctx.options content"
+      }
+    ]
+  },
+  {
+    "name": "with_g_c",
+    "input": "opttest -g -c ",
+    "result": [
+      {
+        "value": "{\"--config\":true,\"--global\":true,\"-c\":true,\"-g\":true} ",
+        "display_override": "{\"--config\":true,\"--global\":true,\"-c\":true,\"-g\":true}",
+        "description": "ctx.options content"
+      }
+    ]
+  },
+  {
+    "name": "with_cwd",
+    "input": "opttest --cwd mydir ",
+    "result": [
+      {
+        "value": "{\"--cwd\":[\"mydir\"]} ",
+        "display_override": "{\"--cwd\":[\"mydir\"]}",
+        "description": "ctx.options content"
+      }
+    ]
+  },
+  {
+    "name": "with_exclude",
+    "input": "opttest --exclude react --exclude vue ",
+    "result": [
+      {
+        "value": "{\"--exclude\":[\"react\",\"vue\"]} ",
+        "display_override": "{\"--exclude\":[\"react\",\"vue\"]}",
+        "description": "ctx.options content"
+      }
+    ]
+  }
+]

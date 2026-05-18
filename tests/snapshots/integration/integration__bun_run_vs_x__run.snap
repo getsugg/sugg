@@ -1,0 +1,37 @@
+---
+source: tests/integration.rs
+expression: "normalize_items(&items_run, &project_path)"
+---
+[
+  {
+    "value": "build ",
+    "display_override": "build",
+    "description": "npm script: echo build"
+  },
+  {
+    "value": "dev ",
+    "display_override": "dev",
+    "description": "npm script: echo dev"
+  },
+  {
+    "value": "node_modules/",
+    "display_override": "node_modules/",
+    "description": "directory",
+    "style": {
+      "fg": "blue"
+    }
+  },
+  {
+    "value": "package.json ",
+    "display_override": "package.json",
+    "description": "file"
+  },
+  {
+    "value": "src/",
+    "display_override": "src/",
+    "description": "directory",
+    "style": {
+      "fg": "blue"
+    }
+  }
+]

@@ -1,0 +1,174 @@
+---
+source: tests/bundle.rs
+expression: "normalize(combined, &dir)"
+---
+// === bun ===
+//#region virtual:env
+const readJson = async (path) => {
+	const content = await globalThis.readFile(path);
+	if (!content) return {};
+	try {
+		return JSON.parse(content);
+	} catch {
+		return {};
+	}
+};
+//#endregion
+//#region tests/fixtures/completions/__v_dyn_bun.ts
+const __dyn_addCommand_args = async (ctx) => {
+	const { prefix } = ctx;
+	return (await exec(`bun getcompletes a ${prefix}`)).split("\n").filter(Boolean).map((line) => ({
+		display: line,
+		description: "NPM Package"
+	}));
+};
+const __dyn_removeCommand_args = async () => {
+	const pkg = await readJson("package.json");
+	const deps = Object.keys(pkg.dependencies || {});
+	const devDeps = Object.keys(pkg.devDependencies || {});
+	return [...deps, ...devDeps].map((d) => ({
+		display: d,
+		description: "Installed dependency"
+	}));
+};
+const __dyn_bun_run_args = async (ctx) => {
+	const { prefix } = ctx;
+	const pathItems = (await scanPath(prefix)).filter((e) => e.display.startsWith(prefix)).map((e) => ({
+		...e,
+		description: e.isDir ? "directory" : "file"
+	}));
+	const pkg = await readJson("package.json");
+	const scripts = Object.keys(pkg.scripts || {}).map((s) => ({
+		display: s,
+		description: `npm script: ${pkg.scripts[s]}`
+	}));
+	const bins = (await exec("bun getcompletes b")).split("\n").filter(Boolean).map((b) => ({
+		display: b,
+		description: "bin"
+	}));
+	const seen = /* @__PURE__ */ new Set();
+	return [
+		...scripts,
+		...bins,
+		...pathItems
+	].filter((item) => {
+		if (!item || seen.has(item.display)) return false;
+		seen.add(item.display);
+		return true;
+	});
+};
+const __dyn_bun_test_args = async () => {
+	return (await scanPath(".")).filter((e) => !e.isDir && e.display.match(/(_|\.)(test|spec)\.(js|ts|jsx|tsx)$/)).map((e) => ({
+		...e,
+		description: "test file"
+	}));
+};
+const __dyn_bun_build_args = async () => {
+	return (await scanPath(".")).filter((e) => !e.isDir && e.display.match(/\.(ts|js|tsx|jsx)$/)).map((e) => ({
+		...e,
+		description: "source file"
+	}));
+};
+const __dyn_bun_x_args = async () => {
+	return (await scanPath("", "node_modules/.bin")).filter((e) => !e.isDir).map((e) => ({
+		...e,
+		description: "local bin"
+	}));
+};
+//#endregion
+export { __dyn_addCommand_args, __dyn_bun_build_args, __dyn_bun_run_args, __dyn_bun_test_args, __dyn_bun_x_args, __dyn_removeCommand_args };
+
+// === docker ===
+//#region virtual:i18n/docker
+const container_desc = "Running container";
+//#endregion
+//#region tests/fixtures/completions/docker/__v_dyn_docker.ts
+const __dyn_docker_ps_args = async () => {
+	return (await exec("docker ps --format '{{.Names}}'")).split("\n").filter(Boolean).map((name) => ({
+		display: name,
+		description: container_desc
+	}));
+};
+//#endregion
+export { __dyn_docker_ps_args };
+
+// === greet_dynamic ===
+//#region virtual:i18n/greet_dynamic
+const bye_desc = "Bye description";
+const hello_desc = "Hello description";
+//#endregion
+//#region tests/fixtures/completions/__v_dyn_greet_dynamic.ts
+const __dyn_greet_dynamic_args = () => [{
+	display: "hello",
+	description: hello_desc
+}, {
+	display: "bye",
+	description: bye_desc
+}];
+//#endregion
+export { __dyn_greet_dynamic_args };
+
+// === pnpm ===
+//#region virtual:env
+const readJson = async (path) => {
+	const content = await globalThis.readFile(path);
+	if (!content) return {};
+	try {
+		return JSON.parse(content);
+	} catch {
+		return {};
+	}
+};
+//#endregion
+//#region tests/fixtures/completions/_lib.ts
+const a = "外部引入的变量";
+//#endregion
+//#region tests/fixtures/completions/__v_dyn_pnpm.ts
+const __dyn_pnpm_run_args = async () => {
+	const scripts = (await readJson("package.json")).scripts || {};
+	return Object.entries(scripts).map(([name, cmd]) => ({
+		display: name,
+		description: `运行指令 ${a}: ${cmd}`
+	}));
+};
+//#endregion
+export { __dyn_pnpm_run_args };
+
+// === testkit ===
+//#region tests/fixtures/completions/__v_dyn_testkit.ts
+const __dyn_sharedDynamic = async () => {
+	return [
+		"shared-a",
+		"shared-b",
+		"shared-c"
+	];
+};
+const __dyn_testkit_opts_options_d_args = async () => {
+	return [
+		"item1",
+		"item2",
+		"item3"
+	];
+};
+const __dyn_testkit_optsinfo_args = async (ctx) => {
+	const lines = [];
+	const opts = ctx.options;
+	if (opts["-g"]) lines.push("global:true");
+	if (opts["--config"]) lines.push(`config:${opts["--config"].join(",")}`);
+	if (opts["--cwd"]) lines.push(`cwd:${opts["--cwd"].join(",")}`);
+	if (opts["--exclude"]) lines.push(`exclude:${opts["--exclude"].join(",")}`);
+	if (lines.length === 0) lines.push("(no options)");
+	return lines.map((s) => ({
+		display: s,
+		value: s
+	}));
+};
+const __dyn_testkit_hybrid_args = async () => {
+	return [
+		"file1.txt",
+		"file2.txt",
+		"file3.txt"
+	];
+};
+//#endregion
+export { __dyn_sharedDynamic, __dyn_testkit_hybrid_args, __dyn_testkit_opts_options_d_args, __dyn_testkit_optsinfo_args };

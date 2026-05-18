@@ -1,0 +1,17 @@
+---
+source: tests/i18n_gen.rs
+expression: read_dts(&completions_dir)
+---
+declare const i18n: {
+  readonly somecmd: {
+    /**
+     * - 🚩 **en**: A
+    */
+    readonly a: string;
+    /**
+     * - **extra**: B
+    */
+    readonly b: string;
+  };
+  readonly [key: string]: any;
+};

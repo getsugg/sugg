@@ -1,0 +1,86 @@
+---
+source: tests/integration.rs
+assertion_line: 364
+expression: all
+---
+[
+  {
+    "name": "cmd_only",
+    "input": "cmd ",
+    "result": [
+      {
+        "value": "build ",
+        "display_override": "build",
+        "description": "Build the project"
+      },
+      {
+        "value": "run ",
+        "display_override": "run",
+        "description": "Run the application"
+      },
+      {
+        "value": "test ",
+        "display_override": "test",
+        "description": "Run tests"
+      }
+    ]
+  },
+  {
+    "name": "dash_only",
+    "input": "cmd -- ",
+    "result": [
+      {
+        "value": "build ",
+        "display_override": "build",
+        "description": "Build the project"
+      },
+      {
+        "value": "run ",
+        "display_override": "run",
+        "description": "Run the application"
+      },
+      {
+        "value": "test ",
+        "display_override": "test",
+        "description": "Run tests"
+      }
+    ]
+  },
+  {
+    "name": "dash_run_empty",
+    "input": "cmd -- run ",
+    "result": [
+      {
+        "value": "file.js ",
+        "display_override": "file.js",
+        "description": "A JS file"
+      },
+      {
+        "value": "file.ts ",
+        "display_override": "file.ts",
+        "description": "A TS file"
+      }
+    ]
+  },
+  {
+    "name": "no_dash_run_empty",
+    "input": "cmd run ",
+    "result": [
+      {
+        "value": "file.js ",
+        "display_override": "file.js",
+        "description": "A JS file"
+      },
+      {
+        "value": "file.ts ",
+        "display_override": "file.ts",
+        "description": "A TS file"
+      }
+    ]
+  },
+  {
+    "name": "dash_mode",
+    "input": "cmd -- --mode ",
+    "result": []
+  }
+]

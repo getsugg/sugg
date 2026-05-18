@@ -1,0 +1,21 @@
+---
+source: tests/integration.rs
+expression: items
+---
+[
+  {
+    "value": "ps ",
+    "display_override": "ps",
+    "description": "List containers"
+  },
+  {
+    "value": "run ",
+    "display_override": "run",
+    "description": "Run a container"
+  },
+  {
+    "value": "stop ",
+    "display_override": "stop",
+    "description": "Stop a container"
+  }
+]

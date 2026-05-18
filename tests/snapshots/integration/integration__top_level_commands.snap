@@ -1,0 +1,37 @@
+---
+source: tests/integration.rs
+assertion_line: 68
+expression: "normalize_items(&items, &sandbox.project_dirs[\"minimal\"])"
+---
+[
+  {
+    "value": "bun ",
+    "display_override": "bun"
+  },
+  {
+    "value": "docker ",
+    "display_override": "docker"
+  },
+  {
+    "value": "git ",
+    "display_override": "git"
+  },
+  {
+    "value": "greet ",
+    "display_override": "greet",
+    "description": "Greeting tool"
+  },
+  {
+    "value": "greet_dynamic ",
+    "display_override": "greet_dynamic"
+  },
+  {
+    "value": "pnpm ",
+    "display_override": "pnpm"
+  },
+  {
+    "value": "testkit ",
+    "display_override": "testkit",
+    "description": "All-in-one test command"
+  }
+]

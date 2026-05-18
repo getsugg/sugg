@@ -1,0 +1,21 @@
+---
+source: tests/integration.rs
+expression: items
+---
+[
+  {
+    "value": "ps ",
+    "display_override": "ps",
+    "description": "列出容器"
+  },
+  {
+    "value": "run ",
+    "display_override": "run",
+    "description": "运行容器"
+  },
+  {
+    "value": "stop ",
+    "display_override": "stop",
+    "description": "停止容器"
+  }
+]

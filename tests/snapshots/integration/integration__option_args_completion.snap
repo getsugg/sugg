@@ -1,0 +1,199 @@
+---
+source: tests/integration.rs
+expression: all
+---
+[
+  {
+    "name": "mode_empty",
+    "input": "opts --mode ",
+    "result": [
+      {
+        "value": "dev ",
+        "display_override": "dev"
+      },
+      {
+        "value": "prod ",
+        "display_override": "prod"
+      },
+      {
+        "value": "test ",
+        "display_override": "test"
+      }
+    ]
+  },
+  {
+    "name": "mode_prefix_d",
+    "input": "opts --mode d",
+    "result": [
+      {
+        "value": "dev ",
+        "display_override": "dev"
+      }
+    ]
+  },
+  {
+    "name": "mode_short_alias",
+    "input": "opts -m p",
+    "result": [
+      {
+        "value": "prod ",
+        "display_override": "prod"
+      }
+    ]
+  },
+  {
+    "name": "log_level_empty",
+    "input": "opts --log-level ",
+    "result": [
+      {
+        "value": "debug",
+        "display_override": "Debug",
+        "description": "Detailed debug info"
+      },
+      {
+        "value": "info",
+        "display_override": "Info",
+        "description": "Normal info"
+      },
+      {
+        "value": "error",
+        "display_override": "Error",
+        "description": "Errors only",
+        "style": {
+          "fg": "red"
+        }
+      }
+    ]
+  },
+  {
+    "name": "log_level_prefix_E",
+    "input": "opts --log-level E",
+    "result": [
+      {
+        "value": "error",
+        "display_override": "Error",
+        "description": "Errors only",
+        "style": {
+          "fg": "red"
+        }
+      }
+    ]
+  },
+  {
+    "name": "dynamic_opt_empty",
+    "input": "opts --dynamic-opt ",
+    "result": [
+      {
+        "value": "item1 ",
+        "display_override": "item1",
+        "description": "First dynamic item"
+      },
+      {
+        "value": "item2 ",
+        "display_override": "item2",
+        "description": "Second dynamic item"
+      }
+    ]
+  },
+  {
+    "name": "dynamic_opt_prefix",
+    "input": "opts --dynamic-opt item2",
+    "result": [
+      {
+        "value": "item2 ",
+        "display_override": "item2",
+        "description": "Second dynamic item"
+      }
+    ]
+  },
+  {
+    "name": "dynamic_opt_short",
+    "input": "opts -d item",
+    "result": [
+      {
+        "value": "item1 ",
+        "display_override": "item1",
+        "description": "First dynamic item"
+      },
+      {
+        "value": "item2 ",
+        "display_override": "item2",
+        "description": "Second dynamic item"
+      }
+    ]
+  },
+  {
+    "name": "name_empty",
+    "input": "opts --name ",
+    "result": [
+      {
+        "value": "NAME ",
+        "display_override": "NAME"
+      }
+    ]
+  },
+  {
+    "name": "shared1_empty",
+    "input": "opts --shared1 ",
+    "result": [
+      {
+        "value": "apple ",
+        "display_override": "apple",
+        "description": "Fruit: apple"
+      },
+      {
+        "value": "banana ",
+        "display_override": "banana",
+        "description": "Fruit: banana"
+      },
+      {
+        "value": "cherry ",
+        "display_override": "cherry",
+        "description": "Fruit: cherry"
+      }
+    ]
+  },
+  {
+    "name": "shared2_empty",
+    "input": "opts --shared2 ",
+    "result": [
+      {
+        "value": "apple ",
+        "display_override": "apple",
+        "description": "Fruit: apple"
+      },
+      {
+        "value": "banana ",
+        "display_override": "banana",
+        "description": "Fruit: banana"
+      },
+      {
+        "value": "cherry ",
+        "display_override": "cherry",
+        "description": "Fruit: cherry"
+      }
+    ]
+  },
+  {
+    "name": "shared1_prefix_b",
+    "input": "opts --shared1 b",
+    "result": [
+      {
+        "value": "banana ",
+        "display_override": "banana",
+        "description": "Fruit: banana"
+      }
+    ]
+  },
+  {
+    "name": "shared2_short_alias",
+    "input": "opts -s2 c",
+    "result": [
+      {
+        "value": "cherry ",
+        "display_override": "cherry",
+        "description": "Fruit: cherry"
+      }
+    ]
+  }
+]

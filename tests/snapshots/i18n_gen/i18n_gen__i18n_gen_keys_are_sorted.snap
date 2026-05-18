@@ -1,0 +1,21 @@
+---
+source: tests/i18n_gen.rs
+expression: read_dts(&completions_dir)
+---
+declare const i18n: {
+  readonly myspace: {
+    /**
+     * - 🚩 **en**: A
+    */
+    readonly a_key: string;
+    /**
+     * - 🚩 **en**: M
+    */
+    readonly m_key: string;
+    /**
+     * - 🚩 **en**: Z
+    */
+    readonly z_key: string;
+  };
+  readonly [key: string]: any;
+};

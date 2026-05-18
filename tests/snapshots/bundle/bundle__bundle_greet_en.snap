@@ -1,0 +1,642 @@
+---
+source: tests/bundle.rs
+expression: "normalize(static_js, &dir)"
+---
+//#region virtual:env
+const __LANG = "en";
+const createCompletion = (obj) => obj;
+const i18nStr = (obj) => {
+	if (obj[__LANG] !== void 0) return obj[__LANG];
+	if (obj["en"] !== void 0) return obj["en"];
+	const first = Object.values(obj)[0];
+	return first !== void 0 ? first : "";
+};
+const __parseConfig = (modules) => {
+	function sortAndResolveAliases(subcommands) {
+		subcommands.sort((a, b) => a.name.localeCompare(b.name));
+		for (let sub of subcommands) if (sub.__target_name) {
+			let realIdx = subcommands.findIndex((c) => c.name === sub.__target_name && !c.__target_name);
+			if (realIdx !== -1) sub.target = realIdx;
+			delete sub.__target_name;
+		}
+	}
+	function traverse(name, node, description = "") {
+		let cmdNode = {
+			name,
+			description,
+			style: node?.style ?? null,
+			target: null,
+			subcommands: [],
+			options: [],
+			dynamic_func: null,
+			static_args: null
+		};
+		if (!node) return cmdNode;
+		if (node.options) for (let opt of node.options) {
+			let labels = opt.labels || [];
+			let takes_value = false;
+			let dynamic_func = null;
+			let static_args = null;
+			if (opt.args) {
+				takes_value = true;
+				if (opt.args.__is_dynamic) dynamic_func = opt.args.id;
+				else if (Array.isArray(opt.args)) static_args = opt.args.map((item) => {
+					if (typeof item === "string") return {
+						value: item + " ",
+						display: item,
+						description: "",
+						style: null
+					};
+					else return {
+						value: item.value !== void 0 ? item.value : item.display + " ",
+						display: item.display,
+						description: item.description || "",
+						style: item.style || null
+					};
+				});
+			}
+			cmdNode.options.push({
+				labels,
+				description: opt.description || "",
+				style: opt.style ?? null,
+				takes_value,
+				dynamic_func,
+				static_args
+			});
+		}
+		if (node.args) {
+			if (node.args.__is_dynamic) cmdNode.dynamic_func = node.args.id;
+			else if (Array.isArray(node.args)) cmdNode.static_args = node.args.map((item) => {
+				if (typeof item === "string") return {
+					value: item + " ",
+					display: item,
+					description: "",
+					style: null
+				};
+				else return {
+					value: item.value !== void 0 ? item.value : item.display + " ",
+					display: item.display,
+					description: item.description || "",
+					style: item.style || null
+				};
+			});
+		}
+		if (node.commands) for (let [cmd, def] of Object.entries(node.commands)) {
+			cmdNode.subcommands.push(traverse(cmd, def, def.description || ""));
+			for (const alias of def.aliases || []) cmdNode.subcommands.push({
+				name: alias,
+				description: def.description || "",
+				style: def.style ?? null,
+				__target_name: cmd,
+				target: null,
+				subcommands: [],
+				options: [],
+				dynamic_func: null,
+				static_args: null
+			});
+		}
+		sortAndResolveAliases(cmdNode.subcommands);
+		return cmdNode;
+	}
+	let rootNode = {
+		name: "",
+		description: "",
+		style: null,
+		target: null,
+		subcommands: [],
+		options: [],
+		dynamic_func: null,
+		static_args: null
+	};
+	for (let [, def] of modules) {
+		if (!def) continue;
+		for (let [cmd, subDef] of Object.entries(def)) rootNode.subcommands.push(traverse(cmd, subDef, subDef.description || ""));
+	}
+	sortAndResolveAliases(rootNode.subcommands);
+	return { root: rootNode };
+};
+//#endregion
+//#region virtual:i18n/docker
+const ps_desc = "List containers";
+const run_desc = "Run a container";
+const stop_desc = "Stop a container";
+//#endregion
+//#region virtual:i18n/greet
+const install = "Install dependencies";
+const run = "Run a script";
+//#endregion
+//#region tests/fixtures/completions/__v_stat_bun.ts
+const packageOptions = [
+	{
+		labels: ["-c", "--config"],
+		description: "Load config(bunfig.toml)"
+	},
+	{
+		labels: ["-y", "--yarn"],
+		description: "Write a yarn.lock file (yarn v1)"
+	},
+	{
+		labels: ["-p", "--production"],
+		description: "Don't install devDependencies"
+	},
+	{
+		labels: ["--no-save"],
+		description: "Don't save a lockfile"
+	},
+	{
+		labels: ["--save"],
+		description: "Save to package.json"
+	},
+	{
+		labels: ["--dry-run"],
+		description: "Don't install anything"
+	},
+	{
+		labels: ["--frozen-lockfile"],
+		description: "Disallow changes to lockfile"
+	},
+	{
+		labels: ["-f", "--force"],
+		description: "Always request the latest versions from the registry"
+	},
+	{
+		labels: ["--cache-dir"],
+		description: "Store & load cached data from a specific directory path"
+	},
+	{
+		labels: ["--no-cache"],
+		description: "Ignore manifest cache entirely"
+	},
+	{
+		labels: ["--silent"],
+		description: "Don't log anything"
+	},
+	{
+		labels: ["--verbose"],
+		description: "Excessively verbose logging"
+	},
+	{
+		labels: ["--no-progress"],
+		description: "Disable the progress bar"
+	},
+	{
+		labels: ["--no-summary"],
+		description: "Don't print a summary"
+	},
+	{
+		labels: ["--no-verify"],
+		description: "Skip verifying integrity of newly downloaded packages"
+	},
+	{
+		labels: ["--ignore-scripts"],
+		description: "Skip lifecycle scripts in the package.json"
+	},
+	{
+		labels: ["-g", "--global"],
+		description: "Add a package globally"
+	},
+	{
+		labels: ["--cwd"],
+		description: "Set a specific cwd"
+	},
+	{
+		labels: ["--backend"],
+		description: "Platform-specific optimizations"
+	},
+	{
+		labels: ["--help"],
+		description: "Print this help menu"
+	}
+];
+const addCommand = {
+	description: "Add a dependency to package.json (bun a)",
+	options: [
+		...packageOptions,
+		{
+			labels: ["-d", "--dev"],
+			description: "Add dependence to devDependencies"
+		},
+		{
+			labels: ["-D"],
+			description: "Add dependence to devDependencies"
+		},
+		{
+			labels: ["--optional"],
+			description: "Add dependency to optionalDependencies"
+		},
+		{
+			labels: ["--peer"],
+			description: "Add dependency to peerDependencies"
+		},
+		{
+			labels: ["--exact"],
+			description: "Add the exact version instead of the ^range"
+		}
+	],
+	args: {
+		__is_dynamic: true,
+		id: "__dyn_addCommand_args"
+	}
+};
+const installCommand = {
+	description: "Install dependencies for a package.json (bun i)",
+	options: packageOptions
+};
+const removeCommand = {
+	description: "Remove a dependency from package.json (bun rm)",
+	options: packageOptions,
+	args: {
+		__is_dynamic: true,
+		id: "__dyn_removeCommand_args"
+	}
+};
+var __v_stat_bun_default = createCompletion({ bun: {
+	options: [
+		{
+			labels: ["-V", "--version"],
+			description: "Show version and exit"
+		},
+		{
+			labels: ["--cwd"],
+			description: "Change directory"
+		},
+		{
+			labels: ["-h", "--help"],
+			description: "Show command help"
+		},
+		{
+			labels: ["--use"],
+			description: "Use a framework, e.g. \"next\""
+		}
+	],
+	commands: {
+		run: {
+			description: "Run JavaScript with Bun, a package.json script, or a bin",
+			options: [
+				{
+					labels: ["-h", "--help"],
+					description: "Display this help and exit"
+				},
+				{
+					labels: ["-b", "--bun"],
+					description: "Force a script or package to use Bun's runtime"
+				},
+				{
+					labels: ["--watch"],
+					description: "Automatically restart bun's JavaScript runtime on file change"
+				},
+				{
+					labels: ["--hot"],
+					description: "Enable auto reload in bun's JavaScript runtime"
+				},
+				{
+					labels: ["--inspect"],
+					description: "Activate Bun's Debugger"
+				}
+			],
+			args: {
+				__is_dynamic: true,
+				id: "__dyn_bun_run_args"
+			}
+		},
+		test: {
+			description: "Run unit tests with Bun",
+			options: [
+				{
+					labels: ["--watch"],
+					description: "Automatically restart on file change"
+				},
+				{
+					labels: ["--timeout"],
+					description: "Set the per-test timeout in milliseconds"
+				},
+				{
+					labels: ["--coverage"],
+					description: "Generate a coverage profile"
+				},
+				{
+					labels: ["--bail"],
+					description: "Exit the test suite after failures"
+				}
+			],
+			args: {
+				__is_dynamic: true,
+				id: "__dyn_bun_test_args"
+			}
+		},
+		init: {
+			description: "Start an empty Bun project from a blank template",
+			options: [{
+				labels: ["-y", "--yes"],
+				description: "Answer yes to all prompts"
+			}]
+		},
+		create: {
+			description: "Create a new project from a template (bun c)",
+			commands: {
+				"next-app": { description: "Next.js app" },
+				"react-app": { description: "React app" }
+			}
+		},
+		pm: {
+			description: "More commands for managing packages",
+			commands: {
+				bin: {
+					description: "print the path to bin folder",
+					options: [{
+						labels: ["-g"],
+						description: "print the global path to bin folder"
+					}]
+				},
+				ls: {
+					description: "list the dependency tree according to the current lockfile",
+					options: [{
+						labels: ["--all"],
+						description: "list the entire dependency tree"
+					}]
+				},
+				hash: { description: "generate & print the hash of the current lockfile" },
+				"hash-string": { description: "print the string used to hash the lockfile" },
+				cache: {
+					description: "print the path to the cache folder",
+					commands: { rm: { description: "remove cache" } }
+				},
+				version: {
+					description: "bump the version in package.json and create a git tag",
+					commands: {
+						patch: { description: "increment patch version" },
+						minor: { description: "increment minor version" },
+						major: { description: "increment major version" }
+					}
+				}
+			}
+		},
+		build: {
+			description: "Bundle TypeScript & JavaScript into a single file",
+			options: [
+				{
+					labels: ["--outfile"],
+					description: "Write the output to a specific file"
+				},
+				{
+					labels: ["--outdir"],
+					description: "Write the output to a directory"
+				},
+				{
+					labels: ["--minify"],
+					description: "Enable all minification flags"
+				},
+				{
+					labels: ["--sourcemap"],
+					description: "Generate sourcemaps"
+				},
+				{
+					labels: ["--target"],
+					description: "The intended execution environment"
+				}
+			],
+			args: {
+				__is_dynamic: true,
+				id: "__dyn_bun_build_args"
+			}
+		},
+		x: {
+			description: "Install and execute a package bin (bunx)",
+			args: {
+				__is_dynamic: true,
+				id: "__dyn_bun_x_args"
+			}
+		},
+		update: {
+			description: "Update outdated dependencies & save to package.json",
+			options: [...packageOptions, {
+				labels: ["--latest"],
+				description: "Updates dependencies to latest version"
+			}]
+		},
+		link: {
+			description: "Link an npm package globally",
+			options: packageOptions
+		},
+		unlink: {
+			description: "Globally unlink an npm package",
+			options: packageOptions
+		},
+		outdated: { description: "Display the latest versions of outdated dependencies" },
+		upgrade: {
+			description: "Get the latest version of bun",
+			options: [{
+				labels: ["--canary"],
+				description: "Upgrade to canary build"
+			}]
+		},
+		repl: { description: "Start a REPL session with Bun" },
+		install: {
+			...installCommand,
+			aliases: ["i"]
+		},
+		a: addCommand,
+		add: addCommand,
+		rm: removeCommand,
+		remove: removeCommand,
+		c: { description: "Alias for create" }
+	}
+} });
+//#endregion
+//#region tests/fixtures/completions/docker/__v_stat_docker.ts
+var __v_stat_docker_default = createCompletion({ docker: { commands: {
+	run: { description: run_desc },
+	ps: {
+		description: ps_desc,
+		args: {
+			__is_dynamic: true,
+			id: "__dyn_docker_ps_args"
+		}
+	},
+	stop: { description: stop_desc }
+} } });
+//#endregion
+//#region tests/fixtures/completions/git/__v_stat_git.ts
+var __v_stat_git_default = createCompletion({ git: { commands: {
+	commit: { description: "提交变更" },
+	push: { description: "推送到远端" },
+	pull: { description: "拉取远端" }
+} } });
+//#endregion
+//#region tests/fixtures/completions/__v_stat_greet.ts
+var __v_stat_greet_default = createCompletion({ greet: {
+	description: i18nStr({
+		en: "Greeting tool",
+		zh: "问候工具"
+	}),
+	commands: {
+		install: { description: install },
+		run: { description: run }
+	}
+} });
+//#endregion
+//#region tests/fixtures/completions/__v_stat_greet_dynamic.ts
+var __v_stat_greet_dynamic_default = createCompletion({ greet_dynamic: { args: {
+	__is_dynamic: true,
+	id: "__dyn_greet_dynamic_args"
+} } });
+//#endregion
+//#region tests/fixtures/completions/__v_stat_pnpm.ts
+var __v_stat_pnpm_default = createCompletion({ pnpm: { commands: {
+	install: {
+		description: "安装依赖",
+		options: await (async () => [{
+			labels: ["-g", "--global"],
+			description: "全局安装",
+			style: { fg: "green" }
+		}])()
+	},
+	run: {
+		description: "运行任务或文件",
+		args: {
+			__is_dynamic: true,
+			id: "__dyn_pnpm_run_args"
+		}
+	}
+} } });
+//#endregion
+//#region tests/fixtures/completions/__v_stat_testkit.ts
+const sharedDynamic = {
+	__is_dynamic: true,
+	id: "__dyn_sharedDynamic"
+};
+var __v_stat_testkit_default = createCompletion({ testkit: {
+	description: "All-in-one test command",
+	options: [{
+		labels: ["-h", "--help"],
+		description: "Show help"
+	}],
+	commands: {
+		opts: {
+			description: "Test option value completion",
+			options: [
+				{
+					labels: ["--mode"],
+					description: "Select mode",
+					args: [
+						"dev",
+						"build",
+						"lint"
+					]
+				},
+				{
+					labels: ["--log-level"],
+					description: "Log level",
+					args: [
+						"error",
+						"warn",
+						"info",
+						"debug"
+					]
+				},
+				{
+					labels: ["-d", "--dynamic-opt"],
+					description: "Dynamic option",
+					args: {
+						__is_dynamic: true,
+						id: "__dyn_testkit_opts_options_d_args"
+					}
+				},
+				{
+					labels: ["--name"],
+					description: "Enter name (no suggestions)",
+					args: []
+				},
+				{
+					labels: ["--shared1"],
+					description: "Shared dynamic 1",
+					args: sharedDynamic
+				},
+				{
+					labels: ["-s2", "--shared2"],
+					description: "Shared dynamic 2",
+					args: sharedDynamic
+				}
+			]
+		},
+		optsinfo: {
+			description: "Test ctx.options passed to dynamic",
+			options: [
+				{ labels: ["-g", "--global"] },
+				{
+					labels: ["-c", "--config"],
+					args: []
+				},
+				{
+					labels: ["--cwd"],
+					args: []
+				},
+				{
+					labels: ["--exclude"],
+					args: []
+				}
+			],
+			args: {
+				__is_dynamic: true,
+				id: "__dyn_testkit_optsinfo_args"
+			}
+		},
+		dynamicReuse: {
+			description: "Test reusing dynamic functions (subcommand args)",
+			commands: {
+				cmd1: {
+					description: "Subcommand 1",
+					args: sharedDynamic
+				},
+				cmd2: {
+					description: "Subcommand 2",
+					args: sharedDynamic
+				}
+			}
+		},
+		hybrid: {
+			description: "Has both subcommands and args",
+			args: {
+				__is_dynamic: true,
+				id: "__dyn_testkit_hybrid_args"
+			},
+			commands: {
+				push: { description: "Push operation" },
+				pop: { description: "Pop operation" },
+				list: { description: "List operation" }
+			}
+		},
+		displayValue: {
+			description: "Test display/value separation",
+			args: [{
+				display: "Add",
+				value: "add",
+				description: "Add an item"
+			}, {
+				display: "Remove",
+				value: "rm",
+				description: "Remove an item"
+			}]
+		},
+		emptyArgs: {
+			description: "Command with an option that takes a value but no suggestions",
+			options: [{
+				labels: ["--token"],
+				args: []
+			}]
+		}
+	}
+} });
+//#endregion
+//#region virtual:static_entry
+var virtual_static_entry_default = [
+	["bun", __v_stat_bun_default],
+	["docker", __v_stat_docker_default],
+	["git", __v_stat_git_default],
+	["greet", __v_stat_greet_default],
+	["greet_dynamic", __v_stat_greet_dynamic_default],
+	["pnpm", __v_stat_pnpm_default],
+	["testkit", __v_stat_testkit_default]
+];
+//#endregion
+export { __parseConfig, virtual_static_entry_default as default };

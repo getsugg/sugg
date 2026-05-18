@@ -1,0 +1,75 @@
+---
+source: tests/integration.rs
+assertion_line: 416
+expression: "serde_json::json!({\n    \"cmd1\": items_cmd1, \"cmd2\": items_cmd2, \"multi\": items_multi,\n    \"multi_filter\": items_multi_filter,\n})"
+---
+{
+  "cmd1": [
+    {
+      "value": "dev ",
+      "display_override": "dev",
+      "description": "Start dev server"
+    },
+    {
+      "value": "build ",
+      "display_override": "build",
+      "description": "Build project"
+    },
+    {
+      "value": "test ",
+      "display_override": "test",
+      "description": "Run tests"
+    }
+  ],
+  "cmd2": [
+    {
+      "value": "dev ",
+      "display_override": "dev",
+      "description": "Start dev server"
+    },
+    {
+      "value": "build ",
+      "display_override": "build",
+      "description": "Build project"
+    },
+    {
+      "value": "test ",
+      "display_override": "test",
+      "description": "Run tests"
+    }
+  ],
+  "multi": [
+    {
+      "value": "dev ",
+      "display_override": "dev",
+      "description": "Start dev server"
+    },
+    {
+      "value": "build ",
+      "display_override": "build",
+      "description": "Build project"
+    },
+    {
+      "value": "test ",
+      "display_override": "test",
+      "description": "Run tests"
+    }
+  ],
+  "multi_filter": [
+    {
+      "value": "dev ",
+      "display_override": "dev",
+      "description": "Start dev server"
+    },
+    {
+      "value": "build ",
+      "display_override": "build",
+      "description": "Build project"
+    },
+    {
+      "value": "test ",
+      "display_override": "test",
+      "description": "Run tests"
+    }
+  ]
+}

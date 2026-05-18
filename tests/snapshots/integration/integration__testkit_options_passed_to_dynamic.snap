@@ -1,0 +1,72 @@
+---
+source: tests/integration.rs
+assertion_line: 344
+expression: all
+---
+[
+  {
+    "name": "no_options",
+    "input": "testkit optsinfo ",
+    "result": [
+      {
+        "value": "(no options)",
+        "display_override": "(no options)"
+      }
+    ]
+  },
+  {
+    "name": "with_g",
+    "input": "testkit optsinfo -g ",
+    "result": [
+      {
+        "value": "global:true",
+        "display_override": "global:true"
+      }
+    ]
+  },
+  {
+    "name": "with_global",
+    "input": "testkit optsinfo --global ",
+    "result": [
+      {
+        "value": "global:true",
+        "display_override": "global:true"
+      }
+    ]
+  },
+  {
+    "name": "with_c",
+    "input": "testkit optsinfo -c ",
+    "result": []
+  },
+  {
+    "name": "with_config",
+    "input": "testkit optsinfo --config ",
+    "result": []
+  },
+  {
+    "name": "with_g_c",
+    "input": "testkit optsinfo -g -c ",
+    "result": []
+  },
+  {
+    "name": "with_cwd",
+    "input": "testkit optsinfo --cwd mydir ",
+    "result": [
+      {
+        "value": "cwd:mydir",
+        "display_override": "cwd:mydir"
+      }
+    ]
+  },
+  {
+    "name": "with_exclude",
+    "input": "testkit optsinfo --exclude react --exclude vue ",
+    "result": [
+      {
+        "value": "exclude:react,vue",
+        "display_override": "exclude:react,vue"
+      }
+    ]
+  }
+]

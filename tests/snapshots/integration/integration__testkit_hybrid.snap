@@ -1,0 +1,74 @@
+---
+source: tests/integration.rs
+assertion_line: 372
+expression: all
+---
+[
+  {
+    "name": "empty_prefix",
+    "input": "testkit hybrid ",
+    "result": [
+      {
+        "value": "list ",
+        "display_override": "list",
+        "description": "List operation"
+      },
+      {
+        "value": "pop ",
+        "display_override": "pop",
+        "description": "Pop operation"
+      },
+      {
+        "value": "push ",
+        "display_override": "push",
+        "description": "Push operation"
+      },
+      {
+        "value": "file1.txt",
+        "display_override": "file1.txt"
+      },
+      {
+        "value": "file2.txt",
+        "display_override": "file2.txt"
+      },
+      {
+        "value": "file3.txt",
+        "display_override": "file3.txt"
+      }
+    ]
+  },
+  {
+    "name": "prefix_p",
+    "input": "testkit hybrid p",
+    "result": [
+      {
+        "value": "pop ",
+        "display_override": "pop",
+        "description": "Pop operation"
+      },
+      {
+        "value": "push ",
+        "display_override": "push",
+        "description": "Push operation"
+      }
+    ]
+  },
+  {
+    "name": "unknown_subcmd",
+    "input": "testkit hybrid xyz ",
+    "result": [
+      {
+        "value": "file1.txt",
+        "display_override": "file1.txt"
+      },
+      {
+        "value": "file2.txt",
+        "display_override": "file2.txt"
+      },
+      {
+        "value": "file3.txt",
+        "display_override": "file3.txt"
+      }
+    ]
+  }
+]

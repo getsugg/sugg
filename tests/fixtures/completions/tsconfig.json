@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler" /* 关键：允许带后缀导入并匹配 Rolldown 行为 */,
+    "lib": ["ESNext"],
+    "strict": true,
+    "skipLibCheck": true,
+    "isolatedModules": true /* 确保文件可以被安全地抹除/转换 */,
+    "esModuleInterop": true,
+    "allowImportingTsExtensions": true /* 允许 import "./_lib.ts" */,
+    "noEmit": true /* 我们只用 TS 做类型检查，编译交给 Oxc/Rolldown */,
+    "types": [],
+    "paths": {}
+  },
+  "include": ["**/*.ts", "**/*.js", "completion.d.ts"],
+  "exclude": ["node_modules"]
+}

@@ -1,0 +1,136 @@
+---
+source: tests/integration.rs
+expression: all
+---
+[
+  {
+    "name": "bun_run",
+    "input": "bun run ",
+    "result": [
+      {
+        "value": "dev ",
+        "display_override": "dev",
+        "description": "npm script: bun dev"
+      },
+      {
+        "value": "build ",
+        "display_override": "build",
+        "description": "npm script: bun build"
+      },
+      {
+        "value": "test ",
+        "display_override": "test",
+        "description": "npm script: bun test"
+      },
+      {
+        "value": "acorn.exe ",
+        "display_override": "acorn.exe",
+        "description": "bin"
+      },
+      {
+        "value": "node_modules/",
+        "display_override": "node_modules/",
+        "description": "directory",
+        "style": {
+          "fg": "blue"
+        }
+      },
+      {
+        "value": "index.ts ",
+        "display_override": "index.ts",
+        "description": "file"
+      },
+      {
+        "value": "package.json ",
+        "display_override": "package.json",
+        "description": "file"
+      },
+      {
+        "value": "server.js ",
+        "display_override": "server.js",
+        "description": "file"
+      }
+    ]
+  },
+  {
+    "name": "bun_exe_run",
+    "input": "bun.exe run ",
+    "result": [
+      {
+        "value": "dev ",
+        "display_override": "dev",
+        "description": "npm script: bun dev"
+      },
+      {
+        "value": "build ",
+        "display_override": "build",
+        "description": "npm script: bun build"
+      },
+      {
+        "value": "test ",
+        "display_override": "test",
+        "description": "npm script: bun test"
+      },
+      {
+        "value": "acorn.exe ",
+        "display_override": "acorn.exe",
+        "description": "bin"
+      },
+      {
+        "value": "node_modules/",
+        "display_override": "node_modules/",
+        "description": "directory",
+        "style": {
+          "fg": "blue"
+        }
+      },
+      {
+        "value": "index.ts ",
+        "display_override": "index.ts",
+        "description": "file"
+      },
+      {
+        "value": "package.json ",
+        "display_override": "package.json",
+        "description": "file"
+      },
+      {
+        "value": "server.js ",
+        "display_override": "server.js",
+        "description": "file"
+      }
+    ]
+  },
+  {
+    "name": "pnpm_run",
+    "input": "pnpm run ",
+    "result": [
+      {
+        "value": "build ",
+        "display_override": "build",
+        "description": "运行指令 外部引入的变量: echo build"
+      },
+      {
+        "value": "test ",
+        "display_override": "test",
+        "description": "运行指令 外部引入的变量: echo test"
+      }
+    ]
+  },
+  {
+    "name": "pnpm_cmd_run",
+    "input": "pnpm.cmd run ",
+    "result": [
+      {
+        "value": "build ",
+        "display_override": "build",
+        "description": "运行指令 外部引入的变量: echo build"
+      },
+      {
+        "value": "test ",
+        "display_override": "test",
+        "description": "运行指令 外部引入的变量: echo test"
+      }
+    ]
+  }
+]

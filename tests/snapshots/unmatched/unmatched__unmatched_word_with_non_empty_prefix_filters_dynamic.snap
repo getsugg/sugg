@@ -1,0 +1,5 @@
+---
+source: tests/unmatched.rs
+expression: items
+---
+[]

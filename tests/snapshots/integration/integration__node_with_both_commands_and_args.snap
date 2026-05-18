@@ -1,0 +1,99 @@
+---
+source: tests/integration.rs
+expression: all
+---
+[
+  {
+    "name": "empty_prefix",
+    "input": "stash ",
+    "result": [
+      {
+        "value": "apply ",
+        "display_override": "apply",
+        "description": "Apply a stash entry"
+      },
+      {
+        "value": "drop ",
+        "display_override": "drop",
+        "description": "Drop a stash entry"
+      },
+      {
+        "value": "list ",
+        "display_override": "list",
+        "description": "List stash entries"
+      },
+      {
+        "value": "pop ",
+        "display_override": "pop",
+        "description": "Pop a stash entry"
+      },
+      {
+        "value": "show ",
+        "display_override": "show",
+        "description": "Show a stash entry"
+      },
+      {
+        "value": "stash-entry-1 ",
+        "display_override": "stash-entry-1",
+        "description": "Stash entry: WIP on main"
+      },
+      {
+        "value": "stash-entry-2 ",
+        "display_override": "stash-entry-2",
+        "description": "Stash entry: WIP on feature"
+      },
+      {
+        "value": "stash-entry-3 ",
+        "display_override": "stash-entry-3",
+        "description": "Stash entry: WIP on fix"
+      }
+    ]
+  },
+  {
+    "name": "prefix_s",
+    "input": "stash s",
+    "result": [
+      {
+        "value": "show ",
+        "display_override": "show",
+        "description": "Show a stash entry"
+      },
+      {
+        "value": "stash-entry-1 ",
+        "display_override": "stash-entry-1",
+        "description": "Stash entry: WIP on main"
+      },
+      {
+        "value": "stash-entry-2 ",
+        "display_override": "stash-entry-2",
+        "description": "Stash entry: WIP on feature"
+      },
+      {
+        "value": "stash-entry-3 ",
+        "display_override": "stash-entry-3",
+        "description": "Stash entry: WIP on fix"
+      }
+    ]
+  },
+  {
+    "name": "unknown_subcmd",
+    "input": "stash xyz ",
+    "result": [
+      {
+        "value": "stash-entry-1 ",
+        "display_override": "stash-entry-1",
+        "description": "Stash entry: WIP on main"
+      },
+      {
+        "value": "stash-entry-2 ",
+        "display_override": "stash-entry-2",
+        "description": "Stash entry: WIP on feature"
+      },
+      {
+        "value": "stash-entry-3 ",
+        "display_override": "stash-entry-3",
+        "description": "Stash entry: WIP on fix"
+      }
+    ]
+  }
+]

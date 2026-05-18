@@ -1,0 +1,6 @@
+{
+  "run_desc": "Run a container",
+  "ps_desc": "List containers",
+  "stop_desc": "Stop a container",
+  "container_desc": "Running container"
+}

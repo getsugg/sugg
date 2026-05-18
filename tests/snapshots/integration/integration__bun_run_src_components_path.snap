@@ -1,0 +1,11 @@
+---
+source: tests/integration.rs
+expression: "normalize_items(&items, project_path)"
+---
+[
+  {
+    "value": "src/components/button.tsx ",
+    "display_override": "src/components/button.tsx",
+    "description": "file"
+  }
+]

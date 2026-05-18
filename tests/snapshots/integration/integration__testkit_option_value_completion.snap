@@ -1,0 +1,137 @@
+---
+source: tests/integration.rs
+assertion_line: 325
+expression: all
+---
+[
+  {
+    "name": "mode_empty",
+    "input": "testkit opts --mode ",
+    "result": [
+      {
+        "value": "dev ",
+        "display_override": "dev"
+      },
+      {
+        "value": "build ",
+        "display_override": "build"
+      },
+      {
+        "value": "lint ",
+        "display_override": "lint"
+      }
+    ]
+  },
+  {
+    "name": "mode_prefix_d",
+    "input": "testkit opts --mode d",
+    "result": [
+      {
+        "value": "dev ",
+        "display_override": "dev"
+      }
+    ]
+  },
+  {
+    "name": "log_level_prefix",
+    "input": "testkit opts --log-level E",
+    "result": []
+  },
+  {
+    "name": "dynamic_opt_empty",
+    "input": "testkit opts --dynamic-opt ",
+    "result": [
+      {
+        "value": "item1",
+        "display_override": "item1"
+      },
+      {
+        "value": "item2",
+        "display_override": "item2"
+      },
+      {
+        "value": "item3",
+        "display_override": "item3"
+      }
+    ]
+  },
+  {
+    "name": "dynamic_opt_prefix",
+    "input": "testkit opts --dynamic-opt item2",
+    "result": [
+      {
+        "value": "item2",
+        "display_override": "item2"
+      }
+    ]
+  },
+  {
+    "name": "dynamic_opt_short",
+    "input": "testkit opts -d item",
+    "result": [
+      {
+        "value": "item1",
+        "display_override": "item1"
+      },
+      {
+        "value": "item2",
+        "display_override": "item2"
+      },
+      {
+        "value": "item3",
+        "display_override": "item3"
+      }
+    ]
+  },
+  {
+    "name": "name_no_suggestions",
+    "input": "testkit opts --name ",
+    "result": []
+  },
+  {
+    "name": "shared1_empty",
+    "input": "testkit opts --shared1 ",
+    "result": [
+      {
+        "value": "shared-a",
+        "display_override": "shared-a"
+      },
+      {
+        "value": "shared-b",
+        "display_override": "shared-b"
+      },
+      {
+        "value": "shared-c",
+        "display_override": "shared-c"
+      }
+    ]
+  },
+  {
+    "name": "shared2_empty",
+    "input": "testkit opts --shared2 ",
+    "result": [
+      {
+        "value": "shared-a",
+        "display_override": "shared-a"
+      },
+      {
+        "value": "shared-b",
+        "display_override": "shared-b"
+      },
+      {
+        "value": "shared-c",
+        "display_override": "shared-c"
+      }
+    ]
+  },
+  {
+    "name": "shared1_prefix_b",
+    "input": "testkit opts --shared1 b",
+    "result": []
+  },
+  {
+    "name": "shared2_short_alias",
+    "input": "testkit opts -s2 c",
+    "result": []
+  }
+]

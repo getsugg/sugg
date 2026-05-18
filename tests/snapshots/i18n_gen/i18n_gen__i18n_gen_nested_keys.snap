@@ -1,0 +1,13 @@
+---
+source: tests/i18n_gen.rs
+expression: read_dts(&completions_dir)
+---
+declare const i18n: {
+  readonly git: {
+    /**
+     * - 🚩 **en**: Commit changes
+    */
+    readonly commit: string;
+  };
+  readonly [key: string]: any;
+};
