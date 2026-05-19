@@ -1,0 +1,59 @@
+name: Release
+
+on:
+    push:
+        tags:
+            - "v*" # 推送任何 v 开头的标签时触发
+
+permissions:
+    contents: write
+
+jobs:
+    build-and-upload:
+        name: Build for ${{ matrix.os }}
+        runs-on: ${{ matrix.os }}
+        strategy:
+            matrix:
+                include:
+                    - os: windows-latest
+                      asset_name: sugg-x86_64-pc-windows-msvc.zip
+                    - os: ubuntu-latest
+                      asset_name: sugg-x86_64-unknown-linux-gnu.tar.gz
+                    - os: macos-latest
+                      asset_name: sugg-x86_64-apple-darwin.tar.gz
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Install Rust toolchain
+              uses: dtolnay/rust-toolchain@stable
+
+            - name: Rust Cache
+              uses: swatinem/rust-cache@v2
+
+            - name: Build release binaries
+              run: cargo build --release --bin sugg --bin sugg-engine
+
+            # ---------- 打包 ----------
+            - name: Package Binaries (Windows)
+              if: matrix.os == 'windows-latest'
+              shell: bash
+              run: |
+                  cd target/release
+                  7z a ../../${{ matrix.asset_name }} sugg.exe sugg-engine.exe
+
+            - name: Package Binaries (Unix)
+              if: matrix.os != 'windows-latest'
+              run: |
+                  cd target/release
+                  tar -czvf ../../${{ matrix.asset_name }} sugg sugg-engine
+
+            # ---------- 自动创建并上传到 Release ----------
+            - name: Upload Release Asset
+              uses: softprops/action-gh-release@v2
+              with:
+                  token: ${{ secrets.GITHUB_TOKEN }}
+                  files: ${{ matrix.asset_name }}
+                  draft: false
+                  prerelease: false
