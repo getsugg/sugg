@@ -1,5 +1,5 @@
-use sugg::{build_bundles, path_to_slash};
 use std::path::Path;
+use sugg::{build_bundles, path_to_slash};
 
 /// 设置快照目录为 tests/snapshots/bundle/
 macro_rules! bundle_snapshot {
@@ -28,8 +28,7 @@ fn combine_dynamic_bundles(bundles: Vec<(String, String, Vec<String>)>) -> Strin
 }
 
 fn fixture_completions_dir() -> std::path::PathBuf {
-    std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("tests/fixtures/completions")
+    std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/completions")
 }
 
 fn normalize(s: String, dir: &Path) -> String {
@@ -71,6 +70,10 @@ async fn test_bundle_dynamic_zh() {
 async fn test_bundle_docker_dynamic() {
     let dir = fixture_completions_dir();
     let (_, dynamic_bundles) = build_bundles(&dir, "en").await;
-    let docker = dynamic_bundles.into_iter().find(|(stem, _, _)| stem == "docker").map(|(_, js, _)| js).unwrap_or_default();
+    let docker = dynamic_bundles
+        .into_iter()
+        .find(|(stem, _, _)| stem == "docker")
+        .map(|(_, js, _)| js)
+        .unwrap_or_default();
     bundle_snapshot!(normalize(docker, &dir));
 }

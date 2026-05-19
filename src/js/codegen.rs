@@ -1,18 +1,15 @@
 /// 生成注入到每个用户脚本顶部的 import 语句。
 /// 只导入一个统一的 `virtual:i18n` 模块，用户代码通过 `i18n.ns.key` 访问翻译。
 pub fn generate_import_stmt() -> String {
-    "import { createCompletion, i18nStr, readJson, __parseConfig } from 'virtual:env';\n".to_string()
+    "import { createCompletion, i18nStr, readJson, __parseConfig } from 'virtual:env';\n"
+        .to_string()
         + "import * as i18n from 'virtual:i18n';\n"
 }
 
 /// 生成 virtual:env 模块内容（不含翻译，不含 globalThis）。
 pub fn generate_env_code(lang: &str) -> String {
     let lang_json = serde_json::to_string(lang).unwrap();
-    format!(
-        "const __LANG = {};\n{}",
-        lang_json,
-        include_str!("env.js")
-    )
+    format!("const __LANG = {};\n{}", lang_json, include_str!("env.js"))
 }
 
 /// 生成 i18n 虚拟模块代码。
@@ -20,12 +17,18 @@ pub fn generate_env_code(lang: &str) -> String {
 /// 再生成一个聚合模块 `virtual:i18n`，通过 `export * as ns from '...'` 组合。
 /// 用户代码通过 `import * as i18n from 'virtual:i18n'` → `i18n.ns.key` 访问。
 pub fn generate_i18n_modules(
-    translations_by_ns: &std::collections::HashMap<String, std::collections::HashMap<String, String>>,
+    translations_by_ns: &std::collections::HashMap<
+        String,
+        std::collections::HashMap<String, String>,
+    >,
 ) -> std::collections::HashMap<String, String> {
     use crate::bundler::VIRTUAL_I18N;
 
     let mut modules = std::collections::HashMap::new();
-    let mut sorted_ns: Vec<&String> = translations_by_ns.keys().filter(|k| !k.is_empty()).collect();
+    let mut sorted_ns: Vec<&String> = translations_by_ns
+        .keys()
+        .filter(|k| !k.is_empty())
+        .collect();
     sorted_ns.sort();
 
     // 每个命名空间生成独立子模块，平铺导出所有 key

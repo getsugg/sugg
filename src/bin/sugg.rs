@@ -242,7 +242,7 @@ fn delegate_to_engine() -> ! {
         #[cfg(not(unix))]
         {
             let status = std::process::Command::new(&path).args(&args).status()?;
-            return Ok(status.code().unwrap_or(1));
+            Ok(status.code().unwrap_or(1))
         }
     })();
 

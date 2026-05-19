@@ -11,9 +11,7 @@ pub fn get_cache_path() -> std::path::PathBuf {
 
 /// 补全建议的显示样式，与 TypeScript SuggestionStyle 一致
 #[derive(
-    Archive, Deserialize, Serialize,
-    Debug, Default, Clone,
-    serde::Serialize, serde::Deserialize,
+    Archive, Deserialize, Serialize, Debug, Default, Clone, serde::Serialize, serde::Deserialize,
 )]
 #[rkyv(attr(derive(Debug)))]
 pub struct SuggestionStyle {
@@ -29,7 +27,9 @@ pub struct SuggestionStyle {
 }
 
 /// 用于存储 args 中的静态数组补全
-#[derive(Archive, Deserialize, Serialize, Debug, Default, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Archive, Deserialize, Serialize, Debug, Default, Clone, serde::Serialize, serde::Deserialize,
+)]
 #[rkyv(attr(derive(Debug)))]
 pub struct StaticSuggestion {
     pub display: String,

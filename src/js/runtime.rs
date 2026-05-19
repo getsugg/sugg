@@ -32,10 +32,10 @@ async fn is_dir_fast(entry: &tokio::fs::DirEntry) -> bool {
     if let Ok(file_type) = entry.file_type().await {
         if file_type.is_dir() {
             return true;
-        } else if file_type.is_symlink() {
-            if let Ok(meta) = entry.metadata().await {
-                return meta.is_dir();
-            }
+        } else if file_type.is_symlink()
+            && let Ok(meta) = entry.metadata().await
+        {
+            return meta.is_dir();
         }
     }
     false
@@ -79,13 +79,11 @@ pub fn inject_globals(ctx: Ctx<'_>) {
                     (".".to_string(), "".to_string())
                 } else if input.ends_with('/') || input.ends_with('\\') {
                     (input.clone(), input)
-                } else if let Some(idx) = input.rfind(|c| c == '/' || c == '\\') {
+                } else if let Some(idx) = input.rfind(['/', '\\']) {
                     let s = &input[..idx];
                     let p = &input[..=idx];
-                    let s = if s.is_empty() {
-                        p // 匹配到 "/"
-                    } else if s.ends_with(':') {
-                        p // 匹配到 Windows 盘符 "C:" -> 强转为 "C:\"
+                    let s = if s.is_empty() || s.ends_with(':') {
+                        p // 匹配到 "/" 或 Windows 盘符 "C:" -> 强转为 "C:\"
                     } else {
                         s
                     };
@@ -216,34 +214,30 @@ pub fn inject_globals(ctx: Ctx<'_>) {
         let mut parts = Vec::with_capacity(args.0.len());
         for arg in args.0 {
             // 如果是原生字符串，直接提取（避免被序列化带上双引号）
-            if let Some(s) = arg.as_string() {
-                if let Ok(s_str) = s.to_string() {
-                    parts.push(s_str);
-                    continue;
-                }
+            if let Some(s) = arg.as_string()
+                && let Ok(s_str) = s.to_string()
+            {
+                parts.push(s_str);
+                continue;
             }
 
             // 如果是对象或数组，尝试优雅地 JSON.stringify
-            if arg.is_object() || arg.is_array() {
-                if let Ok(json) = ctx.globals().get::<_, Object>("JSON") {
-                    if let Ok(stringify) = json.get::<_, Function>("stringify") {
-                        // 传入 Option::<String>::None 相当于传 null 作为 replacer，2 作为 space
-                        if let Ok(s) =
-                            stringify.call::<_, String>((arg.clone(), Option::<String>::None, 2))
-                        {
-                            parts.push(s);
-                            continue;
-                        }
-                    }
-                }
+            if (arg.is_object() || arg.is_array())
+                && let Ok(json) = ctx.globals().get::<_, Object>("JSON")
+                && let Ok(stringify) = json.get::<_, Function>("stringify")
+                && let Ok(s) = stringify.call::<_, String>((arg.clone(), Option::<String>::None, 2))
+            {
+                // 传入 Option::<String>::None 相当于传 null 作为 replacer，2 作为 space
+                parts.push(s);
+                continue;
             }
 
             // 兜底：使用 JS 的 String() 强转 (例如处理 boolean, number, undefined, null 等)
-            if let Ok(string_func) = ctx.globals().get::<_, Function>("String") {
-                if let Ok(s) = string_func.call::<_, String>((arg,)) {
-                    parts.push(s);
-                    continue;
-                }
+            if let Ok(string_func) = ctx.globals().get::<_, Function>("String")
+                && let Ok(s) = string_func.call::<_, String>((arg,))
+            {
+                parts.push(s);
+                continue;
             }
 
             parts.push(String::from("[unknown]"));

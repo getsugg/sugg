@@ -1,4 +1,4 @@
-﻿#![allow(dead_code)]
+#![allow(dead_code)]
 
 use serde_json::Value;
 use std::collections::HashMap;
@@ -88,9 +88,9 @@ pub fn complete(input: &str, project_dir: &Path, cache_dir: &PathBuf) -> Vec<Val
 
 pub fn has_item(items: &[Value], value: &str) -> bool {
     let expected_with_space = format!("{} ", value);
-    items.iter().any(|item| {
-        item["value"] == expected_with_space || item["value"] == value
-    })
+    items
+        .iter()
+        .any(|item| item["value"] == expected_with_space || item["value"] == value)
 }
 
 #[allow(dead_code)]

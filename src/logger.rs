@@ -59,21 +59,21 @@ pub fn write_log(level: LogLevel, msg: &str) {
     } else {
         // 补全 UI 模式：拦截内容，截断后进入队列
         let mutex = UI_LOGS.get_or_init(|| Mutex::new(Vec::new()));
-        if let Ok(mut guard) = mutex.lock() {
-            if guard.len() < 8 {
-                let short_msg = msg.lines().next().unwrap_or("").trim().to_string();
-                guard.push((level, short_msg));
-            }
+        if let Ok(mut guard) = mutex.lock()
+            && guard.len() < 8
+        {
+            let short_msg = msg.lines().next().unwrap_or("").trim().to_string();
+            guard.push((level, short_msg));
         }
     }
 }
 
 /// 获取收集到的 UI 日志
 pub fn get_ui_logs() -> Vec<(LogLevel, String)> {
-    if let Some(mutex) = UI_LOGS.get() {
-        if let Ok(guard) = mutex.lock() {
-            return guard.clone();
-        }
+    if let Some(mutex) = UI_LOGS.get()
+        && let Ok(guard) = mutex.lock()
+    {
+        return guard.clone();
     }
     Vec::new()
 }

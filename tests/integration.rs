@@ -431,4 +431,3 @@ fn test_testkit_logdemo() {
 
     integration_snapshot!(all);
 }
-

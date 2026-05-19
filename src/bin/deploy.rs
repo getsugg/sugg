@@ -72,8 +72,8 @@ fn main() {
     let bin_dir = sugg_root.join("bin");
     std::fs::create_dir_all(&bin_dir).expect("Failed to create bin directory");
 
-    let sugg_dst = bin_dir.join(&sugg_name);
-    let sugg_engine_dst = sugg_root.join(&sugg_engine_name);
+    let sugg_dst = bin_dir.join(sugg_name);
+    let sugg_engine_dst = sugg_root.join(sugg_engine_name);
 
     std::fs::copy(&sugg_src, &sugg_dst).unwrap_or_else(|e| {
         panic!(
@@ -91,7 +91,10 @@ fn main() {
     });
 
     println!("✅ Installation complete");
-    println!("   sugg          -> {}   ← added to PATH", sugg_dst.display());
+    println!(
+        "   sugg          -> {}   ← added to PATH",
+        sugg_dst.display()
+    );
     println!(
         "   sugg-engine   -> {}   ← internal use, not exposed",
         sugg_engine_dst.display()
@@ -140,10 +143,15 @@ fn add_dir_to_path(bin_dir: &std::path::Path) {
                 println!("⚠️  Please restart terminal or re-login for changes to take effect");
             }
             "EXISTS" => {
-                println!("ℹ️  PATH already contains {}, no need to add again", dir_str);
+                println!(
+                    "ℹ️  PATH already contains {}, no need to add again",
+                    dir_str
+                );
             }
             _ => {
-                eprintln!("⚠️  PATH configuration failed (PowerShell output: {stdout}), please add manually");
+                eprintln!(
+                    "⚠️  PATH configuration failed (PowerShell output: {stdout}), please add manually"
+                );
                 eprintln!("   Directory: {}", dir_str);
             }
         }
@@ -174,7 +182,10 @@ fn add_dir_to_path(bin_dir: &std::path::Path) {
             }
             let content = std::fs::read_to_string(&path).unwrap_or_default();
             if content.contains(&export_line) {
-                println!("ℹ️  PATH config already exists in {}, skipping", path.display());
+                println!(
+                    "ℹ️  PATH config already exists in {}, skipping",
+                    path.display()
+                );
                 added = true;
                 continue;
             }
@@ -188,7 +199,9 @@ fn add_dir_to_path(bin_dir: &std::path::Path) {
         if added {
             println!("⚠️  Run `source ~/.bashrc` (or the appropriate profile) or restart terminal");
         } else {
-            eprintln!("⚠️  No shell profile file found. Please manually add the following line to your shell config:");
+            eprintln!(
+                "⚠️  No shell profile file found. Please manually add the following line to your shell config:"
+            );
             eprintln!("   {export_line}");
         }
     }

@@ -52,7 +52,11 @@ impl Plugin for VirtualPlugin {
         let id_normalized = crate::path_to_slash(std::path::Path::new(args.id));
 
         if id_normalized.starts_with(VIRTUAL_I18N) {
-            let code = self.i18n_modules.get(&id_normalized).cloned().unwrap_or_default();
+            let code = self
+                .i18n_modules
+                .get(&id_normalized)
+                .cloned()
+                .unwrap_or_default();
             return Ok(Some(HookLoadOutput {
                 code: code.into(),
                 ..Default::default()

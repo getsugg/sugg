@@ -21,7 +21,8 @@ macro_rules! i18n_gen_snapshot {
 fn run_i18n_gen(completions_dir: &std::path::Path) {
     let status = std::process::Command::new(common::sugg_bin())
         .arg("i18n-gen")
-        .arg("--completions-dir").arg(completions_dir)
+        .arg("--completions-dir")
+        .arg(completions_dir)
         .status()
         .expect("failed to run i18n-gen");
     assert!(status.success(), "i18n-gen failed");
@@ -39,7 +40,9 @@ fn test_i18n_gen_greet_keys() {
     fs::create_dir_all(&greet_i18n_dir).unwrap();
 
     // 从 fixtures 的 greet/i18n/ 复制翻译文件
-    let fixture = common::get_fixture_dir("completions").join("greet").join("i18n");
+    let fixture = common::get_fixture_dir("completions")
+        .join("greet")
+        .join("i18n");
     for entry in fs::read_dir(&fixture).unwrap() {
         let entry = entry.unwrap();
         fs::copy(entry.path(), greet_i18n_dir.join(entry.file_name())).unwrap();
@@ -56,7 +59,11 @@ fn test_i18n_gen_nested_keys() {
     let git_i18n_dir = completions_dir.join("git").join("i18n");
     fs::create_dir_all(&git_i18n_dir).unwrap();
 
-    fs::write(git_i18n_dir.join("en.json"), r#"{"commit": "Commit changes"}"#).unwrap();
+    fs::write(
+        git_i18n_dir.join("en.json"),
+        r#"{"commit": "Commit changes"}"#,
+    )
+    .unwrap();
 
     run_i18n_gen(&completions_dir);
     i18n_gen_snapshot!(read_dts(&completions_dir));
@@ -104,7 +111,11 @@ fn test_i18n_gen_keys_are_sorted() {
     let ns_i18n_dir = completions_dir.join("myspace").join("i18n");
     fs::create_dir_all(&ns_i18n_dir).unwrap();
 
-    fs::write(ns_i18n_dir.join("en.json"), r#"{"z_key": "Z", "a_key": "A", "m_key": "M"}"#).unwrap();
+    fs::write(
+        ns_i18n_dir.join("en.json"),
+        r#"{"z_key": "Z", "a_key": "A", "m_key": "M"}"#,
+    )
+    .unwrap();
 
     run_i18n_gen(&completions_dir);
     i18n_gen_snapshot!(read_dts(&completions_dir));

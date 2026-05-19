@@ -9,6 +9,8 @@ use oxc::span::GetSpan;
 use oxc::span::{SourceType, Span};
 use std::collections::HashMap;
 
+use crate::bundler::{DYNAMIC_FUNC_PREFIX, DYNAMIC_ID_FIELD, IS_DYNAMIC_MARKER};
+
 /// 动态调用的完整元信息
 #[derive(Debug, Clone)]
 pub struct DynamicInfo {
@@ -65,19 +67,17 @@ impl<'a> Visit<'a> for DynamicExtractor {
                     PropertyKey::StringLiteral(s) => s.value == "labels",
                     _ => false,
                 };
-                if is_labels {
-                    if let Expression::ArrayExpression(arr) = &p.value {
-                        for elem in &arr.elements {
-                            if let ArrayExpressionElement::StringLiteral(s) = elem {
-                                // 清洗：去掉前导连字符，非字母数字替换为下划线
-                                let clean = s
-                                    .value
-                                    .trim_start_matches('-')
-                                    .replace(|c: char| !c.is_ascii_alphanumeric(), "_");
-                                if !clean.is_empty() {
-                                    label_name = Some(clean);
-                                    break;
-                                }
+                if is_labels && let Expression::ArrayExpression(arr) = &p.value {
+                    for elem in &arr.elements {
+                        if let ArrayExpressionElement::StringLiteral(s) = elem {
+                            // 清洗：去掉前导连字符，非字母数字替换为下划线
+                            let clean = s
+                                .value
+                                .trim_start_matches('-')
+                                .replace(|c: char| !c.is_ascii_alphanumeric(), "_");
+                            if !clean.is_empty() {
+                                label_name = Some(clean);
+                                break;
                             }
                         }
                     }
@@ -147,9 +147,9 @@ pub fn extract_dynamics(source: &str, path: &str) -> (String, String, Vec<String
     for info in &extractor.dynamics {
         let count = name_counts.entry(info.context_name.clone()).or_insert(0);
         let id = if *count == 0 {
-            format!("__dyn_{}", info.context_name)
+            format!("{}{}", DYNAMIC_FUNC_PREFIX, info.context_name)
         } else {
-            format!("__dyn_{}_{}", info.context_name, count)
+            format!("{}{}_{}",DYNAMIC_FUNC_PREFIX, info.context_name, count)
         };
         *count += 1;
         id_map.insert(info.full_span.start, id);
@@ -159,11 +159,11 @@ pub fn extract_dynamics(source: &str, path: &str) -> (String, String, Vec<String
     let mut modified_source = source.to_string();
     let mut sorted_dynamics: Vec<&DynamicInfo> = extractor.dynamics.iter().collect();
     // 按起始位置降序，保证从后往前替换时偏移量不受影响
-    sorted_dynamics.sort_by(|a, b| b.full_span.start.cmp(&a.full_span.start));
+    sorted_dynamics.sort_by_key(|b| std::cmp::Reverse(b.full_span.start));
 
     for info in &sorted_dynamics {
         let id = &id_map[&info.full_span.start];
-        let replacement = format!("{{ __is_dynamic: true, id: \"{}\" }}", id);
+        let replacement = format!("{{ {}: true, {}: \"{}\" }}", IS_DYNAMIC_MARKER, DYNAMIC_ID_FIELD, id);
         modified_source.replace_range(
             info.full_span.start as usize..info.full_span.end as usize,
             &replacement,
@@ -188,7 +188,7 @@ pub fn extract_dynamics(source: &str, path: &str) -> (String, String, Vec<String
             dyn_replacements.push((span, text));
         }
     }
-    dyn_replacements.sort_by(|a, b| b.0.start.cmp(&a.0.start));
+    dyn_replacements.sort_by_key(|b| std::cmp::Reverse(b.0.start));
 
     let mut pure_dynamic_js = source.to_string();
     for (span, replacement) in &dyn_replacements {

@@ -1,4 +1,4 @@
-﻿use rkyv::access;
+use rkyv::access;
 use rkyv::rancor::Error;
 use rquickjs::{AsyncContext, AsyncRuntime, CatchResultExt, Ctx, Function, Value, async_with};
 use serde_json::Value as JsonValue;
@@ -64,7 +64,7 @@ async fn run_build(args: &EngineArgs) -> Result<(), Box<dyn std::error::Error>> 
                 .ok()
                 .map(PathBuf::from)
         })
-        .unwrap_or_else(|| sugg::default_completions_dir());
+        .unwrap_or_else(sugg::default_completions_dir);
     if !dir_path.exists() {
         fs::create_dir_all(&dir_path)?;
         println!(
@@ -83,8 +83,7 @@ async fn run_build(args: &EngineArgs) -> Result<(), Box<dyn std::error::Error>> 
         .clone()
         .or_else(|| std::env::var("SUGG_LANG").ok())
         .unwrap_or_else(|| "en".to_string());
-    let (bundled_static, dynamic_bundles) =
-        sugg::build_bundles(&dir_path, &lang).await;
+    let (bundled_static, dynamic_bundles) = sugg::build_bundles(&dir_path, &lang).await;
 
     // 脚本清单在 build_bundles() 内边扫描边打印，此处只处理空目录兜底
     if bundled_static.is_empty() {
@@ -140,7 +139,7 @@ async fn run_build(args: &EngineArgs) -> Result<(), Box<dyn std::error::Error>> 
             .catch(&ctx)
             .map_err(|e| anyhow::anyhow!("Failed to serialize root node: {e:?}"))?;
         serde_json::from_str::<JsonValue>(&json_str)
-            .map(|v| json_to_command_node(v))
+            .map(json_to_command_node)
             .context("JSON deserialization to CommandNode failed")
     }
 
@@ -204,8 +203,6 @@ async fn run_build(args: &EngineArgs) -> Result<(), Box<dyn std::error::Error>> 
     Ok(())
 }
 
-
-
 fn run_i18n_gen(args: &EngineArgs) {
     let completions_dir = args
         .completions_dir
@@ -215,7 +212,7 @@ fn run_i18n_gen(args: &EngineArgs) {
                 .ok()
                 .map(PathBuf::from)
         })
-        .unwrap_or_else(|| sugg::default_completions_dir());
+        .unwrap_or_else(sugg::default_completions_dir);
     if !completions_dir.exists() {
         fs::create_dir_all(&completions_dir).expect("Failed to create completions directory");
     }
@@ -242,23 +239,22 @@ fn run_i18n_gen(args: &EngineArgs) {
                     .unwrap_or_default()
                     .to_string_lossy()
                     .to_string();
-                if let Ok(s) = fs::read_to_string(&path) {
-                    if let Ok(map) =
+                if let Ok(s) = fs::read_to_string(&path)
+                    && let Ok(map) =
                         serde_json::from_str::<serde_json::Map<String, serde_json::Value>>(&s)
-                    {
-                        for (k, v) in map {
-                            let val_str = if let Some(s) = v.as_str() {
-                                s.replace('\n', " ").replace("*/", "* /")
-                            } else {
-                                v.to_string()
-                            };
-                            keys_map
-                                .entry(ns.clone())
-                                .or_default()
-                                .entry(k)
-                                .or_default()
-                                .insert(lang.clone(), val_str);
-                        }
+                {
+                    for (k, v) in map {
+                        let val_str = if let Some(s) = v.as_str() {
+                            s.replace('\n', " ").replace("*/", "* /")
+                        } else {
+                            v.to_string()
+                        };
+                        keys_map
+                            .entry(ns.clone())
+                            .or_default()
+                            .entry(k)
+                            .or_default()
+                            .insert(lang.clone(), val_str);
                     }
                 }
             }
@@ -333,13 +329,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Some("commands") => {
             let cache_path = sugg::cache::get_cache_path();
-            if let Ok(data) = std::fs::read(&cache_path) {
-                if let Ok(archived) =
+            if let Ok(data) = std::fs::read(&cache_path)
+                && let Ok(archived) =
                     access::<sugg::cache::structs::ArchivedCompletionCache, Error>(&data)
-                {
-                    for cmd in archived.root.subcommands.iter() {
-                        println!("{}", cmd.name);
-                    }
+            {
+                for cmd in archived.root.subcommands.iter() {
+                    println!("{}", cmd.name);
                 }
             }
             Ok(())
