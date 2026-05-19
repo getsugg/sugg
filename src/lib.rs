@@ -47,7 +47,7 @@ use std::path::Path;
 pub async fn build_bundles(
     dir_path: &Path,
     lang: &str,
-) -> (String, Vec<(String, String, Vec<String>)>) {
+) -> anyhow::Result<(String, Vec<(String, String, Vec<String>)>)> {
     use bundler::{VIRTUAL_DYNAMIC_ENTRY, VIRTUAL_STATIC_ENTRY, bundle_virtual};
     use js::codegen::{generate_env_code, generate_i18n_modules, generate_import_stmt};
 
@@ -83,7 +83,7 @@ pub async fn build_bundles(
 
     let entries = match std::fs::read_dir(dir_path) {
         Ok(e) => e,
-        Err(_) => return (String::new(), vec![]),
+        Err(_) => return Ok((String::new(), vec![])),
     };
 
     for entry in entries.flatten() {
@@ -153,7 +153,7 @@ pub async fn build_bundles(
     }
 
     if idx == 0 {
-        return (String::new(), vec![]);
+        return Ok((String::new(), vec![]));
     }
 
     static_entry.push_str(&format!("\nexport default [ {} ];\n", config_merges));
@@ -166,7 +166,7 @@ pub async fn build_bundles(
         env_code.clone(),
         i18n_modules.clone(),
     )
-    .await;
+    .await?;
     let mut dynamic_bundles = Vec::new();
     for (stem, modules, func_ids) in virtual_dynamics {
         let d = bundle_virtual(
@@ -175,10 +175,10 @@ pub async fn build_bundles(
             env_code.clone(),
             i18n_modules.clone(),
         )
-        .await;
+        .await?;
         dynamic_bundles.push((stem, d, func_ids));
     }
-    (s, dynamic_bundles)
+    Ok((s, dynamic_bundles))
 }
 
 /// 扫描 `completions_dir` 下的所有子命令 i18n 目录，返回 `(namespace, i18n_dir_path)` 列表。

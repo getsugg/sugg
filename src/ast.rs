@@ -100,11 +100,12 @@ impl<'a> Visit<'a> for DynamicExtractor {
                 if let Some(arg) = expr.arguments.first() {
                     // 收集上下文路径，过滤掉无意义的 "commands" 键
                     let context_name = {
-                        let filtered: Vec<&str> = self
+                        let filtered: Vec<String> = self
                             .context_stack
                             .iter()
                             .filter(|s| s.as_str() != "commands")
-                            .map(|s| s.as_str())
+                            // 在这里清洗：把所有非字母数字的字符都转成下划线
+                            .map(|s| s.replace(|c: char| !c.is_ascii_alphanumeric(), "_"))
                             .collect();
                         if filtered.is_empty() {
                             "dynamic".to_string()
@@ -149,7 +150,7 @@ pub fn extract_dynamics(source: &str, path: &str) -> (String, String, Vec<String
         let id = if *count == 0 {
             format!("{}{}", DYNAMIC_FUNC_PREFIX, info.context_name)
         } else {
-            format!("{}{}_{}",DYNAMIC_FUNC_PREFIX, info.context_name, count)
+            format!("{}{}_{}", DYNAMIC_FUNC_PREFIX, info.context_name, count)
         };
         *count += 1;
         id_map.insert(info.full_span.start, id);
@@ -163,7 +164,10 @@ pub fn extract_dynamics(source: &str, path: &str) -> (String, String, Vec<String
 
     for info in &sorted_dynamics {
         let id = &id_map[&info.full_span.start];
-        let replacement = format!("{{ {}: true, {}: \"{}\" }}", IS_DYNAMIC_MARKER, DYNAMIC_ID_FIELD, id);
+        let replacement = format!(
+            "{{ {}: true, {}: \"{}\" }}",
+            IS_DYNAMIC_MARKER, DYNAMIC_ID_FIELD, id
+        );
         modified_source.replace_range(
             info.full_span.start as usize..info.full_span.end as usize,
             &replacement,

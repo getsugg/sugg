@@ -12,7 +12,7 @@ pub async fn bundle_virtual(
     virtual_modules: HashMap<String, String>,
     env_code: String,
     i18n_modules: HashMap<String, String>,
-) -> String {
+) -> anyhow::Result<String> {
     let options = BundlerOptions {
         input: Some(vec![InputItem {
             name: Some("main".to_string()),
@@ -29,9 +29,16 @@ pub async fn bundle_virtual(
         .with_options(options)
         .with_plugins(vec![Arc::new(plugin)])
         .build()
-        .expect("Failed to create Bundler instance");
+        .map_err(|e| anyhow::anyhow!("Failed to create Bundler: {}", e))?;
 
-    let output = bundler.generate().await.expect("Rolldown bundling failed");
+    let output = bundler.generate().await.map_err(|e| {
+        let mut msg = String::from("Bundling failed:\n");
+        for diagnostic in e.into_vec() {
+            msg.push_str(&format!("- [{:?}] {}\n", diagnostic.kind(), diagnostic));
+        }
+        anyhow::anyhow!(msg)
+    })?;
+
     output
         .assets
         .into_iter()
@@ -39,5 +46,5 @@ pub async fn bundle_virtual(
             rolldown_common::Output::Chunk(chunk) => Some(chunk.code.clone()),
             _ => None,
         })
-        .expect("Expected JS code chunk in output, but none found")
+        .ok_or_else(|| anyhow::anyhow!("No JS code chunk found"))
 }

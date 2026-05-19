@@ -1,5 +1,7 @@
 /target
 /package.json
 /node_modules/*
+
 .agents
+AGENTS.md
 .vscode

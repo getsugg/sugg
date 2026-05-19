@@ -83,7 +83,13 @@ async fn run_build(args: &EngineArgs) -> Result<(), Box<dyn std::error::Error>> 
         .clone()
         .or_else(|| std::env::var("SUGG_LANG").ok())
         .unwrap_or_else(|| "en".to_string());
-    let (bundled_static, dynamic_bundles) = sugg::build_bundles(&dir_path, &lang).await;
+    let (bundled_static, dynamic_bundles) = match sugg::build_bundles(&dir_path, &lang).await {
+        Ok(res) => res,
+        Err(e) => {
+            log_error!("Script Error: {:#}", e);
+            return Ok(());
+        }
+    };
 
     // 脚本清单在 build_bundles() 内边扫描边打印，此处只处理空目录兜底
     if bundled_static.is_empty() {

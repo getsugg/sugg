@@ -38,21 +38,21 @@ fn normalize(s: String, dir: &Path) -> String {
 #[tokio::test]
 async fn test_bundle_greet_en() {
     let dir = fixture_completions_dir();
-    let (static_js, _) = build_bundles(&dir, "en").await;
+    let (static_js, _) = build_bundles(&dir, "en").await.unwrap();
     bundle_snapshot!(normalize(static_js, &dir));
 }
 
 #[tokio::test]
 async fn test_bundle_greet_zh() {
     let dir = fixture_completions_dir();
-    let (static_js, _) = build_bundles(&dir, "zh").await;
+    let (static_js, _) = build_bundles(&dir, "zh").await.unwrap();
     bundle_snapshot!(normalize(static_js, &dir));
 }
 
 #[tokio::test]
 async fn test_bundle_dynamic_en() {
     let dir = fixture_completions_dir();
-    let (_, dynamic_bundles) = build_bundles(&dir, "en").await;
+    let (_, dynamic_bundles) = build_bundles(&dir, "en").await.unwrap();
     let combined = combine_dynamic_bundles(dynamic_bundles);
     bundle_snapshot!(normalize(combined, &dir));
 }
@@ -60,7 +60,7 @@ async fn test_bundle_dynamic_en() {
 #[tokio::test]
 async fn test_bundle_dynamic_zh() {
     let dir = fixture_completions_dir();
-    let (_, dynamic_bundles) = build_bundles(&dir, "zh").await;
+    let (_, dynamic_bundles) = build_bundles(&dir, "zh").await.unwrap();
     let combined = combine_dynamic_bundles(dynamic_bundles);
     bundle_snapshot!(normalize(combined, &dir));
 }
@@ -69,7 +69,7 @@ async fn test_bundle_dynamic_zh() {
 #[tokio::test]
 async fn test_bundle_docker_dynamic() {
     let dir = fixture_completions_dir();
-    let (_, dynamic_bundles) = build_bundles(&dir, "en").await;
+    let (_, dynamic_bundles) = build_bundles(&dir, "en").await.unwrap();
     let docker = dynamic_bundles
         .into_iter()
         .find(|(stem, _, _)| stem == "docker")
