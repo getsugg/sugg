@@ -624,6 +624,13 @@ var __v_stat_testkit_default = createCompletion({ testkit: {
 				labels: ["--token"],
 				args: []
 			}]
+		},
+		logdemo: {
+			description: "Demonstrate log and throw output in the UI",
+			args: {
+				__is_dynamic: true,
+				id: "__dyn_testkit_logdemo_args"
+			}
 		}
 	}
 } });

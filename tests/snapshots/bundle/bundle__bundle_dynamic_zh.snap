@@ -170,5 +170,30 @@ const __dyn_testkit_hybrid_args = async () => {
 		"file3.txt"
 	];
 };
+const __dyn_testkit_logdemo_args = async (ctx) => {
+	const prefix = ctx.prefix ?? "";
+	if (prefix.startsWith("bad-")) throw new Error(`❌ Invalid prefix detected: "${prefix}" — please remove the leading "bad-"`);
+	else {
+		log("[DEBUG] prefix=", prefix);
+		log("[INFO] configuration loaded successfully");
+	}
+	return [
+		{
+			display: "alpha",
+			value: "alpha",
+			description: "First item"
+		},
+		{
+			display: "beta",
+			value: "beta",
+			description: "Second item"
+		},
+		{
+			display: "gamma",
+			value: "gamma",
+			description: "Third item"
+		}
+	];
+};
 //#endregion
-export { __dyn_sharedDynamic, __dyn_testkit_hybrid_args, __dyn_testkit_opts_options_d_args, __dyn_testkit_optsinfo_args };
+export { __dyn_sharedDynamic, __dyn_testkit_hybrid_args, __dyn_testkit_logdemo_args, __dyn_testkit_opts_options_d_args, __dyn_testkit_optsinfo_args };

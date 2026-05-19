@@ -9,11 +9,9 @@ const sharedDynamic = dynamic(async () => {
 export default createCompletion({
   testkit: {
     description: "All-in-one test command",
-    options: [
-      { labels: ["-h", "--help"], description: "Show help" },
-    ],
+    options: [{ labels: ["-h", "--help"], description: "Show help" }],
     commands: {
-      // ── 场景1：选项值补全（静态数组 + 动态）──
+      // 选项值补全（静态数组 + 动态）
       opts: {
         description: "Test option value completion",
         options: [
@@ -37,7 +35,7 @@ export default createCompletion({
           {
             labels: ["--name"],
             description: "Enter name (no suggestions)",
-            args: [],   // 只标记需要值，不提供补全
+            args: [], // 只标记需要值，不提供补全
           },
           // 两个选项引用同一个外部 dynamic，测试复用
           {
@@ -53,7 +51,7 @@ export default createCompletion({
         ],
       },
 
-      // ── 场景2：ctx.options 传递 ──
+      // ctx.options 传递
       optsinfo: {
         description: "Test ctx.options passed to dynamic",
         options: [
@@ -84,7 +82,7 @@ export default createCompletion({
         }),
       },
 
-      // ── 场景3：dynamic 复用（已在 opts 中通过 sharedDynamic 覆盖）──
+      // dynamic 复用（已在 opts 中通过 sharedDynamic 覆盖）
       // 额外再加一个独立命令，用同一个 sharedDynamic 作为子命令的 args
       dynamicReuse: {
         description: "Test reusing dynamic functions (subcommand args)",
@@ -100,7 +98,7 @@ export default createCompletion({
         },
       },
 
-      // ── 场景4：节点同时有子命令和参数 ──
+      // 节点同时有子命令和参数
       hybrid: {
         description: "Has both subcommands and args",
         args: dynamic(async () => {
@@ -113,7 +111,7 @@ export default createCompletion({
         },
       },
 
-      // ── 场景5：display 与 value 分离 ──
+      // display 与 value 分离
       displayValue: {
         description: "Test display/value separation",
         args: [
@@ -122,12 +120,35 @@ export default createCompletion({
         ],
       },
 
-      // ── 场景6：空 args 标记（选项需要值但不提供补全） ──
+      // 空 args 标记（选项需要值但不提供补全）
       emptyArgs: {
         description: "Command with an option that takes a value but no suggestions",
-        options: [
-          { labels: ["--token"], args: [] },
-        ],
+        options: [{ labels: ["--token"], args: [] }],
+      },
+
+      // log 与 throw 日志演示
+      logdemo: {
+        description: "Demonstrate log and throw output in the UI",
+        args: dynamic(async (ctx) => {
+          const prefix = ctx.prefix ?? "";
+
+          // throw: 故意抛出一个可读性强的错误，让补全菜单顶部展示红色 ERR
+          if (prefix.startsWith("bad-")) {
+            throw new Error(
+              `❌ Invalid prefix detected: "${prefix}" — please remove the leading "bad-"`,
+            );
+          } else {
+            // log: 永远不会抛异常，输出追踪信息
+            log("[DEBUG] prefix=", prefix);
+            log("[INFO] configuration loaded successfully");
+          }
+
+          return [
+            { display: "alpha", value: "alpha", description: "First item" },
+            { display: "beta", value: "beta", description: "Second item" },
+            { display: "gamma", value: "gamma", description: "Third item" },
+          ];
+        }),
       },
     },
   },

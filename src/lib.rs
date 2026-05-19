@@ -222,11 +222,6 @@ pub fn get_cache_path() -> std::path::PathBuf {
     dir.join(".completion_cache.bin")
 }
 
-/// 日志文件路径
-pub fn get_log_path() -> std::path::PathBuf {
-    sugg_root().join("sugg_error.log")
-}
-
 /// 默认补全脚本目录
 pub fn default_completions_dir() -> std::path::PathBuf {
     sugg_root().join("completions")
@@ -237,7 +232,7 @@ pub fn path_to_slash(path: &std::path::Path) -> String {
     path.to_string_lossy().replace('\\', "/")
 }
 
-/// 错误日志宏 -> 自动带 ❌ 图标
+/// 错误日志宏
 #[macro_export]
 macro_rules! log_error {
     ($($arg:tt)*) => {{
@@ -246,7 +241,7 @@ macro_rules! log_error {
     }};
 }
 
-/// 警告日志宏 -> 自动带 ⚠️ 图标
+/// 警告日志宏
 #[macro_export]
 macro_rules! log_warn {
     ($($arg:tt)*) => {{
@@ -255,7 +250,7 @@ macro_rules! log_warn {
     }};
 }
 
-/// 信息日志宏 -> 自动带 ℹ️ 图标
+/// 信息日志宏
 #[macro_export]
 macro_rules! log_info {
     ($($arg:tt)*) => {{

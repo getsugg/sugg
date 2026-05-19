@@ -1,31 +1,18 @@
-use std::path::PathBuf;
 use chrono::Local;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::OnceLock;
-use std::fs::OpenOptions;
-use std::io::Write;
+use std::sync::atomic::{AtomicU8, Ordering};
+use std::sync::{Mutex, OnceLock};
 
-// 全局开关：是否将日志写入文件（默认 false，输出到控制台）
-static LOG_TO_FILE: AtomicBool = AtomicBool::new(false);
-// 全局缓存：记录当前的输入命令，供日志追加上下文
-static CURRENT_INPUT: OnceLock<String> = OnceLock::new();
+// 日志模式：0 = 直接输出到 stderr（Engine 使用），1 = 存入内存供 UI 展示（补全使用）
+static LOG_MODE: AtomicU8 = AtomicU8::new(0);
 
-/// 开启文件日志（补全命令专享，避免 stderr 破坏终端补全的 UI）
-pub fn enable_file_logging() {
-    LOG_TO_FILE.store(true, Ordering::SeqCst);
-}
+// 专供 UI 展示的内存日志队列
+static UI_LOGS: OnceLock<Mutex<Vec<(LogLevel, String)>>> = OnceLock::new();
 
-/// 记录当前的输入，如果日志发生，会把这个上下文带上
-pub fn set_current_input(input: String) {
-    let _ = CURRENT_INPUT.set(input);
-}
-
-/// 日志级别，每个级别自带对应的图标
+#[derive(Clone, Copy, Debug)]
 pub enum LogLevel {
     Info,
     Warn,
     Error,
-    /// 专门给 JS console.log 使用的级别
     JsLog,
 }
 
@@ -38,24 +25,55 @@ impl LogLevel {
             LogLevel::JsLog => "📝",
         }
     }
-}
 
-/// 获取日志文件路径
-pub fn get_log_path() -> PathBuf {
-    crate::get_log_path()
-}
-
-/// 统一日志写入函数（根据运行时开关走控制台或文件）
-pub fn write_log(level: LogLevel, msg: &str) {
-    let now = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
-    let input_ctx = CURRENT_INPUT.get().map(|i| format!(" [Input: `{}`]", i)).unwrap_or_default();
-    let formatted = format!("{}[{}]{} {}", level.icon(), now, input_ctx, msg);
-
-    if LOG_TO_FILE.load(Ordering::SeqCst) {
-        if let Ok(mut f) = OpenOptions::new().create(true).append(true).open(crate::get_log_path()) {
-            let _ = writeln!(f, "{}", formatted);
+    // 新增：用于在 UI display 中展示简短的等级文本
+    pub fn text(&self) -> &'static str {
+        match self {
+            LogLevel::Info => "INFO",
+            LogLevel::Warn => "WARN",
+            LogLevel::Error => "ERR",
+            LogLevel::JsLog => "LOG",
         }
-    } else {
-        eprintln!("{}", formatted);
     }
+
+    pub fn color(&self) -> &'static str {
+        match self {
+            LogLevel::Error | LogLevel::Warn => "red",
+            LogLevel::Info => "blue",
+            LogLevel::JsLog => "green",
+        }
+    }
+}
+
+/// 设置为 UI 补全模式：所有日志不再打印到 stderr，而是以补全菜单形式呈现
+pub fn set_ui_mode() {
+    LOG_MODE.store(1, Ordering::SeqCst);
+}
+
+/// 统一日志写入接口：由内部 LOG_MODE 决定路由
+pub fn write_log(level: LogLevel, msg: &str) {
+    if LOG_MODE.load(Ordering::SeqCst) == 0 {
+        // Engine 模式：直接输出到 stderr
+        let now = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
+        eprintln!("{}[{}] {}", level.icon(), now, msg);
+    } else {
+        // 补全 UI 模式：拦截内容，截断后进入队列
+        let mutex = UI_LOGS.get_or_init(|| Mutex::new(Vec::new()));
+        if let Ok(mut guard) = mutex.lock() {
+            if guard.len() < 8 {
+                let short_msg = msg.lines().next().unwrap_or("").trim().to_string();
+                guard.push((level, short_msg));
+            }
+        }
+    }
+}
+
+/// 获取收集到的 UI 日志
+pub fn get_ui_logs() -> Vec<(LogLevel, String)> {
+    if let Some(mutex) = UI_LOGS.get() {
+        if let Ok(guard) = mutex.lock() {
+            return guard.clone();
+        }
+    }
+    Vec::new()
 }

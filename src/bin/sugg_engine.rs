@@ -204,61 +204,7 @@ async fn run_build(args: &EngineArgs) -> Result<(), Box<dyn std::error::Error>> 
     Ok(())
 }
 
-/// 打开日志文件（如存在）或其所在目录
-fn run_log() {
-    let log_path = sugg::logger::get_log_path();
-    if log_path.exists() {
-        println!("📄 Opening log file: {}", sugg::path_to_slash(&log_path));
-        open_with_system(&log_path);
-    } else if let Some(parent) = log_path.parent() {
-        if parent.exists() {
-            println!(
-                "📂 Log file not found, opening containing directory: {}",
-                sugg::path_to_slash(parent)
-            );
-            open_with_system(parent);
-        } else {
-            eprintln!(
-                "❌ Log directory does not exist: {}",
-                sugg::path_to_slash(parent)
-            );
-            std::process::exit(1);
-        }
-    }
-}
 
-/// 跨平台调用系统默认程序打开文件/目录
-fn open_with_system(path: &std::path::Path) {
-    let path_str = path.to_string_lossy();
-    #[cfg(target_os = "windows")]
-    {
-        let status = std::process::Command::new("cmd")
-            .args(["/c", "start", "", &path_str])
-            .status();
-        if let Err(e) = status {
-            eprintln!("❌ Failed to open: {}", e);
-            std::process::exit(1);
-        }
-    }
-    #[cfg(target_os = "macos")]
-    {
-        let status = std::process::Command::new("open").arg(&*path_str).status();
-        if let Err(e) = status {
-            eprintln!("❌ Failed to open: {}", e);
-            std::process::exit(1);
-        }
-    }
-    #[cfg(target_os = "linux")]
-    {
-        let status = std::process::Command::new("xdg-open")
-            .arg(&*path_str)
-            .status();
-        if let Err(e) = status {
-            eprintln!("❌ Failed to open: {}", e);
-            std::process::exit(1);
-        }
-    }
-}
 
 fn run_i18n_gen(args: &EngineArgs) {
     let completions_dir = args
@@ -385,10 +331,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             run_i18n_gen(&args);
             Ok(())
         }
-        Some("log") => {
-            run_log();
-            Ok(())
-        }
         Some("commands") => {
             let cache_path = sugg::cache::get_cache_path();
             if let Ok(data) = std::fs::read(&cache_path) {
@@ -406,7 +348,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         _ => {
             eprintln!(
-                "❌ Unknown subcommand: {}. Available commands: i18n-gen, log, commands, reload",
+                "❌ Unknown subcommand: {}. Available commands: i18n-gen, commands, reload",
                 std::env::args().nth(1).unwrap_or_default()
             );
             std::process::exit(1);

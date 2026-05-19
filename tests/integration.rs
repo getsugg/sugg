@@ -413,3 +413,22 @@ fn test_testkit_double_dash_stops_option_parsing() {
     integration_snapshot!(all);
 }
 
+#[test]
+fn test_testkit_logdemo() {
+    let sandbox = get_sandbox();
+    let proj = &sandbox.project_dirs["minimal"];
+
+    // logdemo 子命令用于演示 log() 和 throw 在补全菜单中的 UI 效果。
+    // 逻辑：
+    //   - 始终执行 log("[DEBUG] prefix=", prefix) 和 log("[INFO] configuration loaded successfully")
+    //   - 若 prefix 以 "bad-" 开头则 throw Error
+    //   - 正常返回 alpha / beta / gamma（display/value 分离）
+    let all = serde_json::json!([
+        { "name": "empty_prefix",   "input": "testkit logdemo ",       "result": complete("testkit logdemo ",       proj, &sandbox.cache_dir) },
+        { "name": "bad_prefix",     "input": "testkit logdemo bad-",   "result": complete("testkit logdemo bad-",   proj, &sandbox.cache_dir) },
+        { "name": "prefix_a",       "input": "testkit logdemo a",     "result": complete("testkit logdemo a",     proj, &sandbox.cache_dir) },
+    ]);
+
+    integration_snapshot!(all);
+}
+

@@ -1,6 +1,5 @@
 ---
 source: tests/integration.rs
-assertion_line: 417
 expression: all
 ---
 [
@@ -27,6 +26,11 @@ expression: all
         "value": "hybrid ",
         "display_override": "hybrid",
         "description": "Has both subcommands and args"
+      },
+      {
+        "value": "logdemo ",
+        "display_override": "logdemo",
+        "description": "Demonstrate log and throw output in the UI"
       },
       {
         "value": "opts ",
@@ -63,6 +67,11 @@ expression: all
         "value": "hybrid ",
         "display_override": "hybrid",
         "description": "Has both subcommands and args"
+      },
+      {
+        "value": "logdemo ",
+        "display_override": "logdemo",
+        "description": "Demonstrate log and throw output in the UI"
       },
       {
         "value": "opts ",

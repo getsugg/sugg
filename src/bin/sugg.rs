@@ -10,7 +10,6 @@ use sugg::cache::{
 };
 use sugg::js::runtime::inject_globals;
 use sugg::log_error;
-use sugg::log_warn;
 // 导入外部库：mmap 用于内存映射，rkyv 用于零拷贝反序列化，rquickjs 用于嵌入 JS 引擎
 use anyhow::Context as _;
 use memmap2::Mmap;
@@ -142,7 +141,11 @@ fn engine_path() -> std::path::PathBuf {
     if let Ok(p) = std::env::var("SUGG_ENGINE_PATH") {
         return std::path::PathBuf::from(p);
     }
-    let exe_name = if cfg!(windows) { "sugg-engine.exe" } else { "sugg-engine" };
+    let exe_name = if cfg!(windows) {
+        "sugg-engine.exe"
+    } else {
+        "sugg-engine"
+    };
     let base_dir = if cfg!(debug_assertions) {
         std::env::current_exe()
             .ok()
@@ -228,7 +231,7 @@ fn delegate_to_engine() -> ! {
         if !path.exists() {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
-                format!("未找到 sugg-engine: {}", path.display())
+                format!("未找到 sugg-engine: {}", path.display()),
             ));
         }
         #[cfg(unix)]
@@ -253,22 +256,17 @@ fn delegate_to_engine() -> ! {
 }
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
-    // 非 complete 命令一律转发给 sugg-engine
-    match std::env::args().nth(1).as_deref() {
-        Some("complete") => {
-            // 只有补全过程开启文件日志（以防错误信息污染 Shell 控制台 UI）
-            sugg::logger::enable_file_logging();
-        }
-        _ => delegate_to_engine(),
+    // 非 complete 命令一律转发给 sugg-engine；complete 命令开启 UI 日志拦截
+    if std::env::args().nth(1).as_deref() != Some("complete") {
+        delegate_to_engine();
+    } else {
+        sugg::logger::set_ui_mode();
     }
 
     let parsed = parse_complete_args();
 
     // 处理补全逻辑
     let input = parsed.input_words.join(" ");
-
-    // 记录本次补全请求的真实输入，方便排查时日志有据可查
-    sugg::logger::set_current_input(input.clone());
 
     // 单词切分与清理
     let mut words: Vec<&str> = if input.is_empty() {
@@ -438,11 +436,44 @@ async fn main() {
 }
 
 fn handle_results(items: Vec<CompletionItem>, prefix: &str, shell: &Shell, limit: usize) {
-    let filtered: Vec<_> = items
+    let mut filtered: Vec<_> = items
         .into_iter()
         .filter(|i| i.value.starts_with(prefix) || i.display.starts_with(prefix))
         .take(limit)
         .collect();
+
+    // 取出拦截到的 UI 日志（包括 Error, Warn，甚至 JS 脚本里的 log 调试信息）
+    let logs = sugg::logger::get_ui_logs();
+    if !logs.is_empty() {
+        let mut ui_items = Vec::new();
+
+        for (level, msg) in logs {
+            ui_items.push(CompletionItem {
+                // display 仅显示等级和图标，如 "❌ ERR" 或 "📝 LOG"
+                display: format!("{} {}", level.icon(), level.text()),
+                // value 和 description 承载完整的真实报错/调试信息
+                value: msg.clone(),
+                description: msg.clone(),
+                style: Some(SuggestionStyle {
+                    fg: Some(level.color().to_string()),
+                    bg: None,
+                    attr: Some(vec!["bold".to_string()]),
+                }),
+            });
+        }
+
+        // 垫片 Dummy 项：防止只有日志时被终端自动填入上屏
+        ui_items.push(CompletionItem {
+            display: " ".to_string(),
+            value: format!("{} ", prefix),
+            description: String::new(),
+            style: None,
+        });
+
+        // 把日志项置顶显示
+        ui_items.extend(filtered);
+        filtered = ui_items;
+    }
 
     print_results(filtered, shell);
 }
@@ -492,8 +523,8 @@ async fn run_dynamic_js<'a>(
         inject_globals(ctx.clone());
 
         // 加载预编译好的二进制字节码（比解析文本快得多）
-        let module =
-            unsafe { rquickjs::Module::load(ctx.clone(), bytecode) }.context("JS module loading failed")?;
+        let module = unsafe { rquickjs::Module::load(ctx.clone(), bytecode) }
+            .context("JS module loading failed")?;
         let (eval_mod, _) = module
             .eval()
             .catch(&ctx)
@@ -605,7 +636,7 @@ async fn run_dynamic_js<'a>(
         match try_execute(ctx, func_name, bytecode, prefix, path, words, options).await {
             Ok(items) => items,
             Err(e) => {
-                log_warn!("Dynamic JS execution failed: {:#}", e);
+                log_error!("Dynamic JS execution failed: {:#}", e);
                 Vec::new()
             }
         }
