@@ -1,3 +1,6 @@
+type ShellName = "bash" | "zsh" | "fish" | "nushell" | "powershell";
+type OsName = "windows" | "linux" | "macos";
+
 interface CompletionContext {
   prefix: string;
   path: string;
@@ -19,11 +22,34 @@ interface CompletionContext {
    * ctx.options["--exclude"]  = ["react", "vue"]
    */
   options: Record<string, true | string[]>;
+
+  /** 当前 Shell 名称 */
+  shell: ShellName;
+  /** 当前操作系统 */
+  os: OsName;
 }
 
+type Color =
+  | "black"
+  | "red"
+  | "green"
+  | "yellow"
+  | "blue"
+  | "magenta"
+  | "cyan"
+  | "white"
+  | "bright_black"
+  | "bright_red"
+  | "bright_green"
+  | "bright_yellow"
+  | "bright_blue"
+  | "bright_magenta"
+  | "bright_cyan"
+  | "bright_white";
+
 interface SuggestionStyle {
-  fg?: string;
-  bg?: string;
+  fg?: Color;
+  bg?: Color;
   attr?: ("bold" | "italic" | "underline" | "dim")[];
 }
 

@@ -385,6 +385,7 @@ async fn main() {
                                 "",
                                 words.clone(),
                                 parsed_options.clone(),
+                                &parsed.shell,
                             )
                             .await,
                         );
@@ -414,6 +415,7 @@ async fn main() {
                                 "",
                                 words.clone(),
                                 parsed_options.clone(),
+                                &parsed.shell,
                             )
                             .await,
                         );
@@ -507,8 +509,10 @@ async fn run_dynamic_js<'a>(
     path: &str,
     words: Vec<&'a str>,
     options: HashMap<&'a str, ParsedValue<'a>>,
+    shell: &Shell,
 ) -> Vec<CompletionItem> {
     /// 在 JS 上下文中执行动态补全（内部 try 函数，返回 Result）
+    #[allow(clippy::too_many_arguments)]
     async fn try_execute<'a>(
         ctx: Ctx<'_>,
         func_name: &str,
@@ -517,6 +521,7 @@ async fn run_dynamic_js<'a>(
         path: &str,
         words: Vec<&'a str>,
         options: HashMap<&'a str, ParsedValue<'a>>,
+        shell: &Shell,
     ) -> anyhow::Result<Vec<CompletionItem>> {
         let mut results: Vec<CompletionItem> = Vec::new();
         // 注入全局 API（如 fetch, fs 等，取决于 inject_globals 的实现）
@@ -556,6 +561,8 @@ async fn run_dynamic_js<'a>(
             }
         }
         let _ = ctx_obj.set("options", opts_obj);
+        let _ = ctx_obj.set("shell", shell.as_str());
+        let _ = ctx_obj.set("os", std::env::consts::OS);
 
         // 调用 JS 函数并处理可能的 Promise 返回值
         let js_result: Value = run_func
@@ -633,7 +640,7 @@ async fn run_dynamic_js<'a>(
 
     // 在上下文中执行，通过 match 兜底错误
     async_with!(ctx => |ctx| {
-        match try_execute(ctx, func_name, bytecode, prefix, path, words, options).await {
+        match try_execute(ctx, func_name, bytecode, prefix, path, words, options, shell).await {
             Ok(items) => items,
             Err(e) => {
                 log_error!("Dynamic JS execution failed: {:#}", e);

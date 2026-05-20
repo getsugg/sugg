@@ -40,6 +40,18 @@ impl std::str::FromStr for Shell {
     }
 }
 
+impl Shell {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Shell::Nushell => "nushell",
+            Shell::Zsh => "zsh",
+            Shell::Fish => "fish",
+            Shell::Bash => "bash",
+            Shell::Powershell => "powershell",
+        }
+    }
+}
+
 use std::collections::HashMap;
 use std::path::Path;
 

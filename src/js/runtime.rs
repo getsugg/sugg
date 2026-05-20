@@ -225,9 +225,8 @@ pub fn inject_globals(ctx: Ctx<'_>) {
             if (arg.is_object() || arg.is_array())
                 && let Ok(json) = ctx.globals().get::<_, Object>("JSON")
                 && let Ok(stringify) = json.get::<_, Function>("stringify")
-                && let Ok(s) = stringify.call::<_, String>((arg.clone(), Option::<String>::None, 2))
+                && let Ok(s) = stringify.call::<_, String>((arg.clone(),))
             {
-                // 传入 Option::<String>::None 相当于传 null 作为 replacer，2 作为 space
                 parts.push(s);
                 continue;
             }
