@@ -163,3 +163,30 @@ declare module "virtual:i18n/*" {
   const value: any;
   export = value;
 }
+
+interface CacheHelper {
+  /**
+   * 读取缓存，未命中时调用 fetcher 获取并写入缓存。
+   *
+   * `key` 支持三种形式：
+   * - `string`：直接作为缓存键
+   * - `string[]`：数组元素拼接为缓存键
+   * - `CompletionContext`：自动取 `words`（去掉末尾输入前缀）+ `path` 作为缓存键，
+   *   适合同一命令行上下文内多次触发补全共享同一份数据，避免重复调用外部命令。
+   *
+   * @example
+   * // 传 ctx：用户输入 "bun run b"、"bun run bu" 时命中同一份缓存
+   * const [scripts, bins] = await cache.get(ctx, 5000, () =>
+   *   Promise.all([getScriptNames(), getBinNames()])
+   * );
+   */
+  get<T>(
+    key: string | string[] | CompletionContext,
+    ttlMs: number,
+    fetcher: () => T | Promise<T>,
+  ): Promise<T>;
+  get<T>(key: string | string[] | CompletionContext): Promise<T | undefined>;
+  delete(key: string | string[] | CompletionContext): void;
+}
+
+const cache: CacheHelper;

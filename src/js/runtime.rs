@@ -272,6 +272,36 @@ pub fn inject_globals(ctx: Ctx<'_>) {
             crate::log_error!("Failed to inject ui global: {:?}", e);
         }
     }
+
+    // =========================================================================
+    // 注入底层磁盘缓存 API：__cache 对象（get / set / delete / take）
+    // =========================================================================
+    let cache_dir = crate::sugg_root().join("cmd_cache");
+    let disk_cache = std::sync::Arc::new(crate::cache::DiskCache::new(cache_dir));
+
+    if let Ok(cache_obj) = Object::new(ctx.clone()) {
+        let dc = disk_cache.clone();
+        if let Ok(f) = Function::new(ctx.clone(), move |key: String| {
+            dc.get(&key).unwrap_or_default()
+        }) {
+            let _ = cache_obj.set("get", f);
+        }
+        let dc = disk_cache.clone();
+        if let Ok(f) = Function::new(ctx.clone(), move |key: String, val: String, ttl_ms: u64| {
+            let _ = dc.set(&key, &val, ttl_ms / 1000);
+        }) {
+            let _ = cache_obj.set("set", f);
+        }
+        let dc = disk_cache.clone();
+        if let Ok(f) = Function::new(ctx.clone(), move |key: String| {
+            dc.delete(&key);
+        }) {
+            let _ = cache_obj.set("delete", f);
+        }
+        if let Err(e) = globals.set("__cache", cache_obj) {
+            crate::log_error!("Failed to inject __cache global: {:?}", e);
+        }
+    }
 }
 
 #[cfg(test)]
@@ -494,5 +524,68 @@ mod tests {
         }
 
         async_with!(ctx => |ctx| { async_with_fn(ctx).await }).await;
+    }
+
+    #[tokio::test]
+    async fn test_cache_global() {
+        let rt = AsyncRuntime::new().unwrap();
+        let ctx = AsyncContext::full(&rt).await.unwrap();
+
+        async fn run(ctx: Ctx<'_>) {
+            inject_globals(ctx.clone());
+
+            // __cache 是对象，有 get/set/delete 方法
+            let ok: bool = ctx
+                .eval("typeof globalThis.__cache === 'object' && typeof globalThis.__cache.get === 'function'")
+                .unwrap();
+            assert!(ok);
+
+            // set 后 get 能取回
+            let result: String = ctx
+                .eval(
+                    r#"
+                    globalThis.__cache.set("test_key", "hello", 60000);
+                    globalThis.__cache.get("test_key")
+                "#,
+                )
+                .unwrap();
+            assert_eq!(result, "hello");
+
+            // delete 后 get 返回空字符串
+            let result: String = ctx
+                .eval(
+                    r#"
+                    globalThis.__cache.delete("test_key");
+                    globalThis.__cache.get("test_key")
+                "#,
+                )
+                .unwrap();
+            assert_eq!(result, "");
+
+            // ttl=0 立即过期，get 返回空字符串
+            let result: String = ctx
+                .eval(
+                    r#"
+                    globalThis.__cache.set("exp_key", "v", 0);
+                    globalThis.__cache.get("exp_key")
+                "#,
+                )
+                .unwrap();
+            assert_eq!(result, "");
+
+            // 数组 key 用 \0 拼接，不同数组互不干扰
+            let result: bool = ctx
+                .eval(
+                    r#"
+                    globalThis.__cache.set("a\0b", "1", 60000);
+                    globalThis.__cache.set("a\0c", "2", 60000);
+                    globalThis.__cache.get("a\0b") === "1" && globalThis.__cache.get("a\0c") === "2"
+                "#,
+                )
+                .unwrap();
+            assert!(result);
+        }
+
+        async_with!(ctx => |ctx| { run(ctx).await }).await;
     }
 }

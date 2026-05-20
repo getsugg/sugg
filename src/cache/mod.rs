@@ -1,4 +1,6 @@
+pub mod disk;
 pub mod structs;
+pub use disk::DiskCache;
 
 pub use structs::{CommandNode, CompletionCache, OptionItem, SuggestionStyle, get_cache_path};
 

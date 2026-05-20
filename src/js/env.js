@@ -135,3 +135,30 @@ export const __parseConfig = (modules) => {
   sortAndResolveAliases(rootNode.subcommands);
   return { root: rootNode };
 };
+
+const resolveKey = (key) => {
+  if (Array.isArray(key)) return key.join("\0");
+  if (key && typeof key === "object") {
+    if (key.words != null && key.path != null)
+      return [...key.words].slice(0, -1).concat(key.path).join("\0");
+    // 普通对象数组（非标准 Array）
+    if (typeof key.join === "function") return key.join("\0");
+  }
+  return key;
+};
+
+export const cache = {
+  get: async (key, ttlMs, fetcher) => {
+    const k = resolveKey(key);
+    const cached = globalThis.__cache.get(k);
+    if (cached !== undefined && cached !== "") {
+      try { return JSON.parse(cached); } catch { return cached; }
+    }
+    if (!fetcher) return undefined;
+    const fresh = await fetcher();
+    if (fresh !== undefined && fresh !== null)
+      globalThis.__cache.set(k, typeof fresh === "string" ? fresh : JSON.stringify(fresh), ttlMs);
+    return fresh;
+  },
+  delete: (key) => globalThis.__cache.delete(resolveKey(key)),
+};
