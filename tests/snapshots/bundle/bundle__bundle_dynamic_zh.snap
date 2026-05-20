@@ -223,8 +223,8 @@ const __dyn_testkit_logdemo_args = async (ctx) => {
 	const prefix = ctx.prefix ?? "";
 	if (prefix.startsWith("bad-")) throw new Error(`❌ Invalid prefix detected: "${prefix}" — please remove the leading "bad-"`);
 	else {
-		log("[DEBUG] prefix=", prefix);
-		log("[INFO] configuration loaded successfully");
+		ui.log("[DEBUG] prefix=", prefix);
+		ui.log("[INFO] configuration loaded successfully");
 	}
 	return [
 		{

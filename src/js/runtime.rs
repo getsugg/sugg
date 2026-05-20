@@ -210,7 +210,7 @@ pub fn inject_globals(ctx: Ctx<'_>) {
     }
 
     // 提取为一个显式声明同生命周期 'js 的内部函数，解决闭包生命周期推断歧义
-    fn js_log<'js>(ctx: Ctx<'js>, args: Rest<Value<'js>>) {
+    fn args_to_string<'js>(ctx: &Ctx<'js>, args: Rest<Value<'js>>) -> String {
         let mut parts = Vec::with_capacity(args.0.len());
         for arg in args.0 {
             // 如果是原生字符串，直接提取（避免被序列化带上双引号）
@@ -242,11 +242,36 @@ pub fn inject_globals(ctx: Ctx<'_>) {
 
             parts.push(String::from("[unknown]"));
         }
-        crate::logger::write_log(crate::logger::LogLevel::JsLog, &parts.join(" "));
+        parts.join(" ")
     }
 
-    if let Err(e) = globals.set("log", Function::new(ctx.clone(), js_log)) {
-        crate::log_error!("Failed to inject log global: {:?}", e);
+    // 注入 ui 对象
+    if let Ok(ui_obj) = Object::new(ctx.clone()) {
+        fn ui_log<'js>(ctx: Ctx<'js>, args: Rest<Value<'js>>) {
+            crate::logger::write_log(crate::logger::LogLevel::Log, &args_to_string(&ctx, args));
+        }
+        fn ui_info<'js>(ctx: Ctx<'js>, args: Rest<Value<'js>>) {
+            crate::logger::write_log(crate::logger::LogLevel::Info, &args_to_string(&ctx, args));
+        }
+        fn ui_warn<'js>(ctx: Ctx<'js>, args: Rest<Value<'js>>) {
+            crate::logger::write_log(crate::logger::LogLevel::Warn, &args_to_string(&ctx, args));
+        }
+        fn ui_error<'js>(ctx: Ctx<'js>, args: Rest<Value<'js>>) {
+            crate::logger::write_log(crate::logger::LogLevel::Error, &args_to_string(&ctx, args));
+        }
+        for (name, func) in [
+            ("log", Function::new(ctx.clone(), ui_log)),
+            ("info", Function::new(ctx.clone(), ui_info)),
+            ("warn", Function::new(ctx.clone(), ui_warn)),
+            ("error", Function::new(ctx.clone(), ui_error)),
+        ] {
+            if let Ok(f) = func {
+                let _ = ui_obj.set(name, f);
+            }
+        }
+        if let Err(e) = globals.set("ui", ui_obj) {
+            crate::log_error!("Failed to inject ui global: {:?}", e);
+        }
     }
 }
 

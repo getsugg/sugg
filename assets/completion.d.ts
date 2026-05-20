@@ -126,7 +126,13 @@ function exec(cmd: string): Promise<string>;
  * @see exec 需要管道 |、重定向 >、变量展开 $HOME 等 Shell 功能时用回 exec
  */
 function execFile(cmd: string, args?: string[]): Promise<string>;
-function log(...args: any[]): void;
+interface Ui {
+  log(...args: any[]): void;
+  info(...args: any[]): void;
+  warn(...args: any[]): void;
+  error(...args: any[]): void;
+}
+const ui: Ui;
 declare module "virtual:i18n/*" {
   const value: any;
   export = value;

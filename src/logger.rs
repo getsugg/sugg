@@ -13,7 +13,7 @@ pub enum LogLevel {
     Info,
     Warn,
     Error,
-    JsLog,
+    Log,
 }
 
 impl LogLevel {
@@ -22,7 +22,7 @@ impl LogLevel {
             LogLevel::Info => "ℹ️",
             LogLevel::Warn => "⚠️",
             LogLevel::Error => "❌",
-            LogLevel::JsLog => "📝",
+            LogLevel::Log => "📝",
         }
     }
 
@@ -32,15 +32,16 @@ impl LogLevel {
             LogLevel::Info => "INFO",
             LogLevel::Warn => "WARN",
             LogLevel::Error => "ERR",
-            LogLevel::JsLog => "LOG",
+            LogLevel::Log => "LOG",
         }
     }
 
     pub fn color(&self) -> &'static str {
         match self {
-            LogLevel::Error | LogLevel::Warn => "red",
-            LogLevel::Info => "blue",
-            LogLevel::JsLog => "green",
+            LogLevel::Error => "red",
+            LogLevel::Warn => "yellow",
+            LogLevel::Info => "cyan",
+            LogLevel::Log => "green",
         }
     }
 }

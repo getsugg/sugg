@@ -139,8 +139,8 @@ export default createCompletion({
             );
           } else {
             // log: 永远不会抛异常，输出追踪信息
-            log("[DEBUG] prefix=", prefix);
-            log("[INFO] configuration loaded successfully");
+            ui.log("[DEBUG] prefix=", prefix);
+            ui.log("[INFO] configuration loaded successfully");
           }
 
           return [
