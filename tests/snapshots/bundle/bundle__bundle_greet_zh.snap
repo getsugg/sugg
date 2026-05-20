@@ -3,14 +3,7 @@ source: tests/bundle.rs
 expression: "normalize(static_js, &dir)"
 ---
 //#region virtual:env
-const __LANG = "zh";
 const createCompletion = (obj) => obj;
-const i18nStr = (obj) => {
-	if (obj[__LANG] !== void 0) return obj[__LANG];
-	if (obj["en"] !== void 0) return obj["en"];
-	const first = Object.values(obj)[0];
-	return first !== void 0 ? first : "";
-};
 const __parseConfig = (modules) => {
 	function sortAndResolveAliases(subcommands) {
 		subcommands.sort((a, b) => a.name.localeCompare(b.name));
@@ -116,344 +109,1153 @@ const __parseConfig = (modules) => {
 	return { root: rootNode };
 };
 //#endregion
-//#region virtual:i18n/docker
-const ps_desc = "列出容器";
-const run_desc = "运行容器";
-const stop_desc = "停止容器";
+//#region virtual:i18n/bun
+const audit_option_audit_level = "仅打印严重性大于或等于 <level> 的建议（low、moderate、high、critical）";
+const audit_option_ignore = "忽略审计中的特定 CVE ID";
+const audit_option_json = "以 JSON 格式输出";
+const build_option_bytecode = "使用字节码缓存";
+const build_option_compile = "生成包含打包代码的独立 Bun 可执行文件。意味着 --production";
+const build_option_external = "从转译中排除模块（可使用 * 通配符），例如 -e react";
+const build_option_format = "指定构建的模块格式。支持 \"esm\"、\"cjs\" 和 \"iife\"。默认 \"esm\"，若使用 --bytecode 则为 \"cjs\"。";
+const build_option_metafile = "写入包含构建元数据的 JSON 文件";
+const build_option_minify = "启用所有压缩标志";
+const build_option_minify_identifiers = "压缩标识符";
+const build_option_minify_syntax = "压缩语法和内联数据";
+const build_option_minify_whitespace = "压缩空白字符";
+const build_option_outdir = "多个文件时默认输出到 \"dist\"";
+const build_option_outfile = "写入文件";
+const build_option_production = "设置 NODE_ENV=production 并启用压缩";
+const build_option_sourcemap = "构建 sourcemap - 'linked'、'inline'、'external' 或 'none'";
+const build_option_splitting = "启用代码拆分";
+const build_option_target = "捆绑包的目标执行环境：\"browser\"、\"bun\" 或 \"node\"";
+const cmd_add_desc = "向 package.json 添加依赖（bun a）";
+const cmd_audit_desc = "检查已安装包的安全漏洞";
+const cmd_build_desc = "将 TypeScript 和 JavaScript 打包成单个文件";
+const cmd_create_desc = "从模板创建新项目（bun c）";
+const cmd_exec_desc = "直接运行 Shell 脚本";
+const cmd_feedback_desc = "向 Bun 团队提供反馈";
+const cmd_info_desc = "显示注册表中的包元数据";
+const cmd_init_desc = "从内置模板启动一个空的 Bun 项目";
+const cmd_install_desc = "安装 package.json 中的依赖（bun i）";
+const cmd_link_desc = "注册或链接本地 npm 包";
+const cmd_outdated_desc = "显示过时依赖的最新版本";
+const cmd_patch_desc = "准备一个包以进行补丁";
+const cmd_pm_desc = "额外的包管理工具";
+const cmd_publish_desc = "发布包到 npm 注册表";
+const cmd_remove_desc = "从 package.json 移除依赖（bun rm）";
+const cmd_repl_desc = "启动 REPL 会话";
+const cmd_run_desc = "执行一个文件或运行 package.json 脚本";
+const cmd_test_desc = "运行单元测试";
+const cmd_unlink_desc = "注销本地 npm 包";
+const cmd_update_desc = "更新过时的依赖";
+const cmd_upgrade_desc = "升级到最新版本的 Bun";
+const cmd_why_desc = "解释为什么安装了某个包";
+const cmd_x_desc = "执行包二进制文件（CLI），必要时安装（bunx）";
+const create_option_help = "显示帮助";
+const description$1 = "快速的 JavaScript 运行时、包管理器、打包器和测试运行器。";
+const init_option_minimal = "仅初始化类型定义";
+const init_option_react = "初始化 React 项目";
+const init_option_yes = "接受所有默认选项";
+const install_option_analyze = "递归分析并安装作为参数传递的所有文件的依赖（使用 Bun 的打包器）";
+const install_option_backend = "安装依赖的平台特定优化。可选值：\"hardlink\"（默认）、\"symlink\"、\"copyfile\"";
+const install_option_cache_dir = "将缓存数据存储/加载到指定目录";
+const install_option_concurrent_scripts = "生命周期脚本的最大并发作业数（默认 2x CPU 核心数）";
+const install_option_cpu = "覆盖可选依赖的 CPU 架构（例如 x64、arm64、* 表示所有）";
+const install_option_dev = "添加到 \"devDependencies\"";
+const install_option_dry_run = "执行试运行而不做任何更改";
+const install_option_exact = "添加确切版本而不是 ^range";
+const install_option_force = "始终从注册表请求最新版本并重新安装所有依赖";
+const install_option_frozen_lockfile = "禁止更改 lockfile";
+const install_option_global = "全局安装";
+const install_option_ignore_scripts = "跳过项目 package.json 中的生命周期脚本（依赖脚本从不运行）";
+const install_option_linker = "链接器策略（\"isolated\" 或 \"hoisted\"）";
+const install_option_lockfile_only = "仅生成 lockfile 而不安装依赖";
+const install_option_minimum_release_age = "只安装至少 N 秒前发布的包（安全特性）";
+const install_option_network_concurrency = "最大并发网络请求数（默认 48）";
+const install_option_no_cache = "完全忽略清单缓存";
+const install_option_no_progress = "禁用进度条";
+const install_option_no_save = "不更新 package.json 或保存 lockfile";
+const install_option_no_summary = "不打印摘要";
+const install_option_no_verify = "跳过验证新下载包的完整性";
+const install_option_omit = "从安装中排除 'dev'、'optional' 或 'peer' 依赖";
+const install_option_only_missing = "仅当 package.json 中尚不存在依赖时才添加";
+const install_option_optional = "添加到 \"optionalDependencies\"";
+const install_option_os = "覆盖可选依赖的操作系统（例如 linux、darwin、* 表示所有）";
+const install_option_peer = "添加到 \"peerDependencies\"";
+const install_option_production = "不安装 devDependencies";
+const install_option_registry = "默认使用特定注册表，覆盖 .npmrc、bunfig.toml 和环境变量";
+const install_option_save = "保存到 package.json（默认 true）";
+const install_option_save_text_lockfile = "保存基于文本的 lockfile";
+const install_option_trust = "添加到项目的 package.json 中的 trustedDependencies 并安装包";
+const install_option_verbose = "极其详细的日志";
+const option_bun = "强制脚本或包使用 Bun 运行时代替 Node.js（通过 symlinking node）";
+const option_conditions = "传递自定义条件以解析";
+const option_config = "指定 Bun 配置文件的路径。默认 $cwd/bunfig.toml";
+const option_console_depth = "设置 console.log 对象检查的默认深度（默认 2）";
+const option_cpu_prof = "启动 CPU 分析器，退出时将分析文件写入磁盘";
+const option_cron_period = "cron 执行模式的周期";
+const option_cron_title = "cron 执行模式的标题";
+const option_cwd = "解析文件和入口点的绝对路径。仅更改进程的 cwd。";
+const option_dns_result_order = "设置 DNS 查找结果的默认顺序。有效值：verbatim（默认）、ipv4first、ipv6first";
+const option_elide_lines = "使用 --filter 时显示的脚本输出行数（默认 10）。设为 0 显示所有行。";
+const option_env_file = "从指定文件加载环境变量";
+const option_eval = "将参数作为脚本执行";
+const option_expose_gc = "在全局对象上暴露 gc()。对 Bun.gc() 无效。";
+const option_fetch_preconnect = "在代码加载时预连接到 URL";
+const option_filter = "在所有匹配模式的工作区包中运行脚本";
+const option_heap_prof = "退出时生成 V8 堆快照 (.heapsnapshot)";
+const option_help = "显示此帮助菜单";
+const option_hot = "在 Bun 运行时、测试运行器或打包器中启用自动重载";
+const option_i = "执行时自动安装依赖。相当于 --install=fallback。";
+const option_if_present = "如果入口点不存在则退出而不报错";
+const option_inspect = "激活 Bun 的调试器";
+const option_inspect_brk = "激活 Bun 的调试器，在第一行代码设置断点并等待";
+const option_inspect_wait = "激活 Bun 的调试器，等待连接后再执行";
+const option_install = "配置自动安装行为。可选值：\"auto\"（默认，当没有 node_modules 时自动安装）、\"fallback\"（仅缺失的包）、\"force\"（总是）";
+const option_max_http_header_size = "设置 HTTP 头的最大字节数，默认 16KiB";
+const option_no_addons = "如果调用 process.dlopen 则抛出错误，并禁用导出条件 \"node-addons\"";
+const option_no_clear_screen = "当启用 --hot 或 --watch 时，禁止清屏";
+const option_no_deprecation = "禁止所有自定义弃用报告";
+const option_no_env_file = "禁用自动加载 .env 文件";
+const option_no_exit_on_error = "当一个脚本失败时继续运行其他脚本（与 --parallel/--sequential 一起使用）";
+const option_no_install = "禁用 Bun 运行时的自动安装";
+const option_parallel = "使用 Foreman 风格的输出并发运行多个脚本";
+const option_port = "设置 Bun.serve 的默认端口";
+const option_prefer_latest = "在 Bun 运行时中使用最新的匹配版本，始终检查 npm";
+const option_prefer_offline = "跳过 Bun 运行时中的包陈旧检查，从磁盘解析";
+const option_preload = "在其他模块加载前导入一个模块";
+const option_print = "将参数作为脚本执行并打印结果";
+const option_redis_preconnect = "启动时预连接到 $REDIS_URL";
+const option_revision = "打印带修订号的版本并退出";
+const option_sequential = "使用 Foreman 风格的输出顺序运行多个脚本";
+const option_shell = "控制 package.json 脚本使用的 shell。支持 'bun' 或 'system'";
+const option_silent = "不打印脚本命令";
+const option_smol = "使用更少内存，但更频繁地运行垃圾回收";
+const option_sql_preconnect = "启动时预连接到 PostgreSQL";
+const option_throw_deprecation = "决定弃用警告是否导致错误";
+const option_title = "设置进程标题";
+const option_unhandled_rejections = "可选值：\"strict\"、\"throw\"、\"warn\"、\"none\" 或 \"warn-with-error-code\"";
+const option_use_bundled_ca = "使用捆绑的 CA 存储";
+const option_use_openssl_ca = "使用 OpenSSL 的默认 CA 存储";
+const option_use_system_ca = "使用系统的可信证书颁发机构";
+const option_user_agent = "设置 HTTP 请求的默认 User-Agent 头";
+const option_version = "打印版本并退出";
+const option_watch = "文件变化时自动重启进程";
+const option_workspaces = "在所有工作区包中运行脚本（来自 package.json 中的 \"workspaces\" 字段）";
+const option_zero_fill_buffers = "强制 Buffer.allocUnsafe(size) 零填充";
+const outdated_option_filter = "显示每个匹配工作区的过时依赖";
+const outdated_option_recursive = "检查所有工作区中的过时包";
+const patch_option_commit = "安装包含 `dir` 中修改的包";
+const patch_option_patches_dir = "放置补丁文件的目录（仅当使用 --commit 时）";
+const pm_bin_desc = "打印 bin 文件夹的路径";
+const pm_cache_desc = "打印缓存文件夹的路径";
+const pm_cache_rm_desc = "清空缓存";
+const pm_default_trusted_desc = "打印默认的可信依赖列表";
+const pm_hash_desc = "生成并打印当前 lockfile 的哈希值";
+const pm_hash_print_desc = "打印当前 lockfile 中存储的哈希值";
+const pm_hash_string_desc = "打印用于哈希 lockfile 的字符串";
+const pm_list_desc = "列出当前 lockfile 的依赖树";
+const pm_migrate_desc = "迁移其他包管理器的 lockfile 而不安装任何东西";
+const pm_pack_desc = "创建当前工作区的 tarball";
+const pm_pkg_desc = "管理 package.json 中的数据";
+const pm_scan_desc = "扫描 lockfile 中所有包的安全漏洞";
+const pm_trust_desc = "为不可信依赖运行脚本并添加到 `trustedDependencies`";
+const pm_untrusted_desc = "打印当前带有脚本的不可信依赖";
+const pm_version_desc = "提升 package.json 中的版本并创建 git 标签";
+const pm_view_desc = "查看注册表中的包元数据（改用 `bun info`）";
+const pm_whoami_desc = "打印当前 npm 用户名";
+const pm_why_desc = "显示解释为什么安装了某个包的依赖树";
+const test_option_bail = "在 N 次失败后退出测试套件。未指定数字时默认为 1。";
+const test_option_changed = "只运行受 git 更改影响的测试文件。可选传递要比较的提交或分支。";
+const test_option_concurrent = "将所有测试视为 test.concurrent() 测试";
+const test_option_coverage = "生成覆盖率报告";
+const test_option_coverage_dir = "覆盖率文件目录，默认 'coverage'";
+const test_option_coverage_reporter = "报告覆盖率格式：'text' 和/或 'lcov'。默认 'text'。";
+const test_option_dots = "启用 dots 报告器。--reporter=dots 的简写。";
+const test_option_isolate = "在每个干净的全局对象中运行每个测试文件。一个文件泄漏的句柄不会影响另一个。";
+const test_option_max_concurrency = "同时执行的最大并发测试数，默认 20";
+const test_option_only = "只运行标记为 test.only() 或 describe.only() 的测试";
+const test_option_only_failures = "仅显示失败的测试，隐藏通过的测试";
+const test_option_parallel = "使用 N 个工作进程并行运行测试文件。意味着 --isolate。默认为 CPU 核心数。";
+const test_option_parallel_delay = "第一个 --parallel 工作进程必须忙碌多少毫秒后才能启动其余进程。0 立即全部启动。默认 5。";
+const test_option_pass_with_no_tests = "当未找到测试时以代码 0 退出";
+const test_option_path_ignore_patterns = "要忽略的测试文件路径的 glob 模式";
+const test_option_randomize = "随机顺序运行测试";
+const test_option_reporter = "测试输出报告器格式。可用：'junit'（需要 --reporter-outfile）、'dots'。默认控制台输出。";
+const test_option_reporter_outfile = "报告器格式的输出文件路径（与 --reporter 一起使用）";
+const test_option_rerun_each = "重新运行每个测试文件 N 次，帮助捕捉某些 bug";
+const test_option_retry = "所有测试的默认重试次数，可被每个测试的 { retry: N } 覆盖";
+const test_option_seed = "设置测试随机化的随机种子";
+const test_option_shard = "运行测试文件的子集，例如 '--shard=1/3' 运行三个分片中的第一个。用于在多个 CI 任务间拆分测试。";
+const test_option_test_name_pattern = "只运行名称匹配给定正则表达式的测试";
+const test_option_timeout = "设置每个测试的超时毫秒数，默认 5000";
+const test_option_todo = "包含标记为 test.todo() 的测试";
+const test_option_update_snapshots = "更新快照文件";
+const update_option_interactive = "显示交互式过时包列表以供选择更新";
+const update_option_latest = "将包更新到最新版本";
+const update_option_recursive = "更新所有工作区中的包";
+const x_option_bun = "强制命令使用 Bun 而不是 Node.js 运行";
+const x_option_no_install = "如果包尚未安装则跳过安装";
+const x_option_package = "当二进制名称与包名称不同时指定要安装的包";
+const x_option_silent = "在安装期间抑制输出";
+const x_option_verbose = "在安装期间启用详细输出";
 //#endregion
-//#region virtual:i18n/greet
-const install = "安装依赖";
-const run = "运行脚本";
-//#endregion
-//#region tests/fixtures/completions/__v_stat_bun.ts
-const packageOptions = [
+//#region tests/fixtures/completions/bun/__v_stat_bun.ts
+const commonGlobalOpts = [
 	{
-		labels: ["-c", "--config"],
-		description: "Load config(bunfig.toml)"
+		labels: ["--watch"],
+		description: option_watch
 	},
 	{
-		labels: ["-y", "--yarn"],
-		description: "Write a yarn.lock file (yarn v1)"
+		labels: ["--hot"],
+		description: option_hot
 	},
 	{
-		labels: ["-p", "--production"],
-		description: "Don't install devDependencies"
+		labels: ["--smol"],
+		description: option_smol
 	},
 	{
-		labels: ["--no-save"],
-		description: "Don't save a lockfile"
+		labels: ["--no-clear-screen"],
+		description: option_no_clear_screen
 	},
 	{
-		labels: ["--save"],
-		description: "Save to package.json"
+		labels: ["-r", "--preload"],
+		args: [],
+		description: option_preload
 	},
 	{
-		labels: ["--dry-run"],
-		description: "Don't install anything"
+		labels: ["--inspect"],
+		args: [],
+		description: option_inspect
 	},
 	{
-		labels: ["--frozen-lockfile"],
-		description: "Disallow changes to lockfile"
+		labels: ["--inspect-wait"],
+		args: [],
+		description: option_inspect_wait
 	},
 	{
-		labels: ["-f", "--force"],
-		description: "Always request the latest versions from the registry"
+		labels: ["--inspect-brk"],
+		args: [],
+		description: option_inspect_brk
 	},
 	{
-		labels: ["--cache-dir"],
-		description: "Store & load cached data from a specific directory path"
+		labels: ["--cpu-prof"],
+		description: option_cpu_prof
 	},
 	{
-		labels: ["--no-cache"],
-		description: "Ignore manifest cache entirely"
+		labels: ["--heap-prof"],
+		description: option_heap_prof
+	},
+	{
+		labels: ["--if-present"],
+		description: option_if_present
+	},
+	{
+		labels: ["--no-install"],
+		description: option_no_install
+	},
+	{
+		labels: ["--install"],
+		args: [],
+		description: option_install
+	},
+	{
+		labels: ["-i"],
+		description: option_i
+	},
+	{
+		labels: ["-e", "--eval"],
+		args: [],
+		description: option_eval
+	},
+	{
+		labels: ["-p", "--print"],
+		args: [],
+		description: option_print
+	},
+	{
+		labels: ["--prefer-offline"],
+		description: option_prefer_offline
+	},
+	{
+		labels: ["--prefer-latest"],
+		description: option_prefer_latest
+	},
+	{
+		labels: ["--port"],
+		args: [],
+		description: option_port
+	},
+	{
+		labels: ["--conditions"],
+		args: [],
+		description: option_conditions
+	},
+	{
+		labels: ["--fetch-preconnect"],
+		args: [],
+		description: option_fetch_preconnect
+	},
+	{
+		labels: ["--max-http-header-size"],
+		args: [],
+		description: option_max_http_header_size
+	},
+	{
+		labels: ["--dns-result-order"],
+		args: [],
+		description: option_dns_result_order
+	},
+	{
+		labels: ["--expose-gc"],
+		description: option_expose_gc
+	},
+	{
+		labels: ["--no-deprecation"],
+		description: option_no_deprecation
+	},
+	{
+		labels: ["--throw-deprecation"],
+		description: option_throw_deprecation
+	},
+	{
+		labels: ["--title"],
+		args: [],
+		description: option_title
+	},
+	{
+		labels: ["--zero-fill-buffers"],
+		description: option_zero_fill_buffers
+	},
+	{
+		labels: ["--use-system-ca"],
+		description: option_use_system_ca
+	},
+	{
+		labels: ["--use-openssl-ca"],
+		description: option_use_openssl_ca
+	},
+	{
+		labels: ["--use-bundled-ca"],
+		description: option_use_bundled_ca
+	},
+	{
+		labels: ["--redis-preconnect"],
+		description: option_redis_preconnect
+	},
+	{
+		labels: ["--sql-preconnect"],
+		description: option_sql_preconnect
+	},
+	{
+		labels: ["--no-addons"],
+		description: option_no_addons
+	},
+	{
+		labels: ["--unhandled-rejections"],
+		args: [],
+		description: option_unhandled_rejections
+	},
+	{
+		labels: ["--console-depth"],
+		args: [],
+		description: option_console_depth
+	},
+	{
+		labels: ["--user-agent"],
+		args: [],
+		description: option_user_agent
+	},
+	{
+		labels: ["--cron-title"],
+		args: [],
+		description: option_cron_title
+	},
+	{
+		labels: ["--cron-period"],
+		args: [],
+		description: option_cron_period
 	},
 	{
 		labels: ["--silent"],
-		description: "Don't log anything"
+		description: option_silent
 	},
 	{
-		labels: ["--verbose"],
-		description: "Excessively verbose logging"
+		labels: ["--elide-lines"],
+		args: [],
+		description: option_elide_lines
 	},
 	{
-		labels: ["--no-progress"],
-		description: "Disable the progress bar"
+		labels: ["-v", "--version"],
+		description: option_version
 	},
 	{
-		labels: ["--no-summary"],
-		description: "Don't print a summary"
+		labels: ["--revision"],
+		description: option_revision
 	},
 	{
-		labels: ["--no-verify"],
-		description: "Skip verifying integrity of newly downloaded packages"
+		labels: ["-F", "--filter"],
+		args: [],
+		description: option_filter
 	},
 	{
-		labels: ["--ignore-scripts"],
-		description: "Skip lifecycle scripts in the package.json"
+		labels: ["-b", "--bun"],
+		description: option_bun
 	},
 	{
-		labels: ["-g", "--global"],
-		description: "Add a package globally"
+		labels: ["--shell"],
+		args: [],
+		description: option_shell
+	},
+	{
+		labels: ["--workspaces"],
+		description: option_workspaces
+	},
+	{
+		labels: ["--parallel"],
+		description: option_parallel
+	},
+	{
+		labels: ["--sequential"],
+		description: option_sequential
+	},
+	{
+		labels: ["--no-exit-on-error"],
+		description: option_no_exit_on_error
+	},
+	{
+		labels: ["--env-file"],
+		args: [],
+		description: option_env_file
+	},
+	{
+		labels: ["--no-env-file"],
+		description: option_no_env_file
 	},
 	{
 		labels: ["--cwd"],
-		description: "Set a specific cwd"
+		args: [],
+		description: option_cwd
+	},
+	{
+		labels: ["-c", "--config"],
+		args: [],
+		description: option_config
+	},
+	{
+		labels: ["-h", "--help"],
+		description: option_help
+	}
+];
+const testOptions = [
+	{
+		labels: ["--timeout"],
+		args: [],
+		description: test_option_timeout
+	},
+	{
+		labels: ["-u", "--update-snapshots"],
+		description: test_option_update_snapshots
+	},
+	{
+		labels: ["--rerun-each"],
+		args: [],
+		description: test_option_rerun_each
+	},
+	{
+		labels: ["--retry"],
+		args: [],
+		description: test_option_retry
+	},
+	{
+		labels: ["--todo"],
+		description: test_option_todo
+	},
+	{
+		labels: ["--only"],
+		description: test_option_only
+	},
+	{
+		labels: ["--pass-with-no-tests"],
+		description: test_option_pass_with_no_tests
+	},
+	{
+		labels: ["--concurrent"],
+		description: test_option_concurrent
+	},
+	{
+		labels: ["--randomize"],
+		description: test_option_randomize
+	},
+	{
+		labels: ["--seed"],
+		args: [],
+		description: test_option_seed
+	},
+	{
+		labels: ["--coverage"],
+		description: test_option_coverage
+	},
+	{
+		labels: ["--coverage-reporter"],
+		args: [],
+		description: test_option_coverage_reporter
+	},
+	{
+		labels: ["--coverage-dir"],
+		args: [],
+		description: test_option_coverage_dir
+	},
+	{
+		labels: ["--bail"],
+		args: [],
+		description: test_option_bail
+	},
+	{
+		labels: ["-t", "--test-name-pattern"],
+		args: [],
+		description: test_option_test_name_pattern
+	},
+	{
+		labels: ["--reporter"],
+		args: [],
+		description: test_option_reporter
+	},
+	{
+		labels: ["--reporter-outfile"],
+		args: [],
+		description: test_option_reporter_outfile
+	},
+	{
+		labels: ["--dots"],
+		description: test_option_dots
+	},
+	{
+		labels: ["--only-failures"],
+		description: test_option_only_failures
+	},
+	{
+		labels: ["--max-concurrency"],
+		args: [],
+		description: test_option_max_concurrency
+	},
+	{
+		labels: ["--path-ignore-patterns"],
+		args: [],
+		description: test_option_path_ignore_patterns
+	},
+	{
+		labels: ["--changed"],
+		args: [],
+		description: test_option_changed
+	},
+	{
+		labels: ["--isolate"],
+		description: test_option_isolate
+	},
+	{
+		labels: ["--parallel"],
+		args: [],
+		description: test_option_parallel
+	},
+	{
+		labels: ["--parallel-delay"],
+		args: [],
+		description: test_option_parallel_delay
+	},
+	{
+		labels: ["--shard"],
+		args: [],
+		description: test_option_shard
+	}
+];
+const xOptions = [
+	{
+		labels: ["--bun"],
+		description: x_option_bun
+	},
+	{
+		labels: ["-p", "--package"],
+		args: [],
+		description: x_option_package
+	},
+	{
+		labels: ["--no-install"],
+		description: x_option_no_install
+	},
+	{
+		labels: ["--verbose"],
+		description: x_option_verbose
+	},
+	{
+		labels: ["--silent"],
+		description: x_option_silent
+	}
+];
+const installOptions = [
+	{
+		labels: ["-p", "--production"],
+		description: install_option_production
+	},
+	{
+		labels: ["--no-save"],
+		description: install_option_no_save
+	},
+	{
+		labels: ["--save"],
+		description: install_option_save
+	},
+	{
+		labels: ["--dry-run"],
+		description: install_option_dry_run
+	},
+	{
+		labels: ["--frozen-lockfile"],
+		description: install_option_frozen_lockfile
+	},
+	{
+		labels: ["-f", "--force"],
+		description: install_option_force
+	},
+	{
+		labels: ["--cache-dir"],
+		args: [],
+		description: install_option_cache_dir
+	},
+	{
+		labels: ["--no-cache"],
+		description: install_option_no_cache
+	},
+	{
+		labels: ["--verbose"],
+		description: install_option_verbose
+	},
+	{
+		labels: ["--no-progress"],
+		description: install_option_no_progress
+	},
+	{
+		labels: ["--no-summary"],
+		description: install_option_no_summary
+	},
+	{
+		labels: ["--no-verify"],
+		description: install_option_no_verify
+	},
+	{
+		labels: ["--ignore-scripts"],
+		description: install_option_ignore_scripts
+	},
+	{
+		labels: ["--trust"],
+		description: install_option_trust
+	},
+	{
+		labels: ["-g", "--global"],
+		description: install_option_global
 	},
 	{
 		labels: ["--backend"],
-		description: "Platform-specific optimizations"
+		args: [],
+		description: install_option_backend
 	},
 	{
-		labels: ["--help"],
-		description: "Print this help menu"
+		labels: ["--registry"],
+		args: [],
+		description: install_option_registry
+	},
+	{
+		labels: ["--concurrent-scripts"],
+		args: [],
+		description: install_option_concurrent_scripts
+	},
+	{
+		labels: ["--network-concurrency"],
+		args: [],
+		description: install_option_network_concurrency
+	},
+	{
+		labels: ["--save-text-lockfile"],
+		description: install_option_save_text_lockfile
+	},
+	{
+		labels: ["--omit"],
+		args: [],
+		description: install_option_omit
+	},
+	{
+		labels: ["--lockfile-only"],
+		description: install_option_lockfile_only
+	},
+	{
+		labels: ["--linker"],
+		args: [],
+		description: install_option_linker
+	},
+	{
+		labels: ["--minimum-release-age"],
+		args: [],
+		description: install_option_minimum_release_age
+	},
+	{
+		labels: ["--cpu"],
+		args: [],
+		description: install_option_cpu
+	},
+	{
+		labels: ["--os"],
+		args: [],
+		description: install_option_os
+	},
+	{
+		labels: ["-d", "--dev"],
+		description: install_option_dev
+	},
+	{
+		labels: ["--optional"],
+		description: install_option_optional
+	},
+	{
+		labels: ["--peer"],
+		description: install_option_peer
+	},
+	{
+		labels: ["-E", "--exact"],
+		description: install_option_exact
+	},
+	{
+		labels: ["-a", "--analyze"],
+		description: install_option_analyze
+	},
+	{
+		labels: ["--only-missing"],
+		description: install_option_only_missing
 	}
 ];
-const addCommand = {
-	description: "Add a dependency to package.json (bun a)",
-	options: [
-		...packageOptions,
-		{
-			labels: ["-d", "--dev"],
-			description: "Add dependence to devDependencies"
-		},
-		{
-			labels: ["-D"],
-			description: "Add dependence to devDependencies"
-		},
-		{
-			labels: ["--optional"],
-			description: "Add dependency to optionalDependencies"
-		},
-		{
-			labels: ["--peer"],
-			description: "Add dependency to peerDependencies"
-		},
-		{
-			labels: ["--exact"],
-			description: "Add the exact version instead of the ^range"
-		}
-	],
-	args: {
-		__is_dynamic: true,
-		id: "__dyn_addCommand_args"
+const updateOptions = [
+	{
+		labels: ["--latest"],
+		description: update_option_latest
+	},
+	{
+		labels: ["-i", "--interactive"],
+		description: update_option_interactive
+	},
+	{
+		labels: ["-r", "--recursive"],
+		description: update_option_recursive
 	}
-};
-const installCommand = {
-	description: "Install dependencies for a package.json (bun i)",
-	options: packageOptions
-};
-const removeCommand = {
-	description: "Remove a dependency from package.json (bun rm)",
-	options: packageOptions,
-	args: {
-		__is_dynamic: true,
-		id: "__dyn_removeCommand_args"
+];
+const auditOptions = [
+	{
+		labels: ["--json"],
+		description: audit_option_json
+	},
+	{
+		labels: ["--audit-level"],
+		args: [],
+		description: audit_option_audit_level
+	},
+	{
+		labels: ["--ignore"],
+		args: [],
+		description: audit_option_ignore
+	}
+];
+const outdatedOptions = [{
+	labels: ["-F", "--filter"],
+	args: [],
+	description: outdated_option_filter
+}, {
+	labels: ["-r", "--recursive"],
+	description: outdated_option_recursive
+}];
+const buildOptions = [
+	{
+		labels: ["--production"],
+		description: build_option_production
+	},
+	{
+		labels: ["--compile"],
+		description: build_option_compile
+	},
+	{
+		labels: ["--bytecode"],
+		description: build_option_bytecode
+	},
+	{
+		labels: ["--target"],
+		args: [],
+		description: build_option_target
+	},
+	{
+		labels: ["--outdir"],
+		args: [],
+		description: build_option_outdir
+	},
+	{
+		labels: ["--outfile"],
+		args: [],
+		description: build_option_outfile
+	},
+	{
+		labels: ["--metafile"],
+		args: [],
+		description: build_option_metafile
+	},
+	{
+		labels: ["--sourcemap"],
+		args: [],
+		description: build_option_sourcemap
+	},
+	{
+		labels: ["--format"],
+		args: [],
+		description: build_option_format
+	},
+	{
+		labels: ["--splitting"],
+		description: build_option_splitting
+	},
+	{
+		labels: ["-e", "--external"],
+		args: [],
+		description: build_option_external
+	},
+	{
+		labels: ["--minify"],
+		description: build_option_minify
+	},
+	{
+		labels: ["--minify-syntax"],
+		description: build_option_minify_syntax
+	},
+	{
+		labels: ["--minify-whitespace"],
+		description: build_option_minify_whitespace
+	},
+	{
+		labels: ["--minify-identifiers"],
+		description: build_option_minify_identifiers
+	}
+];
+const initOptions = [
+	{
+		labels: ["-y", "--yes"],
+		description: init_option_yes
+	},
+	{
+		labels: ["-m", "--minimal"],
+		description: init_option_minimal
+	},
+	{
+		labels: ["-r", "--react"],
+		description: init_option_react
+	}
+];
+const createOptions = [{
+	labels: ["-h", "--help"],
+	description: create_option_help
+}];
+const patchOptions = [{
+	labels: ["--commit"],
+	args: [],
+	description: patch_option_commit
+}, {
+	labels: ["--patches-dir"],
+	args: [],
+	description: patch_option_patches_dir
+}];
+const pmSubCommands = {
+	scan: {
+		description: pm_scan_desc,
+		options: [...commonGlobalOpts]
+	},
+	pack: {
+		description: pm_pack_desc,
+		options: [
+			...commonGlobalOpts,
+			{
+				labels: ["--dry-run"],
+				description: install_option_dry_run
+			},
+			{
+				labels: ["--destination"],
+				args: [],
+				description: "the directory the tarball will be saved in"
+			},
+			{
+				labels: ["--filename"],
+				args: [],
+				description: "the name of the tarball"
+			},
+			{
+				labels: ["--ignore-scripts"],
+				description: install_option_ignore_scripts
+			},
+			{
+				labels: ["--gzip-level"],
+				args: [],
+				description: "specify a custom compression level for gzip (0-9, default is 9)"
+			},
+			{
+				labels: ["--quiet"],
+				description: "only output the tarball filename"
+			}
+		]
+	},
+	bin: {
+		description: pm_bin_desc,
+		options: [...commonGlobalOpts, {
+			labels: ["-g"],
+			description: "print the global path to bin folder"
+		}]
+	},
+	list: {
+		description: pm_list_desc,
+		options: [...commonGlobalOpts, {
+			labels: ["--all"],
+			description: "list the entire dependency tree"
+		}]
+	},
+	why: {
+		description: pm_why_desc,
+		args: {
+			__is_dynamic: true,
+			id: "__dyn_pmSubCommands_why_args"
+		},
+		options: [...commonGlobalOpts]
+	},
+	whoami: {
+		description: pm_whoami_desc,
+		options: [...commonGlobalOpts]
+	},
+	view: {
+		description: pm_view_desc,
+		args: [],
+		options: [...commonGlobalOpts]
+	},
+	version: {
+		description: pm_version_desc,
+		args: [],
+		options: [...commonGlobalOpts]
+	},
+	pkg: {
+		description: pm_pkg_desc,
+		args: {
+			__is_dynamic: true,
+			id: "__dyn_pmSubCommands_pkg_args"
+		},
+		options: [...commonGlobalOpts]
+	},
+	hash: {
+		description: pm_hash_desc,
+		options: [...commonGlobalOpts]
+	},
+	"hash-string": {
+		description: pm_hash_string_desc,
+		options: [...commonGlobalOpts]
+	},
+	"hash-print": {
+		description: pm_hash_print_desc,
+		options: [...commonGlobalOpts]
+	},
+	cache: {
+		description: pm_cache_desc,
+		commands: { rm: {
+			description: pm_cache_rm_desc,
+			options: [...commonGlobalOpts]
+		} }
+	},
+	migrate: {
+		description: pm_migrate_desc,
+		options: [...commonGlobalOpts]
+	},
+	untrusted: {
+		description: pm_untrusted_desc,
+		options: [...commonGlobalOpts]
+	},
+	trust: {
+		description: pm_trust_desc,
+		args: {
+			__is_dynamic: true,
+			id: "__dyn_pmSubCommands_trust_args"
+		},
+		options: [...commonGlobalOpts, {
+			labels: ["--all"],
+			description: "trust all untrusted dependencies"
+		}]
+	},
+	"default-trusted": {
+		description: pm_default_trusted_desc,
+		options: [...commonGlobalOpts]
 	}
 };
 var __v_stat_bun_default = createCompletion({ bun: {
-	options: [
-		{
-			labels: ["-V", "--version"],
-			description: "Show version and exit"
-		},
-		{
-			labels: ["--cwd"],
-			description: "Change directory"
-		},
-		{
-			labels: ["-h", "--help"],
-			description: "Show command help"
-		},
-		{
-			labels: ["--use"],
-			description: "Use a framework, e.g. \"next\""
-		}
-	],
+	description: description$1,
+	options: commonGlobalOpts,
 	commands: {
 		run: {
-			description: "Run JavaScript with Bun, a package.json script, or a bin",
-			options: [
-				{
-					labels: ["-h", "--help"],
-					description: "Display this help and exit"
-				},
-				{
-					labels: ["-b", "--bun"],
-					description: "Force a script or package to use Bun's runtime"
-				},
-				{
-					labels: ["--watch"],
-					description: "Automatically restart bun's JavaScript runtime on file change"
-				},
-				{
-					labels: ["--hot"],
-					description: "Enable auto reload in bun's JavaScript runtime"
-				},
-				{
-					labels: ["--inspect"],
-					description: "Activate Bun's Debugger"
-				}
-			],
+			description: cmd_run_desc,
 			args: {
 				__is_dynamic: true,
-				id: "__dyn_bun_run_args"
-			}
+				id: "__dyn_bunCommands_run_args"
+			},
+			options: [...commonGlobalOpts]
 		},
 		test: {
-			description: "Run unit tests with Bun",
-			options: [
-				{
-					labels: ["--watch"],
-					description: "Automatically restart on file change"
-				},
-				{
-					labels: ["--timeout"],
-					description: "Set the per-test timeout in milliseconds"
-				},
-				{
-					labels: ["--coverage"],
-					description: "Generate a coverage profile"
-				},
-				{
-					labels: ["--bail"],
-					description: "Exit the test suite after failures"
-				}
-			],
+			description: cmd_test_desc,
 			args: {
 				__is_dynamic: true,
-				id: "__dyn_bun_test_args"
-			}
-		},
-		init: {
-			description: "Start an empty Bun project from a blank template",
-			options: [{
-				labels: ["-y", "--yes"],
-				description: "Answer yes to all prompts"
-			}]
-		},
-		create: {
-			description: "Create a new project from a template (bun c)",
-			commands: {
-				"next-app": { description: "Next.js app" },
-				"react-app": { description: "React app" }
-			}
-		},
-		pm: {
-			description: "More commands for managing packages",
-			commands: {
-				bin: {
-					description: "print the path to bin folder",
-					options: [{
-						labels: ["-g"],
-						description: "print the global path to bin folder"
-					}]
-				},
-				ls: {
-					description: "list the dependency tree according to the current lockfile",
-					options: [{
-						labels: ["--all"],
-						description: "list the entire dependency tree"
-					}]
-				},
-				hash: { description: "generate & print the hash of the current lockfile" },
-				"hash-string": { description: "print the string used to hash the lockfile" },
-				cache: {
-					description: "print the path to the cache folder",
-					commands: { rm: { description: "remove cache" } }
-				},
-				version: {
-					description: "bump the version in package.json and create a git tag",
-					commands: {
-						patch: { description: "increment patch version" },
-						minor: { description: "increment minor version" },
-						major: { description: "increment major version" }
-					}
-				}
-			}
-		},
-		build: {
-			description: "Bundle TypeScript & JavaScript into a single file",
-			options: [
-				{
-					labels: ["--outfile"],
-					description: "Write the output to a specific file"
-				},
-				{
-					labels: ["--outdir"],
-					description: "Write the output to a directory"
-				},
-				{
-					labels: ["--minify"],
-					description: "Enable all minification flags"
-				},
-				{
-					labels: ["--sourcemap"],
-					description: "Generate sourcemaps"
-				},
-				{
-					labels: ["--target"],
-					description: "The intended execution environment"
-				}
-			],
-			args: {
-				__is_dynamic: true,
-				id: "__dyn_bun_build_args"
-			}
+				id: "__dyn_bunCommands_test_args"
+			},
+			options: [...commonGlobalOpts, ...testOptions]
 		},
 		x: {
-			description: "Install and execute a package bin (bunx)",
+			aliases: ["bunx"],
+			description: cmd_x_desc,
+			args: [],
+			options: [...commonGlobalOpts, ...xOptions]
+		},
+		repl: {
+			description: cmd_repl_desc,
+			options: [...commonGlobalOpts]
+		},
+		exec: {
+			description: cmd_exec_desc,
+			args: [],
+			options: [...commonGlobalOpts]
+		},
+		install: {
+			aliases: ["i"],
+			description: cmd_install_desc,
 			args: {
 				__is_dynamic: true,
-				id: "__dyn_bun_x_args"
-			}
+				id: "__dyn_bunCommands_install_args"
+			},
+			options: [...commonGlobalOpts, ...installOptions]
+		},
+		add: {
+			aliases: ["a"],
+			description: cmd_add_desc,
+			args: {
+				__is_dynamic: true,
+				id: "__dyn_bunCommands_add_args"
+			},
+			options: [...commonGlobalOpts, ...installOptions]
+		},
+		remove: {
+			aliases: ["rm"],
+			description: cmd_remove_desc,
+			args: {
+				__is_dynamic: true,
+				id: "__dyn_bunCommands_remove_args"
+			},
+			options: [...commonGlobalOpts, ...installOptions]
 		},
 		update: {
-			description: "Update outdated dependencies & save to package.json",
-			options: [...packageOptions, {
-				labels: ["--latest"],
-				description: "Updates dependencies to latest version"
-			}]
+			description: cmd_update_desc,
+			args: {
+				__is_dynamic: true,
+				id: "__dyn_bunCommands_update_args"
+			},
+			options: [
+				...commonGlobalOpts,
+				...installOptions,
+				...updateOptions
+			]
+		},
+		audit: {
+			description: cmd_audit_desc,
+			options: [...commonGlobalOpts, ...auditOptions]
+		},
+		outdated: {
+			description: cmd_outdated_desc,
+			options: [...commonGlobalOpts, ...outdatedOptions]
 		},
 		link: {
-			description: "Link an npm package globally",
-			options: packageOptions
+			description: cmd_link_desc,
+			args: [],
+			options: [...commonGlobalOpts, ...installOptions]
 		},
 		unlink: {
-			description: "Globally unlink an npm package",
-			options: packageOptions
+			description: cmd_unlink_desc,
+			options: [...commonGlobalOpts, ...installOptions]
 		},
-		outdated: { description: "Display the latest versions of outdated dependencies" },
+		publish: {
+			description: cmd_publish_desc,
+			args: [],
+			options: [...commonGlobalOpts, ...installOptions]
+		},
+		patch: {
+			description: cmd_patch_desc,
+			args: [],
+			options: [
+				...commonGlobalOpts,
+				...installOptions,
+				...patchOptions
+			]
+		},
+		pm: {
+			description: cmd_pm_desc,
+			commands: pmSubCommands,
+			options: [...commonGlobalOpts]
+		},
+		info: {
+			description: cmd_info_desc,
+			args: [],
+			options: [...commonGlobalOpts, ...installOptions]
+		},
+		why: {
+			description: cmd_why_desc,
+			args: {
+				__is_dynamic: true,
+				id: "__dyn_bunCommands_why_args"
+			},
+			options: [...commonGlobalOpts]
+		},
+		build: {
+			description: cmd_build_desc,
+			args: {
+				__is_dynamic: true,
+				id: "__dyn_bunCommands_build_args"
+			},
+			options: [...commonGlobalOpts, ...buildOptions]
+		},
+		init: {
+			description: cmd_init_desc,
+			args: [],
+			options: [...commonGlobalOpts, ...initOptions]
+		},
+		create: {
+			aliases: ["c"],
+			description: cmd_create_desc,
+			args: [],
+			options: [...commonGlobalOpts, ...createOptions]
+		},
 		upgrade: {
-			description: "Get the latest version of bun",
-			options: [{
-				labels: ["--canary"],
-				description: "Upgrade to canary build"
-			}]
+			description: cmd_upgrade_desc,
+			options: [...commonGlobalOpts]
 		},
-		repl: { description: "Start a REPL session with Bun" },
-		install: {
-			...installCommand,
-			aliases: ["i"]
-		},
-		a: addCommand,
-		add: addCommand,
-		rm: removeCommand,
-		remove: removeCommand,
-		c: { description: "Alias for create" }
+		feedback: {
+			description: cmd_feedback_desc,
+			args: [],
+			options: [...commonGlobalOpts]
+		}
 	}
 } });
 //#endregion
 //#region tests/fixtures/completions/docker/__v_stat_docker.ts
 var __v_stat_docker_default = createCompletion({ docker: { commands: {
-	run: { description: run_desc },
+	run: { description: "运行容器" },
 	ps: {
-		description: ps_desc,
+		description: "列出容器",
 		args: {
 			__is_dynamic: true,
 			id: "__dyn_docker_ps_args"
 		}
 	},
-	stop: { description: stop_desc }
+	stop: { description: "停止容器" }
 } } });
 //#endregion
 //#region tests/fixtures/completions/git/__v_stat_git.ts
@@ -465,13 +1267,10 @@ var __v_stat_git_default = createCompletion({ git: { commands: {
 //#endregion
 //#region tests/fixtures/completions/__v_stat_greet.ts
 var __v_stat_greet_default = createCompletion({ greet: {
-	description: i18nStr({
-		en: "Greeting tool",
-		zh: "问候工具"
-	}),
+	description: "问候工具",
 	commands: {
-		install: { description: install },
-		run: { description: run }
+		install: { description: "安装依赖" },
+		run: { description: "运行脚本" }
 	}
 } });
 //#endregion

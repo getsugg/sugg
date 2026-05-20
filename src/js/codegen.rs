@@ -1,9 +1,6 @@
 /// 生成注入到每个用户脚本顶部的 import 语句。
-/// 只导入一个统一的 `virtual:i18n` 模块，用户代码通过 `i18n.ns.key` 访问翻译。
 pub fn generate_import_stmt() -> String {
-    "import { createCompletion, i18nStr, readJson, __parseConfig } from 'virtual:env';\n"
-        .to_string()
-        + "import * as i18n from 'virtual:i18n';\n"
+    "import { createCompletion, readJson, __parseConfig } from 'virtual:env';\n".to_string()
 }
 
 /// 生成 virtual:env 模块内容（不含翻译，不含 globalThis）。
@@ -64,10 +61,8 @@ mod tests {
         assert!(s.contains("createCompletion"));
         assert!(s.contains("readJson"));
         assert!(s.contains("__parseConfig"));
-
         assert!(s.contains("from 'virtual:env'"));
-        assert!(s.contains("import * as i18n from 'virtual:i18n'"));
-        assert!(!s.contains("from 'virtual:i18n/"));
+        assert!(!s.contains("virtual:i18n"));
     }
 
     #[test]

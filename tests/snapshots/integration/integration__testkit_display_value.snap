@@ -1,6 +1,5 @@
 ---
 source: tests/integration.rs
-assertion_line: 381
 expression: items
 ---
 [

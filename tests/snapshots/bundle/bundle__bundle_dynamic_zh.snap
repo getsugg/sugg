@@ -14,69 +14,118 @@ const readJson = async (path) => {
 	}
 };
 //#endregion
-//#region tests/fixtures/completions/__v_dyn_bun.ts
-const __dyn_addCommand_args = async (ctx) => {
-	const { prefix } = ctx;
-	return (await exec(`bun getcompletes a ${prefix}`)).split("\n").filter(Boolean).map((line) => ({
-		display: line,
-		description: "NPM Package"
-	}));
-};
-const __dyn_removeCommand_args = async () => {
-	const pkg = await readJson("package.json");
-	const deps = Object.keys(pkg.dependencies || {});
-	const devDeps = Object.keys(pkg.devDependencies || {});
-	return [...deps, ...devDeps].map((d) => ({
-		display: d,
-		description: "Installed dependency"
-	}));
-};
-const __dyn_bun_run_args = async (ctx) => {
-	const { prefix } = ctx;
-	const pathItems = (await scanPath(prefix)).filter((e) => e.display.startsWith(prefix)).map((e) => ({
-		...e,
-		description: e.isDir ? "directory" : "file"
-	}));
-	const pkg = await readJson("package.json");
-	const scripts = Object.keys(pkg.scripts || {}).map((s) => ({
+//#region virtual:i18n/bun
+const suggestion_file = "文件";
+const suggestion_global_installed = "全局已安装";
+const suggestion_installed = "已安装";
+const suggestion_package_bin = "包可执行文件";
+const suggestion_package_from_registry = "来自注册表的包";
+const suggestion_script = "脚本";
+//#endregion
+//#region tests/fixtures/completions/bun/__v_dyn_bun.ts
+async function getCompletes(type) {
+	try {
+		const out = await exec(`bun getcompletes ${type}`);
+		if (type === "z") return out.trim().split("\n").filter((line) => line.includes("	")).map((line) => line.split("	")[0]);
+		else return out.trim().split(/\s+/).filter(Boolean);
+	} catch {
+		return [];
+	}
+}
+async function getScriptNames() {
+	return (await getCompletes("z")).map((s) => ({
 		display: s,
-		description: `npm script: ${pkg.scripts[s]}`
+		description: suggestion_script
 	}));
-	const bins = (await exec("bun getcompletes b")).split("\n").filter(Boolean).map((b) => ({
+}
+async function getBinNames() {
+	return (await getCompletes("b")).map((b) => ({
 		display: b,
-		description: "bin"
+		description: suggestion_package_bin
 	}));
-	const seen = /* @__PURE__ */ new Set();
+}
+async function getScriptFiles(ctx) {
+	return (await scanPath(ctx.prefix)).filter((f) => /\.(ts|js|tsx|jsx|mjs|cjs)$/i.test(f.display) || f.isDir);
+}
+async function getTestFiles(ctx) {
+	return (await scanPath(ctx.prefix)).filter((f) => /\.(test|spec)\.(ts|js|tsx|jsx)$/i.test(f.display) || ctx.prefix !== "" && f.isDir);
+}
+async function getInstalledPackages() {
+	const pkg = await readJson("package.json");
+	const deps = {
+		...pkg.dependencies,
+		...pkg.devDependencies
+	};
+	return Object.keys(deps).map((name) => ({
+		display: name,
+		description: suggestion_installed
+	}));
+}
+async function getGlobalPackages() {
+	try {
+		return (await exec("bun pm ls -g")).trim().split("\n").slice(1).map((line) => line.replace(/^[├└][─ ]{2,}\s+/, "").trim()).filter(Boolean).map((name) => name.replace(/@[^@]+$/, "")).filter((name) => name.length > 0).map((name) => ({
+			display: name,
+			description: suggestion_global_installed
+		}));
+	} catch {
+		return [];
+	}
+}
+async function getAddPackages(ctx) {
+	try {
+		return (await exec(`bun getcompletes a ${ctx.prefix}`)).trim().split(/\s+/).filter(Boolean).map((name) => ({
+			display: name,
+			description: suggestion_package_from_registry
+		}));
+	} catch {
+		return [];
+	}
+}
+const __dyn_pmSubCommands_why_args = async () => getInstalledPackages();
+const __dyn_pmSubCommands_pkg_args = async (ctx) => {
+	return [
+		"get",
+		"set",
+		"delete",
+		"fix"
+	].filter((c) => c.startsWith(ctx.prefix));
+};
+const __dyn_pmSubCommands_trust_args = async () => getInstalledPackages();
+const __dyn_bunCommands_run_args = async (ctx) => {
+	let [scripts, bins, files] = await Promise.all([
+		getScriptNames(),
+		getBinNames(),
+		getScriptFiles(ctx)
+	]);
+	if (ctx.prefix) {
+		scripts = scripts.filter((s) => s.display.startsWith(ctx.prefix));
+		bins = bins.filter((b) => b.display.startsWith(ctx.prefix));
+	}
+	if (scripts.length + bins.length > 0) {
+		if (ctx.prefix === "") files = files.filter((f) => !f.isDir);
+		files = files.map((f) => ({
+			...f,
+			description: suggestion_file
+		}));
+	}
 	return [
 		...scripts,
-		...bins,
-		...pathItems
-	].filter((item) => {
-		if (!item || seen.has(item.display)) return false;
-		seen.add(item.display);
-		return true;
-	});
+		...files,
+		...bins
+	];
 };
-const __dyn_bun_test_args = async () => {
-	return (await scanPath(".")).filter((e) => !e.isDir && e.display.match(/(_|\.)(test|spec)\.(js|ts|jsx|tsx)$/)).map((e) => ({
-		...e,
-		description: "test file"
-	}));
+const __dyn_bunCommands_test_args = async (ctx) => getTestFiles(ctx);
+const __dyn_bunCommands_install_args = async (ctx) => getAddPackages(ctx);
+const __dyn_bunCommands_add_args = async (ctx) => getAddPackages(ctx);
+const __dyn_bunCommands_remove_args = async (ctx) => {
+	if (ctx.options["-g"] === true || ctx.options["--global"] === true) return getGlobalPackages();
+	return getInstalledPackages();
 };
-const __dyn_bun_build_args = async () => {
-	return (await scanPath(".")).filter((e) => !e.isDir && e.display.match(/\.(ts|js|tsx|jsx)$/)).map((e) => ({
-		...e,
-		description: "source file"
-	}));
-};
-const __dyn_bun_x_args = async () => {
-	return (await scanPath("", "node_modules/.bin")).filter((e) => !e.isDir).map((e) => ({
-		...e,
-		description: "local bin"
-	}));
-};
+const __dyn_bunCommands_update_args = async () => getInstalledPackages();
+const __dyn_bunCommands_why_args = async () => getInstalledPackages();
+const __dyn_bunCommands_build_args = async (ctx) => getScriptFiles(ctx);
 //#endregion
-export { __dyn_addCommand_args, __dyn_bun_build_args, __dyn_bun_run_args, __dyn_bun_test_args, __dyn_bun_x_args, __dyn_removeCommand_args };
+export { __dyn_bunCommands_add_args, __dyn_bunCommands_build_args, __dyn_bunCommands_install_args, __dyn_bunCommands_remove_args, __dyn_bunCommands_run_args, __dyn_bunCommands_test_args, __dyn_bunCommands_update_args, __dyn_bunCommands_why_args, __dyn_pmSubCommands_pkg_args, __dyn_pmSubCommands_trust_args, __dyn_pmSubCommands_why_args };
 
 // === docker ===
 //#region virtual:i18n/docker

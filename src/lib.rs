@@ -48,8 +48,9 @@ pub async fn build_bundles(
     dir_path: &Path,
     lang: &str,
 ) -> anyhow::Result<(String, Vec<(String, String, Vec<String>)>)> {
+    use anyhow::Context;
     use bundler::{VIRTUAL_DYNAMIC_ENTRY, VIRTUAL_STATIC_ENTRY, bundle_virtual};
-    use js::codegen::{generate_env_code, generate_i18n_modules, generate_import_stmt};
+    use js::codegen::{generate_env_code, generate_i18n_modules};
 
     // 先扫描翻译，确定命名空间列表，再生成 import stmt
     let load_json = |p: &Path| -> HashMap<String, String> {
@@ -72,12 +73,10 @@ pub async fn build_bundles(
         translations_by_ns.insert(ns, map);
     }
 
-    let import_stmt = generate_import_stmt();
-
     let mut virtual_statics = HashMap::new();
     let mut virtual_dynamics: Vec<(String, HashMap<String, String>, Vec<String>)> = Vec::new();
-    let mut static_entry = import_stmt.clone();
-    static_entry.push_str("export { __parseConfig };\n");
+    let mut static_entry =
+        String::from("import { __parseConfig } from 'virtual:env';\nexport { __parseConfig };\n");
     let mut config_merges = String::new();
     let mut idx = 0;
 
@@ -133,17 +132,13 @@ pub async fn build_bundles(
         let abs_dir = path_to_slash(path.parent().unwrap_or(Path::new("")));
 
         let v_stat = format!("{}/__v_stat_{}.ts", abs_dir, file_stem);
-        let mut stat_code = import_stmt.clone();
-        stat_code.push_str(&mod_source);
-        virtual_statics.insert(v_stat.clone(), stat_code);
+        virtual_statics.insert(v_stat.clone(), mod_source);
         static_entry.push_str(&format!("import c{} from '{}';\n", idx, v_stat));
         config_merges.push_str(&format!("['{}', c{}], ", file_stem, idx));
 
         let v_dyn = format!("{}/__v_dyn_{}.ts", abs_dir, file_stem);
         let mut dyn_modules = HashMap::new();
-        let mut dyn_code = import_stmt.clone();
-        dyn_code.push_str(&dyn_source);
-        dyn_modules.insert(v_dyn.clone(), dyn_code);
+        dyn_modules.insert(v_dyn.clone(), dyn_source);
         dyn_modules.insert(
             VIRTUAL_DYNAMIC_ENTRY.to_string(),
             format!("export * from '{}';\n", v_dyn),
@@ -166,7 +161,8 @@ pub async fn build_bundles(
         env_code.clone(),
         i18n_modules.clone(),
     )
-    .await?;
+    .await
+    .with_context(|| "Failed to bundle static entry")?;
     let mut dynamic_bundles = Vec::new();
     for (stem, modules, func_ids) in virtual_dynamics {
         let d = bundle_virtual(
@@ -175,7 +171,8 @@ pub async fn build_bundles(
             env_code.clone(),
             i18n_modules.clone(),
         )
-        .await?;
+        .await
+        .with_context(|| format!("Failed to bundle '{stem}'"))?;
         dynamic_bundles.push((stem, d, func_ids));
     }
     Ok((s, dynamic_bundles))

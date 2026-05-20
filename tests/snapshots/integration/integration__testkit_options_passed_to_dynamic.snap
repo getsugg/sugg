@@ -1,6 +1,5 @@
 ---
 source: tests/integration.rs
-assertion_line: 344
 expression: all
 ---
 [

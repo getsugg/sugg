@@ -1,6 +1,7 @@
 /target
 /package.json
 /node_modules/*
+.cargo
 
 .agents
 AGENTS.md

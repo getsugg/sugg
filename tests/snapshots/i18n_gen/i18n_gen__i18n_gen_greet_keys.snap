@@ -2,18 +2,20 @@
 source: tests/i18n_gen.rs
 expression: read_dts(&completions_dir)
 ---
-declare const i18n: {
-  readonly greet: {
-    /**
-     * - 🚩 **en**: Install dependencies
-     * - **zh**: 安装依赖
-    */
-    readonly install: string;
-    /**
-     * - 🚩 **en**: Run a script
-     * - **zh**: 运行脚本
-    */
-    readonly run: string;
-  };
-  readonly [key: string]: any;
-};
+declare module "virtual:i18n/greet" {
+  /**
+   * - 🚩 **en**: Greeting tool
+   * - **zh**: 问候工具
+   */
+  export const description: string;
+  /**
+   * - 🚩 **en**: Install dependencies
+   * - **zh**: 安装依赖
+   */
+  export const install: string;
+  /**
+   * - 🚩 **en**: Run a script
+   * - **zh**: 运行脚本
+   */
+  export const run: string;
+}

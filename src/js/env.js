@@ -1,12 +1,5 @@
 export const createCompletion = (obj) => obj;
 
-export const i18nStr = (obj) => {
-  if (obj[__LANG] !== undefined) return obj[__LANG];
-  if (obj["en"] !== undefined) return obj["en"];
-  const first = Object.values(obj)[0];
-  return first !== undefined ? first : "";
-};
-
 export const readJson = async (path) => {
   const content = await globalThis.readFile(path);
   if (!content) return {};

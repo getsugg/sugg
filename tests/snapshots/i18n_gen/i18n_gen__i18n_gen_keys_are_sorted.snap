@@ -2,20 +2,17 @@
 source: tests/i18n_gen.rs
 expression: read_dts(&completions_dir)
 ---
-declare const i18n: {
-  readonly myspace: {
-    /**
-     * - 🚩 **en**: A
-    */
-    readonly a_key: string;
-    /**
-     * - 🚩 **en**: M
-    */
-    readonly m_key: string;
-    /**
-     * - 🚩 **en**: Z
-    */
-    readonly z_key: string;
-  };
-  readonly [key: string]: any;
-};
+declare module "virtual:i18n/myspace" {
+  /**
+   * - 🚩 **en**: A
+   */
+  export const a_key: string;
+  /**
+   * - 🚩 **en**: M
+   */
+  export const m_key: string;
+  /**
+   * - 🚩 **en**: Z
+   */
+  export const z_key: string;
+}

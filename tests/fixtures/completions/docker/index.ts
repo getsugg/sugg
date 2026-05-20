@@ -1,9 +1,11 @@
+import * as docker from "virtual:i18n/docker";
+
 export default createCompletion({
   docker: {
     commands: {
-      run: { description: i18n.docker.run_desc },
+      run: { description: docker.run_desc },
       ps: {
-        description: i18n.docker.ps_desc,
+        description: docker.ps_desc,
         args: dynamic(async () => {
           const out = await exec("docker ps --format '{{.Names}}'");
           return out
@@ -11,11 +13,11 @@ export default createCompletion({
             .filter(Boolean)
             .map((name) => ({
               display: name,
-              description: i18n.docker.container_desc,
+              description: docker.container_desc,
             }));
         }),
       },
-      stop: { description: i18n.docker.stop_desc },
+      stop: { description: docker.stop_desc },
     },
   },
 });

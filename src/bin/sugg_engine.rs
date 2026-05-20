@@ -17,6 +17,7 @@ struct EngineArgs {
     completions_dir: Option<PathBuf>,
     lang: Option<String>,
     cache_dir: Option<PathBuf>,
+    debug_dump_dynamic: Option<PathBuf>,
 }
 
 /// 解析子命令后的参数（跳过 argv[0] 和 argv[1]）
@@ -24,6 +25,7 @@ fn parse_engine_args() -> EngineArgs {
     let mut completions_dir = None;
     let mut lang = None;
     let mut cache_dir = None;
+    let mut debug_dump_dynamic = None;
     let mut parser = lexopt::Parser::from_args(std::env::args().skip(2));
     while let Ok(Some(arg)) = parser.next() {
         match arg {
@@ -45,6 +47,12 @@ fn parse_engine_args() -> EngineArgs {
                     .ok()
                     .map(|v| PathBuf::from(v.to_string_lossy().as_ref()));
             }
+            lexopt::Arg::Long("dump-dynamic") => {
+                debug_dump_dynamic = parser
+                    .value()
+                    .ok()
+                    .map(|v| PathBuf::from(v.to_string_lossy().as_ref()));
+            }
             _ => {}
         }
     }
@@ -52,6 +60,7 @@ fn parse_engine_args() -> EngineArgs {
         completions_dir,
         lang,
         cache_dir,
+        debug_dump_dynamic,
     }
 }
 
@@ -91,6 +100,16 @@ async fn run_build(args: &EngineArgs) -> Result<(), Box<dyn std::error::Error>> 
         }
     };
 
+    // 调试导出：将动态 bundle 写入指定目录，便于检查编译后的 JS 代码
+    if let Some(dump_dir) = &args.debug_dump_dynamic {
+        fs::create_dir_all(dump_dir)?;
+        for (stem, code, _) in &dynamic_bundles {
+            let out_path = dump_dir.join(format!("{stem}.js"));
+            fs::write(&out_path, code)?;
+            println!("🔍 Debug dump: {}", out_path.display());
+        }
+    }
+
     // 脚本清单在 build_bundles() 内边扫描边打印，此处只处理空目录兜底
     if bundled_static.is_empty() {
         println!("⚠️ Completions directory is empty, no configuration was bundled.");
@@ -114,16 +133,14 @@ async fn run_build(args: &EngineArgs) -> Result<(), Box<dyn std::error::Error>> 
         let (eval_mod, eval_val) = module_temp
             .eval()
             .catch(&ctx)
-            .map_err(|e| anyhow::anyhow!("JS module evaluation failed: {e:?}"))?;
+            .map_err(|e| anyhow::anyhow!("JS module evaluation failed: {e}"))?;
         if let Some(promise) = eval_val.as_promise() {
             promise
                 .clone()
                 .into_future::<Value>()
                 .await
                 .catch(&ctx)
-                .map_err(|e| {
-                    anyhow::anyhow!("JS module top-level await execution failed: {e:?}")
-                })?;
+                .map_err(|e| anyhow::anyhow!("JS module top-level await execution failed: {e}"))?;
         }
         let config: rquickjs::Object = eval_mod
             .get("default")
@@ -134,7 +151,7 @@ async fn run_build(args: &EngineArgs) -> Result<(), Box<dyn std::error::Error>> 
         let result: rquickjs::Object = parse_func
             .call((config,))
             .catch(&ctx)
-            .map_err(|e| anyhow::anyhow!("__parseConfig execution failed: {e:?}"))?;
+            .map_err(|e| anyhow::anyhow!("__parseConfig execution failed: {e}"))?;
         let json_str: String = result
             .get::<_, rquickjs::Value>("root")
             .and_then(|v| {
@@ -143,7 +160,7 @@ async fn run_build(args: &EngineArgs) -> Result<(), Box<dyn std::error::Error>> 
                 s.call((v,))
             })
             .catch(&ctx)
-            .map_err(|e| anyhow::anyhow!("Failed to serialize root node: {e:?}"))?;
+            .map_err(|e| anyhow::anyhow!("Failed to serialize root node: {e}"))?;
         serde_json::from_str::<JsonValue>(&json_str)
             .map(json_to_command_node)
             .context("JSON deserialization to CommandNode failed")
@@ -269,12 +286,15 @@ fn run_i18n_gen(args: &EngineArgs) {
 
     let mut s = String::new();
     if keys_map.is_empty() {
-        s.push_str("declare const i18n: { readonly [key: string]: any };\n");
+        s.push_str("// No i18n keys found.\n");
     } else {
-        s.push_str("declare const i18n: {\n");
-
-        if let Some(root_keys) = keys_map.get("") {
-            for (key, translations) in root_keys {
+        for (ns, ns_keys) in &keys_map {
+            if ns_keys.is_empty() {
+                continue;
+            }
+            let module_path = format!("virtual:i18n/{}", ns);
+            s.push_str(&format!("declare module \"{}\" {{\n", module_path));
+            for (key, translations) in ns_keys {
                 s.push_str("  /**\n");
                 if let Some(text) = translations.get(&preferred_lang) {
                     s.push_str(&format!("   * - 🚩 **{}**: {}\n", preferred_lang, text));
@@ -286,34 +306,10 @@ fn run_i18n_gen(args: &EngineArgs) {
                     s.push_str(&format!("   * - **{}**: {}\n", lang, text));
                 }
                 s.push_str("   */\n");
-                s.push_str(&format!("  readonly {}: string;\n", key));
+                s.push_str(&format!("  export const {}: string;\n", key));
             }
+            s.push_str("}\n\n");
         }
-
-        for (ns, ns_keys) in &keys_map {
-            if ns.is_empty() {
-                continue;
-            }
-            s.push_str(&format!("  readonly {}: {{\n", ns));
-            for (key, translations) in ns_keys {
-                s.push_str("    /**\n");
-                if let Some(text) = translations.get(&preferred_lang) {
-                    s.push_str(&format!("     * - 🚩 **{}**: {}\n", preferred_lang, text));
-                }
-                for (lang, text) in translations {
-                    if lang == &preferred_lang {
-                        continue;
-                    }
-                    s.push_str(&format!("     * - **{}**: {}\n", lang, text));
-                }
-                s.push_str("    */\n");
-                s.push_str(&format!("    readonly {}: string;\n", key));
-            }
-            s.push_str("  };\n");
-        }
-
-        s.push_str("  readonly [key: string]: any;\n");
-        s.push_str("};\n");
     }
 
     let out_path = completions_dir.join("i18n.d.ts");

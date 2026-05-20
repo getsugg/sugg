@@ -1,6 +1,5 @@
 ---
 source: tests/integration.rs
-assertion_line: 355
 expression: "serde_json::json!({ \"cmd1\": items_cmd1, \"cmd2\": items_cmd2, })"
 ---
 {

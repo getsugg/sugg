@@ -1,12 +1,14 @@
+import * as greet from "virtual:i18n/greet";
+
 export default createCompletion({
   greet: {
-    description: i18nStr({ en: "Greeting tool", zh: "问候工具" }),
+    description: greet.description,
     commands: {
       install: {
-        description: i18n.greet.install,
+        description: greet.install,
       },
       run: {
-        description: i18n["greet"]["run"],
+        description: greet.run,
       },
     },
   },

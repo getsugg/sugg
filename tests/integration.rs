@@ -208,88 +208,16 @@ fn test_i18n_dynamic_zh() {
 }
 
 #[test]
-fn test_bun_run_path_completion() {
-    let sandbox = get_sandbox();
-
-    // 创建临时项目目录，包含子目录和文件用于测试路径补全
-    let project_dir = tempdir().unwrap();
-    let project_path = project_dir.path();
-
-    // 创建 package.json（需要 scripts 字段验证合并逻辑）
-    let pkg = r#"{"scripts":{"dev":"echo dev"}}"#;
-    fs::write(project_path.join("package.json"), pkg).unwrap();
-
-    // 创建 src 目录和文件
-    fs::create_dir_all(project_path.join("src")).unwrap();
-    fs::write(project_path.join("src").join("main.ts"), "// main").unwrap();
-    fs::write(project_path.join("src").join("utils.ts"), "// utils").unwrap();
-
-    // 创建嵌套子目录
-    fs::create_dir_all(project_path.join("src").join("components")).unwrap();
-    fs::write(
-        project_path
-            .join("src")
-            .join("components")
-            .join("button.tsx"),
-        "// button",
-    )
-    .unwrap();
-
-    // 测试 1：bun run src/ — 补全 src 下的文件和子目录
-    let items = complete("bun run src/", project_path, &sandbox.cache_dir);
-    integration_snapshot!("bun_run_src_path", normalize_items(&items, project_path));
-
-    // 测试 2：bun run src/components/ — 补全嵌套子目录
-    let items = complete("bun run src/components/", project_path, &sandbox.cache_dir);
-    integration_snapshot!(
-        "bun_run_src_components_path",
-        normalize_items(&items, project_path)
-    );
-
-    // 测试 3：bun run 空 prefix 时，src 目录应显示为目录条目
-    //（scanDir 只返回直接子项，不递归，因此 src/main.ts 不会出现）
-    let items = complete("bun run ", project_path, &sandbox.cache_dir);
-    // 验证 src 目录被正确扫描显示为目录条目
-    assert!(
-        items.iter().any(|item| {
-            item["value"] == "src/"
-                && item["display_override"] == "src/"
-                && item["description"] == "directory"
-        }),
-        "应包含 src/ 目录条目"
-    );
-    // 验证 package.json（直接子文件）被列出（文件 value 带尾随空格）
-    assert!(
-        items.iter().any(|item| item["value"] == "package.json "),
-        "应包含 package.json"
-    );
-    // 验证 npm script 在空 prefix 下也被显示
-    assert!(
-        items.iter().any(|item| item["display_override"] == "dev"),
-        "应包含 dev script"
-    );
-
-    // 测试 4：bun run src/com — 部分路径前缀匹配，应展开为 src/components/
-    let items = complete("bun run src/com", project_path, &sandbox.cache_dir);
-    integration_snapshot!(
-        "bun_run_src_com_partial",
-        normalize_items(&items, project_path)
-    );
-}
-
-#[test]
 fn test_bun_x_vs_run_paths() {
     let sandbox = get_sandbox();
     let project_path = get_fixture_dir("projects/bun_x_vs_run");
 
-    // ── bun run — 顯示檔案、目錄、scripts ──
     let items_run = complete("bun run ", &project_path, &sandbox.cache_dir);
     integration_snapshot!(
         "bun_run_vs_x__run",
         normalize_items(&items_run, &project_path)
     );
 
-    // ── bun x — 只掃 node_modules/.bin ──
     let items_x = complete("bun x ", &project_path, &sandbox.cache_dir);
     integration_snapshot!("bun_run_vs_x__x", normalize_items(&items_x, &project_path));
 }

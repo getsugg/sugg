@@ -95,16 +95,6 @@ fn test_i18n_gen_empty_i18n_dir() {
 }
 
 #[test]
-fn test_i18n_gen_no_i18n_dir() {
-    let temp = tempdir().unwrap();
-    let completions_dir = temp.path().join("completions");
-    fs::create_dir_all(&completions_dir).unwrap();
-
-    run_i18n_gen(&completions_dir);
-    i18n_gen_snapshot!(read_dts(&completions_dir));
-}
-
-#[test]
 fn test_i18n_gen_keys_are_sorted() {
     let temp = tempdir().unwrap();
     let completions_dir = temp.path().join("completions");

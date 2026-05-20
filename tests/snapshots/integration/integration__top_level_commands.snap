@@ -1,12 +1,12 @@
 ---
 source: tests/integration.rs
-assertion_line: 68
 expression: "normalize_items(&items, &sandbox.project_dirs[\"minimal\"])"
 ---
 [
   {
     "value": "bun ",
-    "display_override": "bun"
+    "display_override": "bun",
+    "description": "Fast JavaScript runtime, package manager, bundler, and test runner."
   },
   {
     "value": "docker ",

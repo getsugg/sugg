@@ -8,32 +8,19 @@ expression: all
     "input": "bun run ",
     "result": [
       {
-        "value": "dev ",
-        "display_override": "dev",
-        "description": "npm script: bun dev"
-      },
-      {
         "value": "build ",
         "display_override": "build",
-        "description": "npm script: bun build"
+        "description": "script"
+      },
+      {
+        "value": "dev ",
+        "display_override": "dev",
+        "description": "script"
       },
       {
         "value": "test ",
         "display_override": "test",
-        "description": "npm script: bun test"
-      },
-      {
-        "value": "acorn.exe ",
-        "display_override": "acorn.exe",
-        "description": "bin"
-      },
-      {
-        "value": "node_modules/",
-        "display_override": "node_modules/",
-        "description": "directory",
-        "style": {
-          "fg": "blue"
-        }
+        "description": "script"
       },
       {
         "value": "index.ts ",
@@ -41,14 +28,14 @@ expression: all
         "description": "file"
       },
       {
-        "value": "package.json ",
-        "display_override": "package.json",
-        "description": "file"
-      },
-      {
         "value": "server.js ",
         "display_override": "server.js",
         "description": "file"
+      },
+      {
+        "value": "acorn.exe ",
+        "display_override": "acorn.exe",
+        "description": "package bin"
       }
     ]
   },
@@ -57,32 +44,19 @@ expression: all
     "input": "bun.exe run ",
     "result": [
       {
-        "value": "dev ",
-        "display_override": "dev",
-        "description": "npm script: bun dev"
-      },
-      {
         "value": "build ",
         "display_override": "build",
-        "description": "npm script: bun build"
+        "description": "script"
+      },
+      {
+        "value": "dev ",
+        "display_override": "dev",
+        "description": "script"
       },
       {
         "value": "test ",
         "display_override": "test",
-        "description": "npm script: bun test"
-      },
-      {
-        "value": "acorn.exe ",
-        "display_override": "acorn.exe",
-        "description": "bin"
-      },
-      {
-        "value": "node_modules/",
-        "display_override": "node_modules/",
-        "description": "directory",
-        "style": {
-          "fg": "blue"
-        }
+        "description": "script"
       },
       {
         "value": "index.ts ",
@@ -90,14 +64,14 @@ expression: all
         "description": "file"
       },
       {
-        "value": "package.json ",
-        "display_override": "package.json",
-        "description": "file"
-      },
-      {
         "value": "server.js ",
         "display_override": "server.js",
         "description": "file"
+      },
+      {
+        "value": "acorn.exe ",
+        "display_override": "acorn.exe",
+        "description": "package bin"
       }
     ]
   },

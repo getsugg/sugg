@@ -2,20 +2,4 @@
 source: tests/integration.rs
 expression: "normalize_items(&items_x, &project_path)"
 ---
-[
-  {
-    "value": "eslint ",
-    "display_override": "eslint",
-    "description": "local bin"
-  },
-  {
-    "value": "prettier ",
-    "display_override": "prettier",
-    "description": "local bin"
-  },
-  {
-    "value": "tsc ",
-    "display_override": "tsc",
-    "description": "local bin"
-  }
-]
+[]

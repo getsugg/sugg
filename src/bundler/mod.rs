@@ -3,7 +3,7 @@ pub mod plugin;
 pub use constants::*;
 
 use crate::bundler::plugin::VirtualPlugin;
-use rolldown::{BundlerBuilder, BundlerOptions, InputItem};
+use rolldown::{BundlerBuilder, BundlerOptions, InjectImport, InputItem};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -18,6 +18,11 @@ pub async fn bundle_virtual(
             name: Some("main".to_string()),
             import: entry_id.to_string(),
         }]),
+        inject: Some(vec![
+            InjectImport::named("createCompletion".into(), None, "virtual:env".into()),
+            InjectImport::named("readJson".into(), None, "virtual:env".into()),
+            InjectImport::namespace("i18n".into(), "virtual:i18n".into()),
+        ]),
         ..Default::default()
     };
     let plugin = VirtualPlugin {
@@ -32,11 +37,18 @@ pub async fn bundle_virtual(
         .map_err(|e| anyhow::anyhow!("Failed to create Bundler: {}", e))?;
 
     let output = bundler.generate().await.map_err(|e| {
-        let mut msg = String::from("Bundling failed:\n");
-        for diagnostic in e.into_vec() {
-            msg.push_str(&format!("- [{:?}] {}\n", diagnostic.kind(), diagnostic));
-        }
-        anyhow::anyhow!(msg)
+        let msg = e
+            .into_vec()
+            .into_iter()
+            .map(|d| {
+                d.to_diagnostic()
+                    .convert_to_string(false)
+                    .replace("__v_stat_", "")
+                    .replace("__v_dyn_", "")
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        anyhow::anyhow!("Bundling failed:\n{msg}")
     })?;
 
     output

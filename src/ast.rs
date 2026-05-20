@@ -127,6 +127,107 @@ impl<'a> Visit<'a> for DynamicExtractor {
     }
 }
 
+/// 收集给定 span 范围内所有标识符引用的名称
+struct RefCollector<'a> {
+    scope: Span,
+    refs: Vec<&'a str>,
+}
+
+impl<'a> Visit<'a> for RefCollector<'a> {
+    fn visit_identifier_reference(&mut self, ident: &IdentifierReference<'a>) {
+        if self.scope.start <= ident.span.start && ident.span.end <= self.scope.end {
+            self.refs.push(ident.name.as_str());
+        }
+    }
+}
+
+/// 生成最小动态模块：只保留 import 语句 + 动态函数依赖链所需的顶层声明 + 导出
+pub fn generate_minimal_dynamic_module(
+    source: &str,
+    path: &str,
+    dynamics: &[DynamicInfo],
+    id_map: &HashMap<u32, String>,
+) -> String {
+    let allocator = Allocator::default();
+    let source_type = SourceType::from_path(path).unwrap_or_default();
+    let program = Parser::new(&allocator, source, source_type).parse().program;
+
+    // 建立 name → stmt_index，并预收集每条顶层语句的引用集合
+    let mut name_to_idx: HashMap<&str, usize> = HashMap::new();
+    let mut stmt_refs: Vec<Vec<&str>> = vec![vec![]; program.body.len()];
+
+    for (i, stmt) in program.body.iter().enumerate() {
+        match stmt {
+            Statement::VariableDeclaration(decl) => {
+                for d in &decl.declarations {
+                    if let BindingPattern::BindingIdentifier(id) = &d.id {
+                        name_to_idx.insert(id.name.as_str(), i);
+                    }
+                }
+            }
+            Statement::FunctionDeclaration(f) => {
+                if let Some(id) = &f.id {
+                    name_to_idx.insert(id.name.as_str(), i);
+                }
+            }
+            _ => {}
+        }
+        let mut collector = RefCollector {
+            scope: stmt.span(),
+            refs: vec![],
+        };
+        collector.visit_program(&program);
+        stmt_refs[i] = collector.refs;
+    }
+
+    // BFS：从所有 arg_span 出发收集需要的语句索引
+    let mut needed: std::collections::HashSet<usize> = std::collections::HashSet::new();
+    let mut queue: std::collections::VecDeque<usize> = std::collections::VecDeque::new();
+
+    for info in dynamics {
+        let mut collector = RefCollector {
+            scope: info.arg_span,
+            refs: vec![],
+        };
+        collector.visit_program(&program);
+        for name in collector.refs {
+            if let Some(&idx) = name_to_idx.get(name)
+                && needed.insert(idx)
+            {
+                queue.push_back(idx);
+            }
+        }
+    }
+
+    while let Some(idx) = queue.pop_front() {
+        for &name in &stmt_refs[idx] {
+            if let Some(&dep_idx) = name_to_idx.get(name)
+                && needed.insert(dep_idx)
+            {
+                queue.push_back(dep_idx);
+            }
+        }
+    }
+
+    // 拼接：import + 需要的声明（按原顺序）+ 导出
+    let mut out = String::new();
+    for (i, stmt) in program.body.iter().enumerate() {
+        let span = stmt.span();
+        if matches!(stmt, Statement::ImportDeclaration(_)) || needed.contains(&i) {
+            let text = &source[span.start as usize..span.end as usize];
+            out.push_str(text);
+            out.push('\n');
+        }
+    }
+    out.push('\n');
+    for info in dynamics {
+        let id = &id_map[&info.full_span.start];
+        let func_code = &source[info.arg_span.start as usize..info.arg_span.end as usize];
+        out.push_str(&format!("export const {} = {};\n", id, func_code));
+    }
+    out
+}
+
 /// 提取源码中的 dynamic() 调用和 createCompletion 调用，返回 (modified_source, pure_dynamic_js)
 ///
 /// - `source`: 原始 TypeScript/JavaScript 源码
@@ -174,40 +275,14 @@ pub fn extract_dynamics(source: &str, path: &str) -> (String, String, Vec<String
         );
     }
 
-    // --- 构建 pure_dynamic_js（基于 Span 精确抹除，避免全局字符串替换误伤） ---
-    // 收集所有需要抹除的 span，过滤掉被其他更大 span 完全包含的（如 createCompletion 内的 dynamic）
-    let mut raw_dyn: Vec<(Span, &str)> = Vec::new();
-    for span in &extractor.create_completions {
-        raw_dyn.push((*span, "null"));
-    }
-    for info in &extractor.dynamics {
-        raw_dyn.push((info.full_span, "null"));
-    }
-    let mut dyn_replacements: Vec<(Span, &str)> = Vec::new();
-    for &(span, text) in &raw_dyn {
-        let is_contained = raw_dyn
-            .iter()
-            .any(|&(other, _)| other.start < span.start && span.end < other.end);
-        if !is_contained {
-            dyn_replacements.push((span, text));
-        }
-    }
-    dyn_replacements.sort_by_key(|b| std::cmp::Reverse(b.0.start));
+    let pure_dynamic_js =
+        generate_minimal_dynamic_module(source, path, &extractor.dynamics, &id_map);
 
-    let mut pure_dynamic_js = source.to_string();
-    for (span, replacement) in &dyn_replacements {
-        pure_dynamic_js.replace_range(span.start as usize..span.end as usize, replacement);
-    }
-
-    // 追加动态函数导出（按源码出现顺序）
-    pure_dynamic_js.push_str("\n\n// --- Auto-appended dynamic exports by compiler ---\n");
-    let mut func_ids: Vec<String> = Vec::new();
-    for info in &extractor.dynamics {
-        let id = &id_map[&info.full_span.start];
-        let func_code = &source[info.arg_span.start as usize..info.arg_span.end as usize];
-        pure_dynamic_js.push_str(&format!("export const {} = {};\n", id, func_code));
-        func_ids.push(id.clone());
-    }
+    let func_ids: Vec<String> = extractor
+        .dynamics
+        .iter()
+        .map(|info| id_map[&info.full_span.start].clone())
+        .collect();
 
     (modified_source, pure_dynamic_js, func_ids)
 }
@@ -251,11 +326,10 @@ export default config;
         assert!(!modified_source.contains("dynamic(async () =>"));
 
         // --- 2. 验证纯动态 JS (pure_dynamic_js) ---
-        assert!(pure_dynamic_js.contains("const config = null;"));
-        assert!(pure_dynamic_js.contains("args: null"));
+        // 新逻辑：只保留依赖链声明，不再全文复制
+        assert!(!pure_dynamic_js.contains("const config = null;"));
         assert!(!pure_dynamic_js.contains("dynamic(async () =>"));
-        assert!(pure_dynamic_js.contains("// --- Auto-appended dynamic exports by compiler ---"));
-        // 按源码出现顺序导出（语义化 ID，无 span.start 后缀）
+        // 按源码出现顺序导出
         assert!(pure_dynamic_js.contains("export const __dyn_dynamic"));
         assert!(pure_dynamic_js.contains("export const __dyn_addCommand_args"));
         assert!(pure_dynamic_js.contains("export const __dyn_config_args"));
