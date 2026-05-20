@@ -21,7 +21,6 @@ pub async fn bundle_virtual(
         inject: Some(vec![
             InjectImport::named("createCompletion".into(), None, "virtual:env".into()),
             InjectImport::named("readJson".into(), None, "virtual:env".into()),
-            InjectImport::namespace("i18n".into(), "virtual:i18n".into()),
         ]),
         ..Default::default()
     };

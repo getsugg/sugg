@@ -81,20 +81,6 @@ function createCompletion(config: Record<string, CommandNode>): Record<string, C
  */
 function dynamic(callback: (ctx: CompletionContext) => SuggestionResult): DynamicCommand;
 
-/**
- * 内联多语言文本。在 reload 阶段根据 COMPLETE_LANG 求值，回退到 en，再回退到第一个可用值。
- * 要求至少提供 en 字段。
- */
-function i18nStr(translations: { en: string; [lang: string]: string }): string;
-
-/**
- * 运行 `complete i18n-gen` 生成类型提示后，
- * 使用 `i18n.namespace.key_name`
- */
-const i18n: {
-  readonly [key: string]: any;
-};
-
 interface ScanDirItem {
   display: string;
   value: string;
@@ -141,7 +127,6 @@ function exec(cmd: string): Promise<string>;
  */
 function execFile(cmd: string, args?: string[]): Promise<string>;
 function log(...args: any[]): void;
-
 declare module "virtual:i18n/*" {
   const value: any;
   export = value;
