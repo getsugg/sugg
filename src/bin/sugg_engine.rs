@@ -1,3 +1,4 @@
+use include_dir::{Dir, include_dir};
 use rkyv::access;
 use rkyv::rancor::Error;
 use rquickjs::{AsyncContext, AsyncRuntime, CatchResultExt, Ctx, Function, Value, async_with};
@@ -20,13 +21,13 @@ struct EngineArgs {
     debug_dump_dynamic: Option<PathBuf>,
 }
 
-/// 解析子命令后的参数（跳过 argv[0] 和 argv[1]）
-fn parse_engine_args() -> EngineArgs {
+/// 解析子命令后的参数，skip_count 为跳过的前缀参数数量（一级命令传 2，二级命令传 3）
+fn parse_engine_args(skip_count: usize) -> EngineArgs {
     let mut completions_dir = None;
     let mut lang = None;
     let mut cache_dir = None;
     let mut debug_dump_dynamic = None;
-    let mut parser = lexopt::Parser::from_args(std::env::args().skip(2));
+    let mut parser = lexopt::Parser::from_args(std::env::args().skip(skip_count));
     while let Ok(Some(arg)) = parser.next() {
         match arg {
             lexopt::Arg::Long("completions-dir") => {
@@ -226,6 +227,213 @@ async fn run_build(args: &EngineArgs) -> Result<(), Box<dyn std::error::Error>> 
     Ok(())
 }
 
+async fn run_upgrade() -> Result<(), Box<dyn std::error::Error>> {
+    println!("🔍 Checking for the latest version...");
+
+    // 调 GitHub API 获取最新 tag，与编译时版本比较
+    let api_output = std::process::Command::new("curl")
+        .args([
+            "-fsSL",
+            "https://api.github.com/repos/axuj/sugg/releases/latest",
+        ])
+        .output()?;
+    if !api_output.status.success() {
+        return Err("Failed to fetch release info from GitHub.".into());
+    }
+    let api_json: serde_json::Value = serde_json::from_slice(&api_output.stdout)?;
+    let latest_tag = api_json["tag_name"]
+        .as_str()
+        .ok_or("Missing tag_name in GitHub API response.")?
+        .trim_start_matches('v');
+    let current = env!("CARGO_PKG_VERSION");
+
+    if latest_tag == current {
+        println!("✅ Already up-to-date (v{}).", current);
+        return Ok(());
+    }
+    println!("⬆️  Upgrading v{} → v{}...", current, latest_tag);
+
+    let (asset_name, is_zip) = if cfg!(target_os = "windows") {
+        ("sugg-x86_64-pc-windows-msvc.zip", true)
+    } else if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
+        ("sugg-aarch64-apple-darwin.tar.gz", false)
+    } else if cfg!(target_os = "macos") {
+        ("sugg-x86_64-apple-darwin.tar.gz", false)
+    } else {
+        ("sugg-x86_64-unknown-linux-gnu.tar.gz", false)
+    };
+
+    let download_url = format!(
+        "https://github.com/axuj/sugg/releases/latest/download/{}",
+        asset_name
+    );
+
+    let tmp_dir = tempfile::tempdir()?;
+    let tmp_path = tmp_dir.path();
+    let archive_path = tmp_path.join(if is_zip { "sugg.zip" } else { "sugg.tar.gz" });
+    let extract_dir = tmp_path.join("extract");
+    std::fs::create_dir_all(&extract_dir)?;
+
+    println!("⬇️  Downloading from {}...", download_url);
+    let status = std::process::Command::new("curl")
+        .args(["-fL", &download_url, "-o", &archive_path.to_string_lossy()])
+        .status()?;
+    if !status.success() {
+        return Err("Download failed: curl returned non-zero status.".into());
+    }
+
+    println!("📦 Extracting binaries...");
+    if is_zip {
+        let status = std::process::Command::new("powershell")
+            .args([
+                "-NoProfile",
+                "-Command",
+                &format!(
+                    "Expand-Archive -Path '{}' -DestinationPath '{}' -Force",
+                    archive_path.display(),
+                    extract_dir.display()
+                ),
+            ])
+            .status()?;
+        if !status.success() {
+            return Err("Extraction failed: Expand-Archive returned non-zero status.".into());
+        }
+    } else {
+        let status = std::process::Command::new("tar")
+            .args([
+                "-xzf",
+                &archive_path.to_string_lossy(),
+                "-C",
+                &extract_dir.to_string_lossy(),
+            ])
+            .status()?;
+        if !status.success() {
+            return Err("Extraction failed: tar returned non-zero status.".into());
+        }
+    }
+
+    fn find_file(dir: &std::path::Path, name: &str) -> Option<PathBuf> {
+        std::fs::read_dir(dir).ok()?.flatten().find_map(|e| {
+            let p = e.path();
+            if p.is_file() && p.file_name()?.to_string_lossy() == name {
+                Some(p)
+            } else if p.is_dir() {
+                find_file(&p, name)
+            } else {
+                None
+            }
+        })
+    }
+
+    let sugg_name = if cfg!(windows) { "sugg.exe" } else { "sugg" };
+    let engine_name = if cfg!(windows) {
+        "sugg-engine.exe"
+    } else {
+        "sugg-engine"
+    };
+
+    let new_sugg = find_file(&extract_dir, sugg_name)
+        .ok_or_else(|| format!("Could not find {} in archive.", sugg_name))?;
+    let new_engine = find_file(&extract_dir, engine_name)
+        .ok_or_else(|| format!("Could not find {} in archive.", engine_name))?;
+
+    println!("🔄 Replacing binaries...");
+    let sugg_root = sugg::sugg_root();
+    // sugg.exe -> sugg_root/bin/sugg.exe
+    let sugg_dest = sugg_root.join("bin").join(sugg_name);
+    if let Some(p) = sugg_dest.parent() {
+        std::fs::create_dir_all(p)?;
+    }
+    std::fs::copy(&new_sugg, &sugg_dest)?;
+
+    // sugg-engine.exe -> sugg_root/sugg-engine.exe (self_replace handles Windows file lock)
+    self_replace::self_replace(&new_engine)?;
+
+    println!("✅ Upgrade complete!");
+    Ok(())
+}
+
+/// 将嵌入目录中的所有文件递归写出到 dest，返回被跳过（已存在）的文件路径列表
+fn extract_dir(
+    dir: &Dir,
+    dest: &std::path::Path,
+    skip_existing: bool,
+) -> std::io::Result<Vec<std::path::PathBuf>> {
+    let mut skipped = Vec::new();
+    for file in dir.files() {
+        let out = dest.join(file.path());
+        if skip_existing && out.exists() {
+            skipped.push(out);
+            continue;
+        }
+        if let Some(parent) = out.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(&out, file.contents())?;
+    }
+    for subdir in dir.dirs() {
+        skipped.extend(extract_dir(subdir, dest, skip_existing)?);
+    }
+    Ok(skipped)
+}
+
+static ASSETS_INIT_DIR: Dir = include_dir!("$CARGO_MANIFEST_DIR/assets/init");
+
+fn run_dev_init(args: &EngineArgs) -> Result<(), Box<dyn std::error::Error>> {
+    let completions_dir = args
+        .completions_dir
+        .clone()
+        .or_else(|| {
+            std::env::var("SUGG_COMPLETIONS_DIR")
+                .ok()
+                .map(PathBuf::from)
+        })
+        .unwrap_or_else(sugg::default_completions_dir);
+
+    // .sugg/ — 每次全量覆盖，先删后写
+    let system_dir = completions_dir.join(".sugg");
+    if system_dir.exists() {
+        fs::remove_dir_all(&system_dir)?;
+    }
+    let sugg_asset_dir = ASSETS_INIT_DIR
+        .get_dir(".sugg")
+        .expect("assets/init/.sugg missing");
+    // sugg.d.ts 注入版本号，其余文件直接写出
+    fs::create_dir_all(&system_dir)?;
+    fs::write(
+        system_dir.join("sugg.d.ts"),
+        format!(
+            "// Version: {}\n{}",
+            env!("CARGO_PKG_VERSION"),
+            sugg_asset_dir
+                .get_file(".sugg/sugg.d.ts")
+                .map(|f| f.contents_utf8().unwrap_or(""))
+                .unwrap_or("")
+        ),
+    )?;
+    for file in sugg_asset_dir
+        .files()
+        .filter(|f| f.path().file_name().unwrap_or_default() != "sugg.d.ts")
+    {
+        fs::write(
+            system_dir.join(file.path().file_name().unwrap()),
+            file.contents(),
+        )?;
+    }
+
+    // 其余文件 — 仅首次生成，不覆盖用户自定义
+    let skipped = extract_dir(&ASSETS_INIT_DIR, &completions_dir, true)?;
+    for path in skipped.iter().filter(|p| !p.starts_with(&system_dir)) {
+        println!("⚠️  {} already exists, skipped.", sugg::path_to_slash(path));
+    }
+
+    println!(
+        "✅ Dev environment initialized at {}",
+        sugg::path_to_slash(&system_dir)
+    );
+    Ok(())
+}
+
 fn run_i18n_gen(args: &EngineArgs) {
     let completions_dir = args
         .completions_dir
@@ -312,7 +520,9 @@ fn run_i18n_gen(args: &EngineArgs) {
         }
     }
 
-    let out_path = completions_dir.join("i18n.d.ts");
+    let sugg_dir = completions_dir.join(".sugg");
+    fs::create_dir_all(&sugg_dir).expect("Failed to create .sugg directory");
+    let out_path = sugg_dir.join("i18n.d.ts");
     fs::write(&out_path, &s).expect("Failed to write i18n.d.ts");
     println!(
         "✅ Generated {} with {} namespaces.",
@@ -323,10 +533,20 @@ fn run_i18n_gen(args: &EngineArgs) {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let args = parse_engine_args();
     match std::env::args().nth(1).as_deref() {
-        Some("i18n-gen") => {
-            run_i18n_gen(&args);
+        Some("dev") => {
+            let args = parse_engine_args(3);
+            match std::env::args().nth(2).as_deref() {
+                Some("init") | Some("setup") => run_dev_init(&args)?,
+                Some("i18n") | Some("types") => run_i18n_gen(&args),
+                sub => {
+                    eprintln!(
+                        "❌ Unknown dev subcommand: {}. Available: init, i18n",
+                        sub.unwrap_or_default()
+                    );
+                    std::process::exit(1);
+                }
+            }
             Ok(())
         }
         Some("commands") => {
@@ -341,12 +561,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             Ok(())
         }
-        Some("reload") => run_build(&args).await,
-
-        _ => {
+        Some("reload") => run_build(&parse_engine_args(2)).await,
+        Some("upgrade") => {
+            if let Err(e) = run_upgrade().await {
+                eprintln!("❌ Upgrade failed: {}", e);
+                std::process::exit(1);
+            }
+            Ok(())
+        }
+        cmd => {
             eprintln!(
-                "❌ Unknown subcommand: {}. Available commands: i18n-gen, commands, reload",
-                std::env::args().nth(1).unwrap_or_default()
+                "❌ Unknown command: {}. Available: dev, reload, commands, upgrade",
+                cmd.unwrap_or_default()
             );
             std::process::exit(1);
         }

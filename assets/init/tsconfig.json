@@ -13,6 +13,6 @@
     "types": [],
     "paths": {}
   },
-  "include": ["**/*.ts", "**/*.js", "completion.d.ts"],
+  "include": ["**/*.ts", "**/*.js", ".sugg/sugg.d.ts", ".sugg/i18n.d.ts"],
   "exclude": ["node_modules"]
 }

@@ -20,16 +20,16 @@ macro_rules! i18n_gen_snapshot {
 
 fn run_i18n_gen(completions_dir: &std::path::Path) {
     let status = std::process::Command::new(common::sugg_bin())
-        .arg("i18n-gen")
+        .args(["dev", "i18n"])
         .arg("--completions-dir")
         .arg(completions_dir)
         .status()
-        .expect("failed to run i18n-gen");
+        .expect("failed to run dev i18n");
     assert!(status.success(), "i18n-gen failed");
 }
 
 fn read_dts(completions_dir: &std::path::Path) -> String {
-    fs::read_to_string(completions_dir.join("i18n.d.ts")).unwrap()
+    fs::read_to_string(completions_dir.join(".sugg").join("i18n.d.ts")).unwrap()
 }
 
 #[test]

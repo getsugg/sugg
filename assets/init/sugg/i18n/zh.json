@@ -1,0 +1,12 @@
+{
+  "desc": "Shell 自动补全引擎",
+  "reload_desc": "从脚本构建补全缓存",
+  "upgrade_desc": "自升级到最新版本",
+  "dev_desc": "开发工具",
+  "dev_init_desc": "初始化工作区：写出类型定义、指南和 tsconfig",
+  "dev_i18n_desc": "从翻译文件生成 i18n.d.ts 类型声明",
+  "opt_completions_dir": "补全脚本目录路径",
+  "opt_lang": "i18n 语言（如 en、zh）",
+  "opt_cache_dir": "覆盖缓存目录",
+  "opt_dump_dynamic": "将编译后的 JS bundle 导出到指定目录"
+}
