@@ -52,8 +52,71 @@ impl Shell {
     }
 }
 
+use icu::locale::Locale;
+use icu::locale::fallback::LocaleFallbacker;
 use std::collections::HashMap;
 use std::path::Path;
+
+/// 基于 BCP 47 规范生成语言回退链（使用 ICU4X 标准实现）
+///
+/// # 示例
+/// ```
+/// # use sugg::get_fallback_chain;
+/// // en 始终兜底，"en-US" 等返回 ["en", "en-US"]（en-US.json 不存在时 build_bundles 自然跳过）
+/// assert_eq!(get_fallback_chain("en"),        vec!["en"]);
+/// assert_eq!(get_fallback_chain("en-US"),     vec!["en", "en-US"]);
+/// // zh-Hans-CN 依次回退: en → zh → zh-CN（脚本被 likelySubtags 最小化）
+/// assert_eq!(get_fallback_chain("zh-Hans-CN"), vec!["en", "zh", "zh-CN"]);
+/// // zh-Hant-TW: en → zh-Hant → zh-TW（脚本被最小化后通过 max_script 补充回来）
+/// assert_eq!(get_fallback_chain("zh-Hant-TW"), vec!["en", "zh-Hant", "zh-TW"]);
+/// // 纯双字母语言码: en → fr → fr-FR
+/// assert_eq!(get_fallback_chain("fr-FR"),     vec!["en", "fr", "fr-FR"]);
+/// // 带变体的语言标签正确处理
+/// assert_eq!(get_fallback_chain("zh-Hans-CN-pinyin"), vec!["en", "zh", "zh-pinyin", "zh-CN", "zh-CN-pinyin"]);
+/// assert_eq!(get_fallback_chain("en-US-posix"),       vec!["en", "en-posix", "en-US", "en-US-posix"]);
+/// ```
+pub fn get_fallback_chain(lang: &str) -> Vec<String> {
+    let mut chain = vec!["en".to_string()];
+    if lang.is_empty() || lang.eq_ignore_ascii_case("en") {
+        return chain;
+    }
+
+    if let Ok(locale) = lang.parse::<Locale>() {
+        let fallbacker = LocaleFallbacker::new();
+        // 默认配置已包含语言、脚本、区域和变体的完整回退
+        let mut iter = fallbacker
+            .for_config(Default::default())
+            .fallback_for(locale.into());
+
+        let mut sequence = Vec::new();
+        loop {
+            let s = iter.get().to_string();
+            if s == "und" {
+                break;
+            }
+            if s != "en" {
+                sequence.push(s);
+            }
+            iter.step();
+        }
+        // sequence 现在是从最特化到最泛化的列表
+        // 如 ["zh-Hans-CN-pinyin", "zh-Hans-CN", "zh-Hans", "zh"]
+        // 反转后得到泛化在前、特化在后的顺序，方便后续 map.extend 覆盖
+        sequence.reverse();
+        for s in sequence {
+            if !chain.contains(&s) {
+                chain.push(s);
+            }
+        }
+    } else {
+        // 无法解析时保守处理：只加入原串
+        if !lang.eq_ignore_ascii_case("en") {
+            chain.push(lang.to_string());
+        }
+    }
+
+    chain
+}
 
 /// 扫描 `dir_path` 下的补全脚本，用指定 `lang` 打包，返回 `(bundle_static, bundle_dynamic)`。
 pub async fn build_bundles(
@@ -64,7 +127,6 @@ pub async fn build_bundles(
     use bundler::{VIRTUAL_DYNAMIC_ENTRY, VIRTUAL_STATIC_ENTRY, bundle_virtual};
     use js::codegen::{generate_env_code, generate_i18n_modules};
 
-    // 先扫描翻译，确定命名空间列表，再生成 import stmt
     let load_json = |p: &Path| -> HashMap<String, String> {
         std::fs::read_to_string(p)
             .ok()
@@ -73,14 +135,15 @@ pub async fn build_bundles(
     };
     let mut translations_by_ns: HashMap<String, HashMap<String, String>> = HashMap::new();
     for (ns, i18n_dir) in scan_i18n_dirs(dir_path) {
-        let lp = i18n_dir.join(format!("{}.json", lang));
-        let ep = i18n_dir.join("en.json");
+        // 生成标准 BCP 47 回退链并依序加载
+        // 顺序：en → zh → zh-Hans → zh-Hans-CN
+        // map.extend 的迭代顺序保证后加载的特化文件覆盖同 key 的泛化翻译
+        let fallbacks = get_fallback_chain(lang);
+
+        // 统一使用 get_matching_i18n_files 扫描并按回退链匹配（忽略大小写）
         let mut map = HashMap::new();
-        if ep.exists() {
-            map.extend(load_json(&ep));
-        }
-        if lp.exists() && lang != "en" {
-            map.extend(load_json(&lp));
+        for (_, fb_path) in get_matching_i18n_files(&i18n_dir, &fallbacks) {
+            map.extend(load_json(&fb_path));
         }
         translations_by_ns.insert(ns, map);
     }
@@ -190,6 +253,36 @@ pub async fn build_bundles(
     Ok((s, dynamic_bundles))
 }
 
+/// 扫描 i18n 目录下的 JSON 文件，只返回 file_stem 匹配回退链（忽略大小写）的 `(stem, path)` 列表。
+/// 按回退链顺序排列，确保 `build_bundles` 和 `run_i18n_gen` 使用相同的匹配逻辑。
+pub fn get_matching_i18n_files(
+    i18n_dir: &std::path::Path,
+    fallbacks: &[String],
+) -> Vec<(String, std::path::PathBuf)> {
+    let mut existing_files: Vec<(String, std::path::PathBuf)> = Vec::new();
+    if let Ok(entries) = std::fs::read_dir(i18n_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.extension().and_then(|e| e.to_str()) == Some("json")
+                && let Some(stem) = path.file_stem().and_then(|s| s.to_str())
+            {
+                existing_files.push((stem.to_string(), path));
+            }
+        }
+    }
+
+    let mut results = Vec::new();
+    for fb in fallbacks {
+        if let Some((stem, path)) = existing_files
+            .iter()
+            .find(|(stem, _)| stem.eq_ignore_ascii_case(fb))
+        {
+            results.push((stem.clone(), path.clone()));
+        }
+    }
+    results
+}
+
 /// 扫描 `completions_dir` 下的所有子命令 i18n 目录，返回 `(namespace, i18n_dir_path)` 列表。
 /// 每个子命令的 i18n 目录对应 `completions_dir/{subdir}/i18n/`。
 pub fn scan_i18n_dirs(completions_dir: &std::path::Path) -> Vec<(String, std::path::PathBuf)> {
@@ -266,4 +359,24 @@ macro_rules! log_info {
         let msg = format!($($arg)*);
         $crate::logger::write_log($crate::logger::LogLevel::Info, &msg);
     }};
+}
+
+#[cfg(test)]
+mod fallback_tests {
+    use super::*;
+
+    /// 边界情况：en 兜底、空字符串、非 BCP 47 格式兜底
+    #[test]
+    fn test_fallback_chain_edge_cases() {
+        // en 始终兜底
+        assert_eq!(get_fallback_chain("en"), vec!["en"]);
+        // 空字符串直接返回 ["en"]
+        assert_eq!(get_fallback_chain(""), vec!["en"]);
+        // 无法解析的字符串：["en"] + 原字符串，不生成多余的 en-* 衍生项
+        let chain = get_fallback_chain("???");
+        assert!(chain.contains(&"en".to_string()));
+        assert!(chain.contains(&"???".to_string()));
+        let en_prefix: Vec<_> = chain.iter().filter(|s| s.starts_with("en")).collect();
+        assert_eq!(en_prefix, vec![&"en"], "不应生成 en-* 衍生项");
+    }
 }

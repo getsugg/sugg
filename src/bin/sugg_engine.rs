@@ -9,6 +9,7 @@ use std::path::PathBuf;
 use sugg::cache::{CommandNode, CompletionCache, get_cache_path};
 use sugg::js::runtime::inject_globals;
 use sugg::log_error;
+use sugg::log_warn;
 
 fn json_to_command_node(v: JsonValue) -> CommandNode {
     serde_json::from_value(v).unwrap_or_default()
@@ -454,6 +455,9 @@ fn run_i18n_gen(args: &EngineArgs) {
         .or_else(|| std::env::var("SUGG_LANG").ok())
         .unwrap_or_else(|| "en".to_string());
 
+    // 基于 BCP 47 生成回退链，供 JSDoc 智能优先展示最佳匹配翻译
+    let fallbacks = sugg::get_fallback_chain(&preferred_lang);
+
     // keys_map: namespace -> key -> lang -> translation
     let mut keys_map: BTreeMap<String, BTreeMap<String, BTreeMap<String, String>>> =
         BTreeMap::new();
@@ -492,6 +496,21 @@ fn run_i18n_gen(args: &EngineArgs) {
         }
     }
 
+    // 按回退链查找优先展示的翻译，用 🚩 标记
+    fn find_best_lang<'a>(
+        fallbacks: &[String],
+        translations: &'a std::collections::BTreeMap<String, String>,
+    ) -> Option<&'a str> {
+        for fb in fallbacks.iter().rev() {
+            for (lang, _) in translations.iter() {
+                if lang.eq_ignore_ascii_case(fb) {
+                    return Some(lang.as_str());
+                }
+            }
+        }
+        None
+    }
+
     let mut s = String::new();
     if keys_map.is_empty() {
         s.push_str("// No i18n keys found.\n");
@@ -504,11 +523,24 @@ fn run_i18n_gen(args: &EngineArgs) {
             s.push_str(&format!("declare module \"{}\" {{\n", module_path));
             for (key, translations) in ns_keys {
                 s.push_str("  /**\n");
-                if let Some(text) = translations.get(&preferred_lang) {
-                    s.push_str(&format!("   * - 🚩 **{}**: {}\n", preferred_lang, text));
+                let best_lang = find_best_lang(&fallbacks, translations);
+                if best_lang.is_none() {
+                    log_warn!(
+                        "i18n key '{}' in namespace '{}' has no translation for preferred language '{}' (fallback chain: {}). Available translations: {}",
+                        key,
+                        ns,
+                        preferred_lang,
+                        fallbacks.join(", "),
+                        translations.keys().cloned().collect::<Vec<_>>().join(", ")
+                    );
+                }
+                if let Some(bl) = best_lang
+                    && let Some(text) = translations.get(bl)
+                {
+                    s.push_str(&format!("   * - 🚩 **{}**: {}\n", bl, text));
                 }
                 for (lang, text) in translations {
-                    if lang == &preferred_lang {
+                    if Some(lang.as_str()) == best_lang {
                         continue;
                     }
                     s.push_str(&format!("   * - **{}**: {}\n", lang, text));
@@ -537,8 +569,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Some("dev") => {
             let args = parse_engine_args(3);
             match std::env::args().nth(2).as_deref() {
-                Some("init") | Some("setup") => run_dev_init(&args)?,
-                Some("i18n") | Some("types") => run_i18n_gen(&args),
+                Some("init") => run_dev_init(&args)?,
+                Some("i18n") => run_i18n_gen(&args),
                 sub => {
                     eprintln!(
                         "❌ Unknown dev subcommand: {}. Available: init, i18n",

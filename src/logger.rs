@@ -1,4 +1,3 @@
-use chrono::Local;
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::{Mutex, OnceLock};
 
@@ -55,8 +54,7 @@ pub fn set_ui_mode() {
 pub fn write_log(level: LogLevel, msg: &str) {
     if LOG_MODE.load(Ordering::SeqCst) == 0 {
         // Engine 模式：直接输出到 stderr
-        let now = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
-        eprintln!("{}[{}] {}", level.icon(), now, msg);
+        eprintln!("{} {}", level.icon(), msg);
     } else {
         // 补全 UI 模式：拦截内容，截断后进入队列
         let mutex = UI_LOGS.get_or_init(|| Mutex::new(Vec::new()));

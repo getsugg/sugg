@@ -28,6 +28,18 @@ fn run_i18n_gen(completions_dir: &std::path::Path) {
     assert!(status.success(), "i18n-gen failed");
 }
 
+#[allow(dead_code)]
+fn run_i18n_gen_with_lang(completions_dir: &std::path::Path, lang: &str) {
+    let status = std::process::Command::new(common::sugg_bin())
+        .args(["dev", "i18n", "--completions-dir"])
+        .arg(completions_dir)
+        .arg("--lang")
+        .arg(lang)
+        .status()
+        .expect("failed to run dev i18n");
+    assert!(status.success(), "i18n-gen failed");
+}
+
 fn read_dts(completions_dir: &std::path::Path) -> String {
     fs::read_to_string(completions_dir.join(".sugg").join("i18n.d.ts")).unwrap()
 }
