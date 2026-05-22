@@ -1,0 +1,28 @@
+let complete_exe = ($env.CURRENT_FILE | path dirname | path join 'bin' 'sugg')
+
+let complete_completer = {|spans|
+    let expanded_alias = (scope aliases | where name == $spans.0 | $in.0?.expansion?)
+
+    let processed_spans = (if $expanded_alias != null {
+        $spans | skip 1 | prepend ($expanded_alias | split row " " | take 1)
+    } else {
+        $spans
+    })
+
+    let input = ($processed_spans | str join ' ')
+
+    let output = (try {
+        ^($complete_exe) complete nushell -- $input | from json
+    } catch {
+        []
+    })
+
+    if ($output | is-empty) { null } else { $output }
+}
+
+$env.config.completions = ($env.config.completions? | default {} | merge {
+    external: ($env.config.completions.external? | default {} | merge {
+        enable: true,
+        completer: $complete_completer
+    })
+})

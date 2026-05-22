@@ -140,17 +140,17 @@ fn add_dir_to_path(bin_dir: &std::path::Path) {
         match stdout.as_str() {
             "ADDED" => {
                 println!("✅ Added {} to user PATH", dir_str);
-                println!("⚠️  Please restart terminal or re-login for changes to take effect");
+                println!("💡  Please restart terminal or re-login for changes to take effect");
             }
             "EXISTS" => {
                 println!(
-                    "ℹ️  PATH already contains {}, no need to add again",
+                    "💡  PATH already contains {}, no need to add again",
                     dir_str
                 );
             }
             _ => {
                 eprintln!(
-                    "⚠️  PATH configuration failed (PowerShell output: {stdout}), please add manually"
+                    "❗  PATH configuration failed (PowerShell output: {stdout}), please add manually"
                 );
                 eprintln!("   Directory: {}", dir_str);
             }
@@ -183,7 +183,7 @@ fn add_dir_to_path(bin_dir: &std::path::Path) {
             let content = std::fs::read_to_string(&path).unwrap_or_default();
             if content.contains(&export_line) {
                 println!(
-                    "ℹ️  PATH config already exists in {}, skipping",
+                    "💡  PATH config already exists in {}, skipping",
                     path.display()
                 );
                 added = true;
@@ -197,10 +197,10 @@ fn add_dir_to_path(bin_dir: &std::path::Path) {
         }
 
         if added {
-            println!("⚠️  Run `source ~/.bashrc` (or the appropriate profile) or restart terminal");
+            println!("💡  Run `source ~/.bashrc` (or the appropriate profile) or restart terminal");
         } else {
             eprintln!(
-                "⚠️  No shell profile file found. Please manually add the following line to your shell config:"
+                "💡  No shell profile file found. Please manually add the following line to your shell config:"
             );
             eprintln!("   {export_line}");
         }

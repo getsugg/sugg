@@ -18,8 +18,8 @@ pub enum LogLevel {
 impl LogLevel {
     pub fn icon(&self) -> &'static str {
         match self {
-            LogLevel::Info => "ℹ️",
-            LogLevel::Warn => "⚠️",
+            LogLevel::Info => "💡",
+            LogLevel::Warn => "❗",
             LogLevel::Error => "❌",
             LogLevel::Log => "📝",
         }
