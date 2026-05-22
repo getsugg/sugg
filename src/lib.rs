@@ -361,6 +361,96 @@ macro_rules! log_info {
     }};
 }
 
+use std::sync::OnceLock;
+
+/// 终端是否支持富文本 Emoji
+pub fn use_emoji() -> bool {
+    *USE_EMOJI.get_or_init(|| {
+        if std::env::var("NO_COLOR").is_ok() {
+            return false;
+        }
+        #[cfg(target_os = "windows")]
+        {
+            std::env::var("WT_SESSION").is_ok()
+                || std::env::var("TERM_PROGRAM")
+                    .map(|v| v == "vscode")
+                    .unwrap_or(false)
+                || std::env::var("COLORTERM").is_ok()
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            true
+        }
+    })
+}
+
+static USE_EMOJI: OnceLock<bool> = OnceLock::new();
+
+/// 智能 Emoji 包装器：实现 Display，自动根据环境降级
+#[derive(Clone, Copy, Debug)]
+pub struct Emoji {
+    pub rich: &'static str,
+    pub fallback: &'static str,
+}
+
+impl Emoji {
+    pub const fn new(rich: &'static str, fallback: &'static str) -> Self {
+        Self { rich, fallback }
+    }
+}
+
+impl std::fmt::Display for Emoji {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if use_emoji() {
+            f.write_str(self.rich)
+        } else {
+            f.write_str(self.fallback)
+        }
+    }
+}
+
+// =========================================================================
+// 全局统一的 CLI 符号字典
+// =========================================================================
+pub const ICON_SUCCESS: Emoji = Emoji::new("✅", "√");
+pub const ICON_ERROR: Emoji = Emoji::new("❌", "×");
+pub const ICON_WARN: Emoji = Emoji::new("❗", "!");
+pub const ICON_INFO: Emoji = Emoji::new("💡", "i");
+pub const ICON_LOG: Emoji = Emoji::new("📝", "-");
+pub const ICON_BUILD: Emoji = Emoji::new("🛠️", "*");
+pub const ICON_PACKAGE: Emoji = Emoji::new("📦", "o");
+pub const ICON_SCAN: Emoji = Emoji::new("🔍", "»");
+pub const ICON_DOWNLOAD: Emoji = Emoji::new("📥", "↓");
+pub const ICON_UPGRADE: Emoji = Emoji::new("⬆️", "↑");
+pub const ICON_SYNC: Emoji = Emoji::new("🔄", "~");
+pub const ICON_STAR: Emoji = Emoji::new("⭐", "*");
+pub const ICON_ROCKET: Emoji = Emoji::new("🚀", ">");
+pub const ICON_TAG: Emoji = Emoji::new("🏷️", "@");
+pub const ICON_PARTY: Emoji = Emoji::new("🎉", "*");
+
+// =========================================================================
+// ANSI 颜色码（复用 use_emoji 的终端检测，NO_COLOR 时一并静默）
+// =========================================================================
+
+/// ANSI 颜色/样式码包装器：实现 Display，终端不支持时输出空字符串
+pub struct Ansi(pub &'static str);
+
+impl std::fmt::Display for Ansi {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if use_emoji() {
+            write!(f, "\x1b[{}m", self.0)
+        } else {
+            Ok(())
+        }
+    }
+}
+
+pub const ANSI_GREEN: Ansi = Ansi("1;32");
+pub const ANSI_CYAN: Ansi = Ansi("1;36");
+pub const ANSI_YELLOW: Ansi = Ansi("33");
+pub const ANSI_BOLD: Ansi = Ansi("1");
+pub const ANSI_RESET: Ansi = Ansi("0");
+
 #[cfg(test)]
 mod fallback_tests {
     use super::*;

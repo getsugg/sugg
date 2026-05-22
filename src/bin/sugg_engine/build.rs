@@ -28,13 +28,15 @@ pub async fn run_build(
     if !dir_path.exists() {
         fs::create_dir_all(&dir_path)?;
         println!(
-            "💡 Completions directory not found. Auto-created at {}. Place TS/JS scripts in this directory and retry.",
+            "{} Completions directory not found. Auto-created at {}. Place TS/JS scripts in this directory and retry.",
+            sugg::ICON_INFO,
             sugg::path_to_slash(&dir_path)
         );
         return Ok(());
     }
     println!(
-        "📦 Scanning completion scripts directory: {}",
+        "{} Scanning completion scripts directory: {}",
+        sugg::ICON_PACKAGE,
         sugg::path_to_slash(&dir_path)
     );
 
@@ -56,21 +58,24 @@ pub async fn run_build(
         for (stem, code, _) in &dynamic_bundles {
             let out_path = dump_dir.join(format!("{stem}.js"));
             fs::write(&out_path, code)?;
-            println!("🔍 Debug dump: {}", out_path.display());
+            println!("{} Debug dump: {}", sugg::ICON_SCAN, out_path.display());
         }
     }
 
     // 脚本清单在 build_bundles() 内边扫描边打印，此处只处理空目录兜底
     if bundled_static.is_empty() {
-        println!("💡 Completions directory is empty, no configuration was bundled.");
+        println!(
+            "{} Completions directory is empty, no configuration was bundled.",
+            sugg::ICON_INFO
+        );
         return Ok(());
     }
 
     let mut cache = CompletionCache::default();
-    let rt = AsyncRuntime::new().expect("❌ Failed to create QuickJS runtime");
+    let rt = AsyncRuntime::new().expect("ERROR: Failed to create QuickJS runtime");
     let ctx = AsyncContext::full(&rt)
         .await
-        .expect("❌ Failed to create QuickJS context");
+        .expect("ERROR: Failed to create QuickJS context");
 
     async fn try_generate_root(
         ctx: Ctx<'_>,
@@ -166,7 +171,7 @@ pub async fn run_build(
             }
             let bytes = rkyv::to_bytes::<Error>(&cache).expect("Failed to serialize cache");
             fs::write(cache_path, bytes).expect("Failed to write cache file");
-            println!("✅ Cache complete!");
+            println!("{} Cache complete!", sugg::ICON_SUCCESS);
         }
         Err(e) => {
             log_error!("Cache build phase failed: {:#}", e);

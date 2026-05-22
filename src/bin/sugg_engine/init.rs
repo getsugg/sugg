@@ -50,25 +50,78 @@ pub fn run_init(shell_name: &str) -> Result<(), Box<dyn std::error::Error>> {
     print!("{}", content);
 
     if stdout().is_terminal() {
-        eprintln!("\n# ==========================================================================");
+        use sugg::{ANSI_BOLD, ANSI_CYAN, ANSI_GREEN, ANSI_RESET, ANSI_YELLOW, Emoji};
+
+        let party = Emoji::new("🎉 ", "");
+        let pointer = Emoji::new("👉 ", "  ");
+        let rule =
+            "═══════════════════════════════════════════════════════════════════════════════════";
+
+        eprintln!("\n{}{}{}", ANSI_CYAN, rule, ANSI_RESET);
         eprintln!(
-            "# 💡 sugg shell integration for {} generated successfully.",
-            shell.as_str()
+            "  {}{}Sugg {} shell integration generated successfully!{}",
+            ANSI_GREEN,
+            party,
+            shell.as_str(),
+            ANSI_RESET
+        );
+        eprintln!("  {}", ANSI_RESET);
+        eprintln!(
+            "  {}{}To apply this automatically on shell startup,{}",
+            ANSI_BOLD, pointer, ANSI_RESET
         );
         eprintln!(
-            "# To apply this automatically on shell startup, add the following to your config:"
+            "  {}    add the following to your config:{}",
+            ANSI_BOLD, ANSI_RESET
         );
         match shell {
-            sugg::Shell::Bash => eprintln!("#   eval \"$(sugg init bash)\""),
-            sugg::Shell::Zsh => eprintln!("#   eval \"$(sugg init zsh)\""),
-            sugg::Shell::Fish => eprintln!("#   sugg init fish | source"),
-            sugg::Shell::Nushell => {
-                eprintln!("#   sugg init nushell | save -f ~/.sugg_init.nu");
-                eprintln!("#   (Then add `source ~/.sugg_init.nu` to your env.nu/config.nu)");
+            sugg::Shell::Bash => {
+                eprintln!(
+                    "      {}eval \"$(sugg init bash)\"{}",
+                    ANSI_YELLOW, ANSI_RESET
+                )
             }
-            sugg::Shell::Powershell => eprintln!("#   sugg init powershell | Invoke-Expression"),
+            sugg::Shell::Zsh => {
+                eprintln!(
+                    "      {}eval \"$(sugg init zsh)\"{}",
+                    ANSI_YELLOW, ANSI_RESET
+                )
+            }
+            sugg::Shell::Fish => {
+                eprintln!("      {}sugg init fish | source{}", ANSI_YELLOW, ANSI_RESET)
+            }
+            sugg::Shell::Nushell => {
+                eprintln!(
+                    "      {}✨  Recommended (Nushell 0.102+ — no config editing needed):{}",
+                    ANSI_CYAN, ANSI_RESET
+                );
+                eprintln!(
+                    "        {}mkdir ($nu.default-config-dir | path join 'autoload'){}",
+                    ANSI_YELLOW, ANSI_RESET
+                );
+                eprintln!(
+                    "        {}sugg init nushell | save -f ($nu.default-config-dir | path join 'autoload/sugg.nu'){}",
+                    ANSI_YELLOW, ANSI_RESET
+                );
+                eprintln!(
+                    "      {}Legacy (any version — requires editing config.nu):{}",
+                    ANSI_CYAN, ANSI_RESET
+                );
+                eprintln!(
+                    "        {}sugg init nushell | save -f ~/.sugg_init.nu{}",
+                    ANSI_YELLOW, ANSI_RESET
+                );
+                eprintln!(
+                    "        (Then add {}source ~/.sugg_init.nu{} to your config.nu)",
+                    ANSI_YELLOW, ANSI_RESET
+                );
+            }
+            sugg::Shell::Powershell => eprintln!(
+                "      {}sugg init powershell | Invoke-Expression{}",
+                ANSI_YELLOW, ANSI_RESET
+            ),
         }
-        eprintln!("# ==========================================================================\n");
+        eprintln!("{}{}{}\n", ANSI_CYAN, rule, ANSI_RESET);
     }
 
     Ok(())
@@ -109,11 +162,16 @@ pub fn run_dev_init(completions_dir: &Path) -> Result<(), Box<dyn std::error::Er
     // 其余文件 — 仅首次生成，不覆盖用户自定义
     let skipped = extract_dir(&ASSETS_INIT_DIR, completions_dir, true)?;
     for path in skipped.iter().filter(|p| !p.starts_with(&system_dir)) {
-        println!("💡  {} already exists, skipped.", sugg::path_to_slash(path));
+        println!(
+            "{}  {} already exists, skipped.",
+            sugg::ICON_INFO,
+            sugg::path_to_slash(path)
+        );
     }
 
     println!(
-        "✅ Dev environment initialized at {}",
+        "{} Dev environment initialized at {}",
+        sugg::ICON_SUCCESS,
         sugg::path_to_slash(&system_dir)
     );
     Ok(())

@@ -5,8 +5,10 @@
 //!   sugg_root()/sugg-engine         ← 内部引擎，不放 bin/ 避免污染 PATH
 //!
 //! 用法:
-//!   cargo deploy --release              # 编译 + 安装
-//!   cargo deploy --release --add-path   # 编译 + 安装 + 配置 PATH
+//!   cargo deploy --release                # 编译 + 安装
+//!   cargo deploy --release --add-path     # 编译 + 安装 + 配置 PATH
+//!   cargo deploy --release --no-build     # 跳过编译（已经在 cargo test 中编译过了），直接安装
+//!   cargo deploy --release --no-build --add-path
 //!
 //! 安装目录（可通过 SUGG_HOME 环境变量覆盖）:
 //!   Windows:  %APPDATA%/sugg/
@@ -15,26 +17,33 @@
 
 use std::path::PathBuf;
 use std::process::Command;
+use sugg::{ICON_BUILD, ICON_ERROR, ICON_INFO, ICON_SUCCESS, ICON_WARN};
 
 fn main() {
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let args: Vec<String> = std::env::args().skip(1).collect();
     let is_release = args.iter().any(|a| a == "--release");
     let add_path = args.iter().any(|a| a == "--add-path");
+    let skip_build = args.iter().any(|a| a == "--no-build");
     let profile = if is_release { "release" } else { "debug" };
 
-    // ── 1. 构建 sugg + sugg-engine ──
-    println!("🔨 Building sugg and sugg-engine ({profile} mode)...");
-    let mut cmd = Command::new("cargo");
-    cmd.args(["build", "--bin", "sugg", "--bin", "sugg-engine"])
-        .current_dir(&manifest_dir);
-    if is_release {
-        cmd.arg("--release");
-    }
-    let status = cmd.status().expect("Failed to start cargo build");
-    if !status.success() {
-        eprintln!("❌ Build failed");
-        std::process::exit(1);
+    // ── 1. 构建 sugg + sugg-engine（--no-build 跳过，直接从已有产物安装）──
+    if !skip_build {
+        println!(
+            "{} Building sugg and sugg-engine ({profile} mode)...",
+            ICON_BUILD
+        );
+        let mut cmd = Command::new("cargo");
+        cmd.args(["build", "--bin", "sugg", "--bin", "sugg-engine"])
+            .current_dir(&manifest_dir);
+        if is_release {
+            cmd.arg("--release");
+        }
+        let status = cmd.status().expect("Failed to start cargo build");
+        if !status.success() {
+            eprintln!("{} Build failed", ICON_ERROR);
+            std::process::exit(1);
+        }
     }
 
     // ── 2. 确定编译产物路径 ──
@@ -50,11 +59,19 @@ fn main() {
     let sugg_engine_src = target_dir.join(sugg_engine_name);
 
     if !sugg_src.exists() {
-        eprintln!("❌ Build artifact not found: {}", sugg_src.display());
+        eprintln!(
+            "{} Build artifact not found: {}",
+            ICON_ERROR,
+            sugg_src.display()
+        );
         std::process::exit(1);
     }
     if !sugg_engine_src.exists() {
-        eprintln!("❌ Build artifact not found: {}", sugg_engine_src.display());
+        eprintln!(
+            "{} Build artifact not found: {}",
+            ICON_ERROR,
+            sugg_engine_src.display()
+        );
         std::process::exit(1);
     }
 
@@ -90,7 +107,7 @@ fn main() {
         )
     });
 
-    println!("✅ Installation complete");
+    println!("{} Installation complete", ICON_SUCCESS);
     println!(
         "   sugg          -> {}   ← added to PATH",
         sugg_dst.display()
@@ -105,7 +122,10 @@ fn main() {
     if add_path {
         add_dir_to_path(&bin_dir);
     } else {
-        println!("💡 Tip: add the following directory to PATH to use sugg globally:");
+        println!(
+            "{} Tip: add the following directory to PATH to use sugg globally:",
+            ICON_INFO
+        );
         println!("       {}", bin_dir.display());
         println!("   Next time, use --add-path to auto-configure:");
         println!("       cargo deploy --release --add-path");
@@ -139,18 +159,22 @@ fn add_dir_to_path(bin_dir: &std::path::Path) {
         let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
         match stdout.as_str() {
             "ADDED" => {
-                println!("✅ Added {} to user PATH", dir_str);
-                println!("💡  Please restart terminal or re-login for changes to take effect");
+                println!("{} Added {} to user PATH", ICON_SUCCESS, dir_str);
+                println!(
+                    "{} Please restart terminal or re-login for changes to take effect",
+                    ICON_INFO
+                );
             }
             "EXISTS" => {
                 println!(
-                    "💡  PATH already contains {}, no need to add again",
-                    dir_str
+                    "{} PATH already contains {}, no need to add again",
+                    ICON_INFO, dir_str
                 );
             }
             _ => {
                 eprintln!(
-                    "❗  PATH configuration failed (PowerShell output: {stdout}), please add manually"
+                    "{} PATH configuration failed (PowerShell output: {stdout}), please add manually",
+                    ICON_WARN
                 );
                 eprintln!("   Directory: {}", dir_str);
             }
@@ -183,7 +207,8 @@ fn add_dir_to_path(bin_dir: &std::path::Path) {
             let content = std::fs::read_to_string(&path).unwrap_or_default();
             if content.contains(&export_line) {
                 println!(
-                    "💡  PATH config already exists in {}, skipping",
+                    "{} PATH config already exists in {}, skipping",
+                    ICON_INFO,
                     path.display()
                 );
                 added = true;
@@ -191,16 +216,20 @@ fn add_dir_to_path(bin_dir: &std::path::Path) {
             }
             if let Ok(mut file) = std::fs::OpenOptions::new().append(true).open(&path) {
                 writeln!(file, "\n# added by sugg deploy\n{export_line}").ok();
-                println!("✅ PATH config written to {}", path.display());
+                println!("{} PATH config written to {}", ICON_SUCCESS, path.display());
                 added = true;
             }
         }
 
         if added {
-            println!("💡  Run `source ~/.bashrc` (or the appropriate profile) or restart terminal");
+            println!(
+                "{} Run `source ~/.bashrc` (or the appropriate profile) or restart terminal",
+                ICON_INFO
+            );
         } else {
             eprintln!(
-                "💡  No shell profile file found. Please manually add the following line to your shell config:"
+                "{} No shell profile file found. Please manually add the following line to your shell config:",
+                ICON_INFO
             );
             eprintln!("   {export_line}");
         }

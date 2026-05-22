@@ -138,7 +138,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         } => build::run_build(completions_dir, lang, cache_dir, dump_dynamic).await,
         Commands::Upgrade => {
             if let Err(e) = upgrade::run_upgrade().await {
-                eprintln!("❌ Upgrade failed: {}", e);
+                eprintln!("{} Upgrade failed: {}", sugg::ICON_ERROR, e);
                 std::process::exit(1);
             }
             Ok(())
@@ -146,12 +146,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::Init { shell } => {
             let shell_name = shell.unwrap_or_default();
             if shell_name.is_empty() {
-                eprintln!("❌ Missing <shell> argument. Usage: sugg init <shell>");
+                eprintln!(
+                    "{} Missing <shell> argument. Usage: sugg init <shell>",
+                    sugg::ICON_ERROR
+                );
                 eprintln!("   Supported shells: bash, zsh, fish, nushell, powershell");
                 std::process::exit(1);
             }
             if let Err(e) = init::run_init(&shell_name) {
-                eprintln!("❌ Init failed: {}", e);
+                eprintln!("{} Init failed: {}", sugg::ICON_ERROR, e);
                 std::process::exit(1);
             }
             Ok(())

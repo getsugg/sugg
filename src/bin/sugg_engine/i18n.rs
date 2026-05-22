@@ -112,7 +112,8 @@ pub fn run_i18n_gen(completions_dir: &Path, lang: &str) {
     let out_path = sugg_dir.join("i18n.d.ts");
     fs::write(&out_path, &s).expect("Failed to write i18n.d.ts");
     println!(
-        "✅ Generated {} with {} namespaces.",
+        "{} Generated {} with {} namespaces.",
+        sugg::ICON_SUCCESS,
         sugg::path_to_slash(&out_path),
         keys_map.len()
     );

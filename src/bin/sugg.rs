@@ -137,6 +137,7 @@ fn parse_cli_state<'a>(root: &'a ArchivedCommandNode, words: &[&'a str]) -> Pars
 }
 
 /// 获取引擎路径：消除 4 处平台宏重复，用 cfg!() 一次判断
+/// 获取引擎路径：直接使用全局安装根目录
 fn engine_path() -> std::path::PathBuf {
     if let Ok(p) = std::env::var("SUGG_ENGINE_PATH") {
         return std::path::PathBuf::from(p);
@@ -146,15 +147,7 @@ fn engine_path() -> std::path::PathBuf {
     } else {
         "sugg-engine"
     };
-    let base_dir = if cfg!(debug_assertions) {
-        std::env::current_exe()
-            .ok()
-            .and_then(|p| p.parent().map(|p| p.to_path_buf()))
-            .unwrap_or_default()
-    } else {
-        sugg::sugg_root()
-    };
-    base_dir.join(exe_name)
+    sugg::sugg_root().join(exe_name)
 }
 
 struct CompleteArgs {
@@ -249,7 +242,7 @@ fn delegate_to_engine() -> ! {
     match spawn_res {
         Ok(code) => std::process::exit(code),
         Err(e) => {
-            eprintln!("❌ 启动引擎失败: {}", e);
+            eprintln!("{} 启动引擎失败: {}", sugg::ICON_ERROR, e);
             std::process::exit(1);
         }
     }
