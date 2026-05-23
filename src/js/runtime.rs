@@ -53,7 +53,9 @@ pub fn inject_globals(ctx: Ctx<'_>) {
                 match tokio::fs::read_to_string(&path).await {
                     Ok(content) => content,
                     Err(e) => {
-                        crate::log_warn!("Failed to read file {}: {:?}", &path, e);
+                        if e.kind() != std::io::ErrorKind::NotFound {
+                            crate::log_warn!("Failed to read file {}: {:?}", &path, e);
+                        }
                         String::new()
                     }
                 }
