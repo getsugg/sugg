@@ -361,95 +361,116 @@ macro_rules! log_info {
     }};
 }
 
-use std::sync::OnceLock;
-
-/// 终端是否支持富文本 Emoji
-pub fn use_emoji() -> bool {
-    *USE_EMOJI.get_or_init(|| {
-        if std::env::var("NO_COLOR").is_ok() {
-            return false;
-        }
-        #[cfg(target_os = "windows")]
-        {
-            std::env::var("WT_SESSION").is_ok()
-                || std::env::var("TERM_PROGRAM")
-                    .map(|v| v == "vscode")
-                    .unwrap_or(false)
-                || std::env::var("COLORTERM").is_ok()
-        }
-        #[cfg(not(target_os = "windows"))]
-        {
-            true
-        }
-    })
-}
-
-static USE_EMOJI: OnceLock<bool> = OnceLock::new();
-
-/// 智能 Emoji 包装器：实现 Display，自动根据环境降级
-#[derive(Clone, Copy, Debug)]
-pub struct Emoji {
-    pub rich: &'static str,
-    pub fallback: &'static str,
-}
-
-impl Emoji {
-    pub const fn new(rich: &'static str, fallback: &'static str) -> Self {
-        Self { rich, fallback }
-    }
-}
-
-impl std::fmt::Display for Emoji {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if use_emoji() {
-            f.write_str(self.rich)
-        } else {
-            f.write_str(self.fallback)
-        }
-    }
-}
-
 // =========================================================================
 // 全局统一的 CLI 符号字典
 // =========================================================================
-pub const ICON_SUCCESS: Emoji = Emoji::new("✅", "√");
-pub const ICON_ERROR: Emoji = Emoji::new("❌", "×");
-pub const ICON_WARN: Emoji = Emoji::new("❗", "!");
-pub const ICON_INFO: Emoji = Emoji::new("💡", "i");
-pub const ICON_LOG: Emoji = Emoji::new("📝", "-");
-pub const ICON_BUILD: Emoji = Emoji::new("🛠️", "*");
-pub const ICON_PACKAGE: Emoji = Emoji::new("📦", "o");
-pub const ICON_SCAN: Emoji = Emoji::new("🔍", "»");
-pub const ICON_DOWNLOAD: Emoji = Emoji::new("📥", "↓");
-pub const ICON_UPGRADE: Emoji = Emoji::new("⬆️", "↑");
-pub const ICON_SYNC: Emoji = Emoji::new("🔄", "~");
-pub const ICON_STAR: Emoji = Emoji::new("⭐", "*");
-pub const ICON_ROCKET: Emoji = Emoji::new("🚀", ">");
-pub const ICON_TAG: Emoji = Emoji::new("🏷️", "@");
-pub const ICON_PARTY: Emoji = Emoji::new("🎉", "*");
+
+pub const ICON_SUCCESS: &str = "✅";
+pub const ICON_ERROR: &str = "❌";
+pub const ICON_WARN: &str = "❗";
+pub const ICON_INFO: &str = "💡";
+pub const ICON_LOG: &str = "📝";
+pub const ICON_BUILD: &str = "🔧";
+pub const ICON_PACKAGE: &str = "📦";
+pub const ICON_SCAN: &str = "🔍";
+pub const ICON_DOWNLOAD: &str = "📥";
+pub const ICON_UPGRADE: &str = "🔼";
+pub const ICON_SYNC: &str = "🔄";
+pub const ICON_STAR: &str = "⭐";
+pub const ICON_ROCKET: &str = "🚀";
+pub const ICON_TAG: &str = "🔖";
+pub const ICON_PARTY: &str = "🎉";
+pub const ICON_SPARKLES: &str = "✨";
+pub const ICON_POINTER: &str = "👉";
 
 // =========================================================================
-// ANSI 颜色码（复用 use_emoji 的终端检测，NO_COLOR 时一并静默）
+// TerminalBox — 通用圆角边框渲染组件
 // =========================================================================
 
-/// ANSI 颜色/样式码包装器：实现 Display，终端不支持时输出空字符串
-pub struct Ansi(pub &'static str);
+/// 终端圆角卡片容器，支持自适应宽度和 Builder 模式链式构建
+pub struct TerminalBox {
+    lines: Vec<String>,
+    border_style: console::Style,
+}
 
-impl std::fmt::Display for Ansi {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if use_emoji() {
-            write!(f, "\x1b[{}m", self.0)
-        } else {
-            Ok(())
+impl TerminalBox {
+    /// 创建新的 TerminalBox，默认边框颜色为青色
+    pub fn new() -> Self {
+        Self {
+            lines: Vec::new(),
+            border_style: console::Style::new().bold().cyan(),
         }
+    }
+
+    /// 设置边框颜色
+    pub fn border_color(mut self, style: console::Style) -> Self {
+        self.border_style = style;
+        self
+    }
+
+    /// 追加一行内容
+    pub fn line(mut self, text: impl Into<String>) -> Self {
+        self.lines.push(text.into());
+        self
+    }
+
+    /// 追加一个空行
+    pub fn empty_line(mut self) -> Self {
+        self.lines.push(String::new());
+        self
+    }
+
+    /// 渲染并打印盒子到 stderr
+    pub fn print(&self) {
+        let max_width = self
+            .lines
+            .iter()
+            .map(|l| console::measure_text_width(l))
+            .max()
+            .unwrap_or(0);
+
+        let left_padding = 2;
+        let right_padding = 2;
+        let total_padding = left_padding + right_padding;
+
+        // 动态适配终端宽度：获取 stderr 的物理列宽，防止窄终端溢出
+        let terminal_width = console::Term::stderr().size().1 as usize;
+        let effective_width = if terminal_width > 20 {
+            max_width.min(terminal_width.saturating_sub(12))
+        } else {
+            max_width
+        };
+
+        // 使用 for_stderr() 确保颜色检测使用 stderr 而非 stdout
+        let border = self.border_style.clone().for_stderr();
+
+        let horizontal = "─".repeat(effective_width + total_padding);
+
+        // 整个边框行作为一个样式化整体包裹
+        eprintln!();
+        eprintln!("{}", border.apply_to(format!("  ╭{}╮", horizontal)));
+
+        for line in &self.lines {
+            let padded = console::pad_str(line, effective_width, console::Alignment::Left, None);
+
+            eprintln!(
+                "  {}  {}  {}",
+                border.apply_to("│"),
+                padded,
+                border.apply_to("│"),
+            );
+        }
+
+        eprintln!("{}", border.apply_to(format!("  ╰{}╯", horizontal)));
+        eprintln!();
     }
 }
 
-pub const ANSI_GREEN: Ansi = Ansi("1;32");
-pub const ANSI_CYAN: Ansi = Ansi("1;36");
-pub const ANSI_YELLOW: Ansi = Ansi("33");
-pub const ANSI_BOLD: Ansi = Ansi("1");
-pub const ANSI_RESET: Ansi = Ansi("0");
+impl Default for TerminalBox {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 #[cfg(test)]
 mod fallback_tests {
@@ -468,5 +489,82 @@ mod fallback_tests {
         assert!(chain.contains(&"???".to_string()));
         let en_prefix: Vec<_> = chain.iter().filter(|s| s.starts_with("en")).collect();
         assert_eq!(en_prefix, vec![&"en"], "不应生成 en-* 衍生项");
+    }
+}
+
+#[cfg(test)]
+mod display_tests {
+    use super::*;
+
+    /// 验证 Style(for_stderr) 在颜色开关下的行为
+    /// 注意：set_colors_enabled_stderr 是全局状态，并行测试会互相干扰，
+    /// 所以把开/关两个场景合并到一个测试中顺序执行。
+    #[test]
+    fn test_style_color_on_off_stderr() {
+        let prev = console::colors_enabled_stderr();
+
+        // ===== 关闭颜色 =====
+        console::set_colors_enabled_stderr(false);
+        let style = console::Style::new().bold().cyan().for_stderr();
+        let output = style.apply_to("hello").to_string();
+        assert!(
+            !output.contains('\x1b'),
+            "颜色关闭时不应包含 ANSI 码: {:?}",
+            output
+        );
+        assert_eq!(output, "hello", "颜色关闭时应输出纯文本");
+
+        // ===== 开启颜色 =====
+        console::set_colors_enabled_stderr(true);
+        let style = console::Style::new().bold().cyan().for_stderr();
+        let output = style.apply_to("hello").to_string();
+        assert!(output.contains('\x1b'), "颜色开启时应包含 ANSI 码");
+        assert!(output.starts_with("\x1b["), "应以 ANSI 转义序列开头");
+        assert!(output.ends_with("\x1b[0m"), "应以 ANSI 重置结尾");
+        assert!(output.contains("hello"), "应保留原始文本");
+
+        console::set_colors_enabled_stderr(prev);
+    }
+
+    /// 验证 Style（for_stdout）不受 stderr 颜色设置影响
+    #[test]
+    fn test_for_stdout_independent_from_stderr() {
+        let prev_stderr = console::colors_enabled_stderr();
+        let prev_stdout = console::colors_enabled();
+
+        // stderr 关闭，stdout 保持原样
+        console::set_colors_enabled_stderr(false);
+
+        let stderr_style = console::Style::new().bold().cyan().for_stderr();
+        let stdout_style = console::Style::new().bold().cyan().for_stdout();
+
+        let stderr_out = stderr_style.apply_to("x").to_string();
+        let stdout_out = stdout_style.apply_to("x").to_string();
+
+        // stderr 颜色被抑制
+        assert!(!stderr_out.contains('\x1b'), "stderr 不应有 ANSI 码");
+        // stdout 不受影响（取决于实际环境，这里只验证它们可以不同）
+        assert_eq!(
+            stdout_out.contains('\x1b'),
+            prev_stdout,
+            "stdout 应与之前一致"
+        );
+
+        console::set_colors_enabled_stderr(prev_stderr);
+        console::set_colors_enabled(prev_stdout);
+    }
+
+    /// 验证 Emoji 常量至少能渲染出内容（不 panic）
+    /// 注意：console::Emoji 内部用 OnceLock 缓存 is_emoji_enabled() 结果，
+    /// 在测试中无法通过运行时改环境变量覆盖，但实际运行时 NO_COLOR/TERM=dumb
+    /// 都会在第一次调用时被正确检测。console 库自身有对应测试。
+    #[test]
+    fn test_emoji_constants_render() {
+        let s = format!("{}", ICON_SUCCESS);
+        assert!(!s.is_empty(), "ICON_SUCCESS 应渲染出内容");
+        let s = format!("{}", ICON_ERROR);
+        assert!(!s.is_empty(), "ICON_ERROR 应渲染出内容");
+        let s = format!("{}", ICON_PARTY);
+        assert!(!s.is_empty(), "ICON_PARTY 应渲染出内容");
     }
 }

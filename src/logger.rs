@@ -16,7 +16,7 @@ pub enum LogLevel {
 }
 
 impl LogLevel {
-    pub fn icon(&self) -> crate::Emoji {
+    pub fn icon(&self) -> &'static str {
         match self {
             LogLevel::Info => crate::ICON_INFO,
             LogLevel::Warn => crate::ICON_WARN,

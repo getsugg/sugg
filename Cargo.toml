@@ -23,6 +23,7 @@ lexopt = "0.3.2"
 self-replace = "1.5.0"
 include_dir = "0.7.4"
 icu = { version = "2.2.0", features = ["compiled_data"] }
+console = "0.16.3"
 
 [dev-dependencies]
 insta = { version = "1.39", features = ["json"] }

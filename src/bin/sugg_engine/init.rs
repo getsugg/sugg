@@ -1,6 +1,5 @@
 use include_dir::{Dir, include_dir};
 use std::fs;
-use std::io::{IsTerminal, stdout};
 use std::path::Path;
 
 static ASSETS_INIT_DIR: Dir = include_dir!("$CARGO_MANIFEST_DIR/assets/init");
@@ -49,79 +48,101 @@ pub fn run_init(shell_name: &str) -> Result<(), Box<dyn std::error::Error>> {
         .ok_or_else(|| format!("Bridge script for '{}' is not valid UTF-8", file_name))?;
     print!("{}", content);
 
-    if stdout().is_terminal() {
-        use sugg::{ANSI_BOLD, ANSI_CYAN, ANSI_GREEN, ANSI_RESET, ANSI_YELLOW, Emoji};
+    if console::user_attended() {
+        use console::style;
+        use sugg::TerminalBox;
 
-        let party = Emoji::new("🎉 ", "");
-        let pointer = Emoji::new("👉 ", "  ");
-        let rule =
-            "═══════════════════════════════════════════════════════════════════════════════════";
+        let mut banner = TerminalBox::new()
+            .border_color(console::Style::new().bold().cyan())
+            .line(
+                style(format!(
+                    "{} Sugg {} shell integration generated successfully!",
+                    sugg::ICON_PARTY,
+                    shell.as_str(),
+                ))
+                .green()
+                .to_string(),
+            )
+            .empty_line()
+            .line(
+                style(format!(
+                    "{} To apply this automatically on shell startup,",
+                    sugg::ICON_POINTER
+                ))
+                .bold()
+                .to_string(),
+            )
+            .line(
+                style("  add the following to your config:")
+                    .bold()
+                    .to_string(),
+            );
 
-        eprintln!("\n{}{}{}", ANSI_CYAN, rule, ANSI_RESET);
-        eprintln!(
-            "  {}{}Sugg {} shell integration generated successfully!{}",
-            ANSI_GREEN,
-            party,
-            shell.as_str(),
-            ANSI_RESET
-        );
-        eprintln!("  {}", ANSI_RESET);
-        eprintln!(
-            "  {}{}To apply this automatically on shell startup,{}",
-            ANSI_BOLD, pointer, ANSI_RESET
-        );
-        eprintln!(
-            "  {}    add the following to your config:{}",
-            ANSI_BOLD, ANSI_RESET
-        );
         match shell {
             sugg::Shell::Bash => {
-                eprintln!(
-                    "      {}eval \"$(sugg init bash)\"{}",
-                    ANSI_YELLOW, ANSI_RESET
-                )
+                banner = banner.line(style("    eval \"$(sugg init bash)\"").yellow().to_string());
             }
             sugg::Shell::Zsh => {
-                eprintln!(
-                    "      {}eval \"$(sugg init zsh)\"{}",
-                    ANSI_YELLOW, ANSI_RESET
-                )
+                banner = banner.line(style("    eval \"$(sugg init zsh)\"").yellow().to_string());
             }
             sugg::Shell::Fish => {
-                eprintln!("      {}sugg init fish | source{}", ANSI_YELLOW, ANSI_RESET)
+                banner = banner.line(style("    sugg init fish | source").yellow().to_string());
             }
             sugg::Shell::Nushell => {
-                eprintln!(
-                    "      {}✨  Recommended (Nushell 0.102+ — no config editing needed):{}",
-                    ANSI_CYAN, ANSI_RESET
-                );
-                eprintln!(
-                    "        {}mkdir ($nu.default-config-dir | path join 'autoload'){}",
-                    ANSI_YELLOW, ANSI_RESET
-                );
-                eprintln!(
-                    "        {}sugg init nushell | save -f ($nu.default-config-dir | path join 'autoload/sugg.nu'){}",
-                    ANSI_YELLOW, ANSI_RESET
-                );
-                eprintln!(
-                    "      {}Legacy (any version — requires editing config.nu):{}",
-                    ANSI_CYAN, ANSI_RESET
-                );
-                eprintln!(
-                    "        {}sugg init nushell | save -f ~/.sugg_init.nu{}",
-                    ANSI_YELLOW, ANSI_RESET
-                );
-                eprintln!(
-                    "        (Then add {}source ~/.sugg_init.nu{} to your config.nu)",
-                    ANSI_YELLOW, ANSI_RESET
+                banner = banner
+                    .line(
+                        style(
+                            &format!("    {}  Recommended (Nushell 0.102+ — no config editing needed):", sugg::ICON_SPARKLES),
+                        )
+                        .cyan()
+                        .to_string(),
+                    )
+                    .line(
+                        style(
+                            "      mkdir ($nu.default-config-dir | path join 'autoload')",
+                        )
+                        .yellow()
+                        .to_string(),
+                    )
+                    .line(
+                        style(
+                            "      sugg init nushell | save -f ($nu.default-config-dir | path join 'autoload/sugg.nu')",
+                        )
+                        .yellow()
+                        .to_string(),
+                    )
+                    .line(
+                        style(
+                            "    Legacy (any version — requires editing config.nu):",
+                        )
+                        .cyan()
+                        .to_string(),
+                    )
+                    .line(
+                        style(
+                            "      sugg init nushell | save -f ~/.sugg_init.nu",
+                        )
+                        .yellow()
+                        .to_string(),
+                    )
+                    .line(
+                        style(
+                            "      (Then add source ~/.sugg_init.nu to your config.nu)",
+                        )
+                        .yellow()
+                        .to_string(),
+                    );
+            }
+            sugg::Shell::Powershell => {
+                banner = banner.line(
+                    style("    sugg init powershell | Invoke-Expression")
+                        .yellow()
+                        .to_string(),
                 );
             }
-            sugg::Shell::Powershell => eprintln!(
-                "      {}sugg init powershell | Invoke-Expression{}",
-                ANSI_YELLOW, ANSI_RESET
-            ),
         }
-        eprintln!("{}{}{}\n", ANSI_CYAN, rule, ANSI_RESET);
+
+        banner.print();
     }
 
     Ok(())
