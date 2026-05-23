@@ -31,14 +31,14 @@ fn extract_dir(
 
 pub fn run_init(shell_name: &str) -> Result<(), Box<dyn std::error::Error>> {
     let shell = shell_name
-        .parse::<sugg::Shell>()
+        .parse::<sugg_core::Shell>()
         .map_err(|e| e.to_string())?;
     let file_name = match shell {
-        sugg::Shell::Bash => "bash.sh",
-        sugg::Shell::Zsh => "zsh.zsh",
-        sugg::Shell::Fish => "fish.fish",
-        sugg::Shell::Nushell => "nushell.nu",
-        sugg::Shell::Powershell => "powershell.ps1",
+        sugg_core::Shell::Bash => "bash.sh",
+        sugg_core::Shell::Zsh => "zsh.zsh",
+        sugg_core::Shell::Fish => "fish.fish",
+        sugg_core::Shell::Nushell => "nushell.nu",
+        sugg_core::Shell::Powershell => "powershell.ps1",
     };
     let file = ASSETS_SHELL_DIR
         .get_file(file_name)
@@ -50,14 +50,14 @@ pub fn run_init(shell_name: &str) -> Result<(), Box<dyn std::error::Error>> {
 
     if console::user_attended() {
         use console::style;
-        use sugg::TerminalBox;
+        use sugg_core::TerminalBox;
 
         let mut banner = TerminalBox::new()
             .border_color(console::Style::new().bold().cyan())
             .line(
                 style(format!(
                     "{} Sugg {} shell integration generated successfully!",
-                    sugg::ICON_PARTY,
+                    sugg_core::ICON_PARTY,
                     shell.as_str(),
                 ))
                 .green()
@@ -67,7 +67,7 @@ pub fn run_init(shell_name: &str) -> Result<(), Box<dyn std::error::Error>> {
             .line(
                 style(format!(
                     "{} To apply this automatically on shell startup,",
-                    sugg::ICON_POINTER
+                    sugg_core::ICON_POINTER
                 ))
                 .bold()
                 .to_string(),
@@ -79,20 +79,20 @@ pub fn run_init(shell_name: &str) -> Result<(), Box<dyn std::error::Error>> {
             );
 
         match shell {
-            sugg::Shell::Bash => {
+            sugg_core::Shell::Bash => {
                 banner = banner.line(style("    eval \"$(sugg init bash)\"").yellow().to_string());
             }
-            sugg::Shell::Zsh => {
+            sugg_core::Shell::Zsh => {
                 banner = banner.line(style("    eval \"$(sugg init zsh)\"").yellow().to_string());
             }
-            sugg::Shell::Fish => {
+            sugg_core::Shell::Fish => {
                 banner = banner.line(style("    sugg init fish | source").yellow().to_string());
             }
-            sugg::Shell::Nushell => {
+            sugg_core::Shell::Nushell => {
                 banner = banner
                     .line(
                         style(
-                            &format!("    {}  Recommended (Nushell 0.102+ — no config editing needed):", sugg::ICON_SPARKLES),
+                            &format!("    {}  Recommended (Nushell 0.102+ — no config editing needed):", sugg_core::ICON_SPARKLES),
                         )
                         .cyan()
                         .to_string(),
@@ -133,7 +133,7 @@ pub fn run_init(shell_name: &str) -> Result<(), Box<dyn std::error::Error>> {
                         .to_string(),
                     );
             }
-            sugg::Shell::Powershell => {
+            sugg_core::Shell::Powershell => {
                 banner = banner.line(
                     style("    sugg init powershell | Invoke-Expression")
                         .yellow()
@@ -149,7 +149,6 @@ pub fn run_init(shell_name: &str) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 pub fn run_dev_init(completions_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
-    // .sugg/ — 每次全量覆盖，先删后写
     let system_dir = completions_dir.join(".sugg");
     if system_dir.exists() {
         fs::remove_dir_all(&system_dir)?;
@@ -157,7 +156,6 @@ pub fn run_dev_init(completions_dir: &Path) -> Result<(), Box<dyn std::error::Er
     let sugg_asset_dir = ASSETS_INIT_DIR
         .get_dir(".sugg")
         .expect("assets/init/.sugg missing");
-    // sugg.d.ts 注入版本号，其余文件直接写出
     fs::create_dir_all(&system_dir)?;
     fs::write(
         system_dir.join("sugg.d.ts"),
@@ -180,20 +178,19 @@ pub fn run_dev_init(completions_dir: &Path) -> Result<(), Box<dyn std::error::Er
         )?;
     }
 
-    // 其余文件 — 仅首次生成，不覆盖用户自定义
     let skipped = extract_dir(&ASSETS_INIT_DIR, completions_dir, true)?;
     for path in skipped.iter().filter(|p| !p.starts_with(&system_dir)) {
         println!(
             "{}  {} already exists, skipped.",
-            sugg::ICON_INFO,
-            sugg::path_to_slash(path)
+            sugg_core::ICON_INFO,
+            sugg_core::path_to_slash(path)
         );
     }
 
     println!(
         "{} Dev environment initialized at {}",
-        sugg::ICON_SUCCESS,
-        sugg::path_to_slash(&system_dir)
+        sugg_core::ICON_SUCCESS,
+        sugg_core::path_to_slash(&system_dir)
     );
     Ok(())
 }

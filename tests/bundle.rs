@@ -1,5 +1,6 @@
 use std::path::Path;
-use sugg::{build_bundles, path_to_slash};
+use sugg_core::path_to_slash;
+use sugg_engine::build_bundles;
 
 /// 设置快照目录为 tests/snapshots/bundle/
 macro_rules! bundle_snapshot {

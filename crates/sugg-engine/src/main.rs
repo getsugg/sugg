@@ -94,7 +94,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             .ok()
                             .map(PathBuf::from)
                     })
-                    .unwrap_or_else(sugg::default_completions_dir);
+                    .unwrap_or_else(sugg_core::default_completions_dir);
                 init::run_dev_init(&dir)?;
                 Ok(())
             }
@@ -109,7 +109,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             .ok()
                             .map(PathBuf::from)
                     })
-                    .unwrap_or_else(sugg::default_completions_dir);
+                    .unwrap_or_else(sugg_core::default_completions_dir);
                 let lang = l
                     .or(lang)
                     .or_else(|| std::env::var("SUGG_LANG").ok())
@@ -119,10 +119,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         },
         Commands::CachedList => {
-            let cache_path = sugg::cache::get_cache_path();
+            let cache_path = sugg_core::cache::get_cache_path();
             if let Ok(data) = std::fs::read(&cache_path)
                 && let Ok(archived) =
-                    access::<sugg::cache::structs::ArchivedCompletionCache, Error>(&data)
+                    access::<sugg_core::cache::structs::ArchivedCompletionCache, Error>(&data)
             {
                 for cmd in archived.root.subcommands.iter() {
                     println!("{}", cmd.name);
@@ -138,7 +138,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         } => build::run_build(completions_dir, lang, cache_dir, dump_dynamic).await,
         Commands::Upgrade => {
             if let Err(e) = upgrade::run_upgrade().await {
-                eprintln!("{} Upgrade failed: {}", sugg::ICON_ERROR, e);
+                eprintln!("{} Upgrade failed: {}", sugg_core::ICON_ERROR, e);
                 std::process::exit(1);
             }
             Ok(())
@@ -148,13 +148,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if shell_name.is_empty() {
                 eprintln!(
                     "{} Missing <shell> argument. Usage: sugg init <shell>",
-                    sugg::ICON_ERROR
+                    sugg_core::ICON_ERROR
                 );
                 eprintln!("   Supported shells: bash, zsh, fish, nushell, powershell");
                 std::process::exit(1);
             }
             if let Err(e) = init::run_init(&shell_name) {
-                eprintln!("{} Init failed: {}", sugg::ICON_ERROR, e);
+                eprintln!("{} Init failed: {}", sugg_core::ICON_ERROR, e);
                 std::process::exit(1);
             }
             Ok(())

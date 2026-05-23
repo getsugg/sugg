@@ -1,0 +1,15 @@
+[package]
+name = "sugg-core"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+tokio.workspace = true
+rquickjs.workspace = true
+rkyv.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+console.workspace = true
+dirs-next.workspace = true
+anyhow.workspace = true
+tempfile.workspace = true

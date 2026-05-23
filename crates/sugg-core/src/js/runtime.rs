@@ -74,7 +74,6 @@ pub fn inject_globals(ctx: Ctx<'_>) {
         Function::new(
             ctx.clone(),
             Async(|input: String, base_dir_opt: Opt<String>| async move {
-                // 如果未提供 baseDir，则默认为当前目录 "."
                 let base_dir = base_dir_opt.0.unwrap_or_else(|| ".".to_string());
 
                 let (s_dir, p_dir) = if input.is_empty() {
@@ -85,7 +84,7 @@ pub fn inject_globals(ctx: Ctx<'_>) {
                     let s = &input[..idx];
                     let p = &input[..=idx];
                     let s = if s.is_empty() || s.ends_with(':') {
-                        p // 匹配到 "/" 或 Windows 盘符 "C:" -> 强转为 "C:\"
+                        p
                     } else {
                         s
                     };
@@ -94,8 +93,6 @@ pub fn inject_globals(ctx: Ctx<'_>) {
                     (".".to_string(), "".to_string())
                 };
 
-                // 物理扫描路径：将 baseDir 与用户输入的逻辑目录进行 Join
-                // 如果 s_dir 是绝对路径，Rust 会聪明地忽略 base_dir，表现出原生 Shell 质感！
                 let scan_path = std::path::Path::new(&base_dir).join(&s_dir);
 
                 let mut entries = Vec::with_capacity(32);
@@ -105,13 +102,12 @@ pub fn inject_globals(ctx: Ctx<'_>) {
                             let name = entry.file_name().to_string_lossy().into_owned();
                             let is_dir = is_dir_fast(&entry).await;
 
-                            // 组装逻辑全路径（不暴露内部 baseDir）
                             let full = format!("{}{}", p_dir, name);
 
                             let (display, value) = if is_dir {
                                 (format!("{}/", full), format!("{}/", full))
                             } else {
-                                (full.clone(), format!("{} ", full)) // 文件补全后加上空格
+                                (full.clone(), format!("{} ", full))
                             };
                             entries.push(ScanDirEntry {
                                 display,
@@ -126,7 +122,6 @@ pub fn inject_globals(ctx: Ctx<'_>) {
                         }
                     }
                 }
-                // 极致体验：文件夹置顶排在前面，然后再按字母表顺序排序
                 entries.sort_by(|a, b| {
                     b.is_dir
                         .cmp(&a.is_dir)
@@ -149,7 +144,6 @@ pub fn inject_globals(ctx: Ctx<'_>) {
                     use std::os::windows::process::CommandExt;
                     let mut std_cmd = std::process::Command::new("cmd");
                     std_cmd.arg("/C");
-                    // 使用 raw_arg，告诉 Rust 绝对不要在里面瞎加双引号或转义！
                     std_cmd.raw_arg(&command);
                     tokio::process::Command::from(std_cmd).output().await
                 };
@@ -174,19 +168,6 @@ pub fn inject_globals(ctx: Ctx<'_>) {
 
     // =========================================================================
     // execFile(cmd, args) —— 极速直接进程拉起，无 Shell 开销与注入风险
-    //
-    // 与 exec(cmd) 不同，execFile 不走 sh -c / cmd /C，而是直接调用
-    // tokio::process::Command::new(cmd).args(&args)，零中间进程、零 Shell 解析。
-    //
-    // 适用场景：
-    //   - 纯命令行执行（无需管道、重定向、变量展开等内容）
-    //   - 高频调用场景（每次省去 fork sh 的几毫秒，积少成多）
-    //   - 传入不可信参数时（userInput 作为 args 单独传递，无注入风险）
-    //
-    // 不适用的场景（此时请用 exec）：
-    //   - 需要管道符 |、重定向 >、逻辑链 && 等 Shell 语法
-    //   - 需要执行 Windows 内置命令（dir, echo, cd 等）
-    //   - 依赖 Shell 变量展开（$HOME, %PATH% 等）
     // =========================================================================
     if let Err(e) = globals.set(
         "execFile",
@@ -211,11 +192,9 @@ pub fn inject_globals(ctx: Ctx<'_>) {
         crate::log_error!("Failed to inject execFile global: {:?}", e);
     }
 
-    // 提取为一个显式声明同生命周期 'js 的内部函数，解决闭包生命周期推断歧义
     fn args_to_string<'js>(ctx: &Ctx<'js>, args: Rest<Value<'js>>) -> String {
         let mut parts = Vec::with_capacity(args.0.len());
         for arg in args.0 {
-            // 如果是原生字符串，直接提取（避免被序列化带上双引号）
             if let Some(s) = arg.as_string()
                 && let Ok(s_str) = s.to_string()
             {
@@ -223,7 +202,6 @@ pub fn inject_globals(ctx: Ctx<'_>) {
                 continue;
             }
 
-            // 如果是对象或数组，尝试优雅地 JSON.stringify
             if (arg.is_object() || arg.is_array())
                 && let Ok(json) = ctx.globals().get::<_, Object>("JSON")
                 && let Ok(stringify) = json.get::<_, Function>("stringify")
@@ -233,7 +211,6 @@ pub fn inject_globals(ctx: Ctx<'_>) {
                 continue;
             }
 
-            // 兜底：使用 JS 的 String() 强转 (例如处理 boolean, number, undefined, null 等)
             if let Ok(string_func) = ctx.globals().get::<_, Function>("String")
                 && let Ok(s) = string_func.call::<_, String>((arg,))
             {
@@ -246,7 +223,6 @@ pub fn inject_globals(ctx: Ctx<'_>) {
         parts.join(" ")
     }
 
-    // 注入 ui 对象
     if let Ok(ui_obj) = Object::new(ctx.clone()) {
         fn ui_log<'js>(ctx: Ctx<'js>, args: Rest<Value<'js>>) {
             crate::logger::write_log(crate::logger::LogLevel::Log, &args_to_string(&ctx, args));
@@ -353,8 +329,6 @@ mod tests {
         async fn async_with_fn(ctx: Ctx<'_>) {
             inject_globals(ctx.clone());
 
-            // 执行一个不需要 Shell 的简单命令来验证 execFile
-            // 跨平台方案：执行 rustc --version（rustc 必定存在于开发环境中）
             let script = r#"
                 (async () => {
                     const out = await execFile("rustc", ["--version"]);
@@ -369,7 +343,6 @@ mod tests {
                 result
             );
 
-            // 参数数组正确传递：execFile("/bin/echo", ["hello", "world"]) 应输出 "hello world"
             #[cfg(unix)]
             {
                 let script2 = r#"
@@ -383,7 +356,6 @@ mod tests {
                 assert_eq!(result2, "hello world");
             }
 
-            // Windows 上用 cmd /c echo 模拟（cmd.exe 是独立 PE 文件，可用 execFile 调起）
             #[cfg(windows)]
             {
                 let script2 = r#"
@@ -397,9 +369,6 @@ mod tests {
                 assert_eq!(result2, "hello");
             }
 
-            // ========== 场景 4：不传 args 参数也能正常调用 ==========
-            // execFile("rustc") 不传第二个参数，等价于 execFile("rustc", [])
-            // rustc 无参时 stdout 为空（报错走 stderr），验证不 panic 且返回 string
             {
                 let script3 = r#"
                     (async () => {
@@ -415,7 +384,6 @@ mod tests {
                 );
             }
 
-            // 场景 5：显式传空数组效果等价
             #[cfg(unix)]
             {
                 let script4 = r#"
@@ -446,7 +414,6 @@ mod tests {
         async fn async_with_fn(ctx: Ctx<'_>) {
             inject_globals(ctx.clone());
 
-            // 执行不存在的命令应返回空字符串（不 panic）
             let script = r#"
                 (async () => {
                     const out = await execFile("nonexistent_command_xyz", ["--version"]);
@@ -480,7 +447,6 @@ mod tests {
             let temp_dir = tempdir().expect("Failed to create temp directory");
             let base_path = temp_dir.path();
 
-            // 构造场景: base_path 下有个 bin 目录，bin 下有 eslint 文件和 sub 目录，sub 里有 foo 文件
             tokio::fs::create_dir(base_path.join("bin")).await.unwrap();
             tokio::fs::write(base_path.join("bin").join("eslint"), "exec")
                 .await
@@ -497,31 +463,22 @@ mod tests {
                 base_str = base_str.replace("\\", "/");
             }
 
-            // ---- 场景 1: 普通路径推断补全 ----
-            // 用户输入 "bi"
             let script1 = format!("scanPath('bi', '{}')", base_str);
             let promise1: rquickjs::Promise = ctx.eval(script1.as_str()).unwrap();
             let items1: Vec<rquickjs::Object> = promise1.into_future().await.unwrap();
             let d1: Vec<String> = items1.iter().map(|o| o.get("display").unwrap()).collect();
-            // 当前目录下看到了 bin/
             assert_eq!(d1, vec!["bin/"]);
 
-            // ---- 场景 2: bun x 虚拟目录补全 ----
-            // 假设这是 bun x 命令，用户尚未输入任何前缀，我们去扫描 .bin 目录
             let script2 = format!("globalThis.scanPath('', '{}/bin')", base_str);
             let promise2: rquickjs::Promise = ctx.eval(script2.as_str()).unwrap();
             let items2: Vec<rquickjs::Object> = promise2.into_future().await.unwrap();
             let d2: Vec<String> = items2.iter().map(|o| o.get("display").unwrap()).collect();
-            // 不包含前缀路径！文件夹置顶，文件在下
             assert_eq!(d2, vec!["sub/", "eslint"]);
 
-            // ---- 场景 3: bun x 虚拟目录下的子目录补全！ ----
-            // 用户在 bun x 后输入了 "sub/"
             let script3 = format!("globalThis.scanPath('sub/', '{}/bin')", base_str);
             let promise3: rquickjs::Promise = ctx.eval(script3.as_str()).unwrap();
             let items3: Vec<rquickjs::Object> = promise3.into_future().await.unwrap();
             let d3: Vec<String> = items3.iter().map(|o| o.get("display").unwrap()).collect();
-            // 完美拼接出 sub/ 前缀，同时没有暴露物理上隐藏的 bin 目录
             assert_eq!(d3, vec!["sub/foo"]);
         }
 
@@ -536,13 +493,11 @@ mod tests {
         async fn run(ctx: Ctx<'_>) {
             inject_globals(ctx.clone());
 
-            // __cache 是对象，有 get/set/delete 方法
             let ok: bool = ctx
                 .eval("typeof globalThis.__cache === 'object' && typeof globalThis.__cache.get === 'function'")
                 .unwrap();
             assert!(ok);
 
-            // set 后 get 能取回
             let result: String = ctx
                 .eval(
                     r#"
@@ -553,7 +508,6 @@ mod tests {
                 .unwrap();
             assert_eq!(result, "hello");
 
-            // delete 后 get 返回空字符串
             let result: String = ctx
                 .eval(
                     r#"
@@ -564,7 +518,6 @@ mod tests {
                 .unwrap();
             assert_eq!(result, "");
 
-            // ttl=0 立即过期，get 返回空字符串
             let result: String = ctx
                 .eval(
                     r#"
@@ -575,7 +528,6 @@ mod tests {
                 .unwrap();
             assert_eq!(result, "");
 
-            // 数组 key 用 \0 拼接，不同数组互不干扰
             let result: bool = ctx
                 .eval(
                     r#"

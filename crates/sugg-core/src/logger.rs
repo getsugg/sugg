@@ -25,7 +25,6 @@ impl LogLevel {
         }
     }
 
-    // 新增：用于在 UI display 中展示简短的等级文本
     pub fn text(&self) -> &'static str {
         match self {
             LogLevel::Info => "INFO",

@@ -1,56 +1,54 @@
-[package]
-name = "sugg"
+[workspace]
+members = [
+    "crates/sugg-core",
+    "crates/sugg-engine",
+    "crates/sugg-cli",
+    "crates/sugg-deploy",
+]
+resolver = "2"
+
+[workspace.package]
 version = "0.1.0"
 edition = "2024"
+authors = ["Your Name <your.email@example.com>"]
 
-[dependencies]
-memmap2 = "0.9.10"
-oxc = { version = "0.128.0", default-features = false }
-rkyv = { version = "0.8.16" }
-rolldown = { git = "https://github.com/rolldown/rolldown.git", tag = "v1.0.0-rc.18" }
-rolldown_common = { git = "https://github.com/rolldown/rolldown.git", tag = "v1.0.0-rc.18" }
-
-rquickjs = { version = "0.11.0", features = ["futures"] }
+[workspace.dependencies]
+# 共享依赖
+sugg-core = { path = "crates/sugg-core" }
+sugg-engine = { path = "crates/sugg-engine" }
+anyhow = "1.0.102"
 tokio = { version = "1.52.2", features = ["rt", "macros", "fs", "process"] }
-dirs-next = "2.0.0"
-chrono = "0.4.44"
+rquickjs = { version = "0.11.0", features = ["futures"] }
+rkyv = { version = "0.8.16" }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
-tempfile = "3.27.0"
-anyhow = "1.0.102"
-clap = { version = "4.5", features = ["derive"] }
-lexopt = "0.3.2"
-self-replace = "1.5.0"
-include_dir = "0.7.4"
-icu = { version = "2.2.0", features = ["compiled_data"] }
 console = "0.16.3"
+dirs-next = "2.0.0"
+tempfile = "3.27.0"
 
-[dev-dependencies]
-insta = { version = "1.39", features = ["json"] }
-
-[lib]
-path = "src/lib.rs"
-
-[[bin]]
-name = "sugg"
-path = "src/bin/sugg.rs"
-
-[[bin]]
-name = "sugg-engine"
-path = "src/bin/sugg_engine/main.rs"
+[workspace.dependencies.insta]
+version = "1.39"
+features = ["json"]
 
 [profile.release]
-# 开启 Fat LTO，进行跨 Crate 全局优化
 lto = "fat"
-
-# 减少并行代码生成单元的数量（1 可以让 LTO 获得最大的优化空间，但编译最慢）
 codegen-units = 1
-
-# 优化等级："z" 或 "s" 专注于减小体积（"z" 比 "s" 更激进）
 opt-level = "z"
-
-# 发生 panic 时直接终止，不生成展开（unwind）代码，能显著减少体积
 panic = "abort"
-
-# 移除二进制文件中的调试符号（等同于执行 strip 命令）
 strip = true
+
+# 根包：仅用于托管集成测试
+[package]
+name = "sugg-tests"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[dev-dependencies]
+sugg-core.workspace = true
+sugg-engine.workspace = true
+insta.workspace = true
+tempfile.workspace = true
+serde_json.workspace = true
+serde.workspace = true
+tokio.workspace = true

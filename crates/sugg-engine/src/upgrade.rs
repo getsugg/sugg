@@ -1,9 +1,11 @@
 use std::path::{Path, PathBuf};
 
 pub async fn run_upgrade() -> Result<(), Box<dyn std::error::Error>> {
-    println!("{} Checking for the latest version...", sugg::ICON_SCAN);
+    println!(
+        "{} Checking for the latest version...",
+        sugg_core::ICON_SCAN
+    );
 
-    // 调 GitHub API 获取最新 tag，与编译时版本比较
     let api_output = std::process::Command::new("curl")
         .args([
             "-fsSL",
@@ -21,12 +23,16 @@ pub async fn run_upgrade() -> Result<(), Box<dyn std::error::Error>> {
     let current = env!("CARGO_PKG_VERSION");
 
     if latest_tag == current {
-        println!("{} Already up-to-date (v{}).", sugg::ICON_SUCCESS, current);
+        println!(
+            "{} Already up-to-date (v{}).",
+            sugg_core::ICON_SUCCESS,
+            current
+        );
         return Ok(());
     }
     println!(
         "{} Upgrading v{} → v{}...",
-        sugg::ICON_UPGRADE,
+        sugg_core::ICON_UPGRADE,
         current,
         latest_tag
     );
@@ -54,7 +60,7 @@ pub async fn run_upgrade() -> Result<(), Box<dyn std::error::Error>> {
 
     println!(
         "{} Downloading from {}...",
-        sugg::ICON_DOWNLOAD,
+        sugg_core::ICON_DOWNLOAD,
         download_url
     );
     let status = std::process::Command::new("curl")
@@ -64,7 +70,7 @@ pub async fn run_upgrade() -> Result<(), Box<dyn std::error::Error>> {
         return Err("Download failed: curl returned non-zero status.".into());
     }
 
-    println!("{} Extracting binaries...", sugg::ICON_PACKAGE);
+    println!("{} Extracting binaries...", sugg_core::ICON_PACKAGE);
     if is_zip {
         let status = std::process::Command::new("powershell")
             .args([
@@ -119,18 +125,16 @@ pub async fn run_upgrade() -> Result<(), Box<dyn std::error::Error>> {
     let new_engine = find_file(&extract_dir, engine_name)
         .ok_or_else(|| format!("Could not find {} in archive.", engine_name))?;
 
-    println!("{} Replacing binaries...", sugg::ICON_SYNC);
-    let sugg_root = sugg::sugg_root();
-    // sugg.exe -> sugg_root/bin/sugg.exe
+    println!("{} Replacing binaries...", sugg_core::ICON_SYNC);
+    let sugg_root = sugg_core::sugg_root();
     let sugg_dest = sugg_root.join("bin").join(sugg_name);
     if let Some(p) = sugg_dest.parent() {
         std::fs::create_dir_all(p)?;
     }
     std::fs::copy(&new_sugg, &sugg_dest)?;
 
-    // sugg-engine.exe -> sugg_root/sugg-engine.exe (self_replace handles Windows file lock)
     self_replace::self_replace(&new_engine)?;
 
-    println!("{} Upgrade complete!", sugg::ICON_SUCCESS);
+    println!("{} Upgrade complete!", sugg_core::ICON_SUCCESS);
     Ok(())
 }

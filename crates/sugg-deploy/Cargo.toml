@@ -1,0 +1,7 @@
+[package]
+name = "sugg-deploy"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+dirs-next.workspace = true

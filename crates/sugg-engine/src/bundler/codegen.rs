@@ -68,7 +68,6 @@ mod tests {
     #[test]
     fn test_generate_i18n_modules() {
         let mut translations_by_ns = std::collections::HashMap::new();
-        // 空命名空间（根）被跳过
         translations_by_ns.insert("".to_string(), std::collections::HashMap::new());
 
         let mut git_map = std::collections::HashMap::new();
@@ -80,10 +79,8 @@ mod tests {
         translations_by_ns.insert("docker".to_string(), docker_map);
 
         let modules = generate_i18n_modules(&translations_by_ns);
-        // 不再生成聚合模块
         assert!(!modules.contains_key("virtual:i18n"));
 
-        // 每个命名空间的独立子模块
         assert!(modules.contains_key("virtual:i18n/git"));
         assert!(modules["virtual:i18n/git"].contains("export const commit = \"Commit\";"));
         assert!(modules.contains_key("virtual:i18n/docker"));

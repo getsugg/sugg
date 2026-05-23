@@ -17,7 +17,24 @@
 
 use std::path::PathBuf;
 use std::process::Command;
-use sugg::{ICON_BUILD, ICON_ERROR, ICON_INFO, ICON_SUCCESS, ICON_WARN};
+
+// =========================================================================
+// 本地复制的图标常量与路径函数（彻底切断对 sugg-core 的依赖）
+// =========================================================================
+const ICON_BUILD: &str = "🔧";
+const ICON_ERROR: &str = "❌";
+const ICON_SUCCESS: &str = "✅";
+const ICON_WARN: &str = "❗";
+const ICON_INFO: &str = "💡";
+
+fn sugg_root() -> PathBuf {
+    if let Ok(var) = std::env::var("SUGG_HOME") {
+        return PathBuf::from(var);
+    }
+    dirs_next::data_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join("sugg")
+}
 
 fn main() {
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -34,7 +51,7 @@ fn main() {
             ICON_BUILD
         );
         let mut cmd = Command::new("cargo");
-        cmd.args(["build", "--bin", "sugg", "--bin", "sugg-engine"])
+        cmd.args(["build", "-p", "sugg", "-p", "sugg-engine"])
             .current_dir(&manifest_dir);
         if is_release {
             cmd.arg("--release");
@@ -54,7 +71,9 @@ fn main() {
         "sugg-engine"
     };
 
-    let target_dir = manifest_dir.join("target").join(profile);
+    // 在 workspace 中，target dir 在 workspace root，不在 crate 内
+    let workspace_root = manifest_dir.parent().unwrap().parent().unwrap();
+    let target_dir = workspace_root.join("target").join(profile);
     let sugg_src = target_dir.join(sugg_name);
     let sugg_engine_src = target_dir.join(sugg_engine_name);
 
@@ -76,15 +95,7 @@ fn main() {
     }
 
     // ── 3. 安装 ──
-    //     bin/                  ← 用户加 PATH，只放 sugg.exe
-    //     sugg_root() 根目录      ← 放 sugg-engine.exe，内部查找不暴露
-    let sugg_root = if let Ok(var) = std::env::var("SUGG_HOME") {
-        PathBuf::from(var)
-    } else {
-        dirs_next::data_dir()
-            .unwrap_or_else(|| PathBuf::from("."))
-            .join("sugg")
-    };
+    let sugg_root = sugg_root();
 
     let bin_dir = sugg_root.join("bin");
     std::fs::create_dir_all(&bin_dir).expect("Failed to create bin directory");
@@ -184,7 +195,6 @@ fn add_dir_to_path(bin_dir: &std::path::Path) {
     #[cfg(not(windows))]
     {
         use std::io::Write;
-        // Unix：检测 shell 并写入对应的 profile 文件
         let shell = std::env::var("SHELL").unwrap_or_default();
         let export_line = format!(r#"export PATH="{}:$PATH""#, bin_dir.display());
 

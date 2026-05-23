@@ -68,7 +68,6 @@ pub fn print_results(items: Vec<CompletionItem>, shell: &Shell) {
             }
         }
         Shell::Zsh => {
-            // Zsh 格式：value:description（每行一个）
             for item in items {
                 let v = item.value.trim_end();
                 if item.description.is_empty() {
@@ -79,20 +78,17 @@ pub fn print_results(items: Vec<CompletionItem>, shell: &Shell) {
             }
         }
         Shell::Fish => {
-            // Fish 格式：value\tdescription（每行一个）
             for item in items {
                 let v = item.value.trim_end();
                 println!("{}\t{}", v, item.description);
             }
         }
         Shell::Bash => {
-            // Bash 格式：纯 value（每行一个）
             for item in items {
                 println!("{}", item.value.trim_end());
             }
         }
         Shell::Powershell => {
-            // PowerShell 格式：与 Nushell 相同的 JSON 结构，方便用 ConvertFrom-Json 解析
             let out: Vec<NushellItem> = items
                 .into_iter()
                 .map(|item| NushellItem {

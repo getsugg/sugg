@@ -1,3 +1,4 @@
+pub mod codegen;
 pub mod constants;
 pub mod plugin;
 pub use constants::*;

@@ -1,15 +1,15 @@
-﻿// 导入自定义的缓存管理、结构体定义、JS 运行时注入及错误处理宏
-use sugg::Shell;
-use sugg::cache::get_cache_path;
-use sugg::cache::print_results;
-use sugg::cache::{
+// 导入自定义的缓存管理、结构体定义、JS 运行时注入及错误处理宏
+use sugg_core::Shell;
+use sugg_core::cache::get_cache_path;
+use sugg_core::cache::print_results;
+use sugg_core::cache::{
     CompletionItem, SuggestionStyle,
     structs::{
         ArchivedCommandNode, ArchivedCompletionCache, ArchivedOptionItem, ArchivedSuggestionStyle,
     },
 };
-use sugg::js::runtime::inject_globals;
-use sugg::log_error;
+use sugg_core::js::runtime::inject_globals;
+use sugg_core::log_error;
 // 导入外部库：mmap 用于内存映射，rkyv 用于零拷贝反序列化，rquickjs 用于嵌入 JS 引擎
 use anyhow::Context as _;
 use memmap2::Mmap;
@@ -147,7 +147,7 @@ fn engine_path() -> std::path::PathBuf {
     } else {
         "sugg-engine"
     };
-    sugg::sugg_root().join(exe_name)
+    sugg_core::sugg_root().join(exe_name)
 }
 
 struct CompleteArgs {
@@ -242,7 +242,7 @@ fn delegate_to_engine() -> ! {
     match spawn_res {
         Ok(code) => std::process::exit(code),
         Err(e) => {
-            eprintln!("{} 启动引擎失败: {}", sugg::ICON_ERROR, e);
+            eprintln!("{} 启动引擎失败: {}", sugg_core::ICON_ERROR, e);
             std::process::exit(1);
         }
     }
@@ -253,7 +253,7 @@ async fn main() {
     if std::env::args().nth(1).as_deref() != Some("complete") {
         delegate_to_engine();
     } else {
-        sugg::logger::set_ui_mode();
+        sugg_core::logger::set_ui_mode();
     }
 
     let parsed = parse_complete_args();
@@ -301,14 +301,14 @@ async fn main() {
     let file = match File::open(&cache_path) {
         Ok(f) => f,
         Err(_) => {
-            sugg::cache::print_results(vec![], &parsed.shell);
+            print_results(vec![], &parsed.shell);
             return;
         }
     };
     let mmap = match unsafe { Mmap::map(&file) } {
         Ok(m) => m,
         Err(_) => {
-            sugg::cache::print_results(vec![], &parsed.shell);
+            print_results(vec![], &parsed.shell);
             return;
         }
     };
@@ -316,7 +316,7 @@ async fn main() {
     let archived = match access::<ArchivedCompletionCache, rkyv::rancor::Error>(&mmap) {
         Ok(a) => a,
         Err(_) => {
-            sugg::cache::print_results(vec![], &parsed.shell);
+            print_results(vec![], &parsed.shell);
             return;
         }
     };
@@ -438,7 +438,7 @@ fn handle_results(items: Vec<CompletionItem>, prefix: &str, shell: &Shell, limit
         .collect();
 
     // 取出拦截到的 UI 日志（包括 Error, Warn，甚至 JS 脚本里的 log 调试信息）
-    let logs = sugg::logger::get_ui_logs();
+    let logs = sugg_core::logger::get_ui_logs();
     if !logs.is_empty() {
         let mut ui_items = Vec::new();
 
@@ -487,9 +487,9 @@ fn from_archived_style(archived: &ArchivedSuggestionStyle) -> SuggestionStyle {
 fn find_bytecode(archived: &ArchivedCompletionCache, func_name: &str) -> Option<Vec<u8>> {
     let idx = archived
         .dyn_index
-        .iter()
-        .find(|t| t.0.as_str() == func_name)
-        .map(|t| t.1.to_native() as usize)?;
+        .binary_search_by(|t| t.0.as_str().cmp(func_name))
+        .ok()
+        .map(|i| archived.dyn_index[i].1.to_native() as usize)?;
     archived.bytecodes.get(idx).map(|bc| bc.as_slice().to_vec())
 }
 

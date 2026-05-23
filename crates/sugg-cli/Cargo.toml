@@ -1,0 +1,15 @@
+[package]
+name = "sugg"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+sugg-core.workspace = true
+anyhow.workspace = true
+tokio = { workspace = true, features = ["rt"] }
+rquickjs.workspace = true
+rkyv.workspace = true
+
+# CLI 专用
+memmap2 = "0.9.10"
+lexopt = "0.3.2"

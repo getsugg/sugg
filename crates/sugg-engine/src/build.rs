@@ -3,9 +3,9 @@ use rquickjs::{AsyncContext, AsyncRuntime, CatchResultExt, Ctx, Function, Value,
 use serde_json::Value as JsonValue;
 use std::fs;
 use std::path::PathBuf;
-use sugg::cache::{CommandNode, CompletionCache, get_cache_path};
-use sugg::js::runtime::inject_globals;
-use sugg::log_error;
+use sugg_core::cache::{CommandNode, CompletionCache, get_cache_path};
+use sugg_core::js::runtime::inject_globals;
+use sugg_core::log_error;
 
 fn json_to_command_node(v: JsonValue) -> CommandNode {
     serde_json::from_value(v).unwrap_or_default()
@@ -24,27 +24,28 @@ pub async fn run_build(
                 .ok()
                 .map(PathBuf::from)
         })
-        .unwrap_or_else(sugg::default_completions_dir);
+        .unwrap_or_else(sugg_core::default_completions_dir);
     if !dir_path.exists() {
         fs::create_dir_all(&dir_path)?;
         println!(
             "{} Completions directory not found. Auto-created at {}. Place TS/JS scripts in this directory and retry.",
-            sugg::ICON_INFO,
-            sugg::path_to_slash(&dir_path)
+            sugg_core::ICON_INFO,
+            sugg_core::path_to_slash(&dir_path)
         );
         return Ok(());
     }
     println!(
         "{} Scanning completion scripts directory: {}",
-        sugg::ICON_PACKAGE,
-        sugg::path_to_slash(&dir_path)
+        sugg_core::ICON_PACKAGE,
+        sugg_core::path_to_slash(&dir_path)
     );
 
     let lang = lang
         .clone()
         .or_else(|| std::env::var("SUGG_LANG").ok())
         .unwrap_or_else(|| "en".to_string());
-    let (bundled_static, dynamic_bundles) = match sugg::build_bundles(&dir_path, &lang).await {
+    let (bundled_static, dynamic_bundles) = match sugg_engine::build_bundles(&dir_path, &lang).await
+    {
         Ok(res) => res,
         Err(e) => {
             log_error!("Script Error: {:#}", e);
@@ -52,21 +53,23 @@ pub async fn run_build(
         }
     };
 
-    // 调试导出：将动态 bundle 写入指定目录，便于检查编译后的 JS 代码
     if let Some(dump_dir) = &debug_dump_dynamic {
         fs::create_dir_all(dump_dir)?;
         for (stem, code, _) in &dynamic_bundles {
             let out_path = dump_dir.join(format!("{stem}.js"));
             fs::write(&out_path, code)?;
-            println!("{} Debug dump: {}", sugg::ICON_SCAN, out_path.display());
+            println!(
+                "{} Debug dump: {}",
+                sugg_core::ICON_SCAN,
+                out_path.display()
+            );
         }
     }
 
-    // 脚本清单在 build_bundles() 内边扫描边打印，此处只处理空目录兜底
     if bundled_static.is_empty() {
         println!(
             "{} Completions directory is empty, no configuration was bundled.",
-            sugg::ICON_INFO
+            sugg_core::ICON_INFO
         );
         return Ok(());
     }
@@ -157,6 +160,9 @@ pub async fn run_build(
                     }
                 }
             }
+            // 排序 dyn_index 以支持二分查找
+            cache.dyn_index.sort_by(|a, b| a.0.cmp(&b.0));
+
             let cache_path = cache_dir
                 .as_ref()
                 .map(|d| d.join(".completion_cache.bin"))
@@ -171,7 +177,7 @@ pub async fn run_build(
             }
             let bytes = rkyv::to_bytes::<Error>(&cache).expect("Failed to serialize cache");
             fs::write(cache_path, bytes).expect("Failed to write cache file");
-            println!("{} Cache complete!", sugg::ICON_SUCCESS);
+            println!("{} Cache complete!", sugg_core::ICON_SUCCESS);
         }
         Err(e) => {
             log_error!("Cache build phase failed: {:#}", e);

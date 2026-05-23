@@ -6,6 +6,7 @@ use rolldown::plugin::{
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::sync::Arc;
+use sugg_core::path_to_slash;
 
 #[derive(Debug)]
 pub struct VirtualPlugin {
@@ -28,7 +29,7 @@ impl Plugin for VirtualPlugin {
         _ctx: &PluginContext,
         args: &HookResolveIdArgs<'_>,
     ) -> HookResolveIdReturn {
-        let specifier = crate::path_to_slash(std::path::Path::new(args.specifier));
+        let specifier = path_to_slash(std::path::Path::new(args.specifier));
         if specifier == VIRTUAL_ENV
             || specifier.starts_with(VIRTUAL_I18N)
             || self.virtual_modules.contains_key(&specifier)
@@ -49,7 +50,7 @@ impl Plugin for VirtualPlugin {
             }));
         }
 
-        let id_normalized = crate::path_to_slash(std::path::Path::new(args.id));
+        let id_normalized = path_to_slash(std::path::Path::new(args.id));
 
         if id_normalized.starts_with(VIRTUAL_I18N) {
             let code = self

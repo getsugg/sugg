@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
-use sugg::log_warn;
+use sugg_core::log_warn;
 
 pub fn run_i18n_gen(completions_dir: &Path, lang: &str) {
     if !completions_dir.exists() {
@@ -10,14 +10,13 @@ pub fn run_i18n_gen(completions_dir: &Path, lang: &str) {
 
     let preferred_lang = lang;
 
-    // 基于 BCP 47 生成回退链，供 JSDoc 智能优先展示最佳匹配翻译
-    let fallbacks = sugg::get_fallback_chain(preferred_lang);
+    let fallbacks = sugg_engine::get_fallback_chain(preferred_lang);
 
     // keys_map: namespace -> key -> lang -> translation
     let mut keys_map: BTreeMap<String, BTreeMap<String, BTreeMap<String, String>>> =
         BTreeMap::new();
 
-    for (ns, i18n_dir) in sugg::scan_i18n_dirs(completions_dir) {
+    for (ns, i18n_dir) in sugg_engine::scan_i18n_dirs(completions_dir) {
         let Ok(dir_entries) = fs::read_dir(&i18n_dir) else {
             continue;
         };
@@ -51,7 +50,6 @@ pub fn run_i18n_gen(completions_dir: &Path, lang: &str) {
         }
     }
 
-    // 按回退链查找优先展示的翻译，用 🚩 标记
     fn find_best_lang<'a>(
         fallbacks: &[String],
         translations: &'a BTreeMap<String, String>,
@@ -113,8 +111,8 @@ pub fn run_i18n_gen(completions_dir: &Path, lang: &str) {
     fs::write(&out_path, &s).expect("Failed to write i18n.d.ts");
     println!(
         "{} Generated {} with {} namespaces.",
-        sugg::ICON_SUCCESS,
-        sugg::path_to_slash(&out_path),
+        sugg_core::ICON_SUCCESS,
+        sugg_core::path_to_slash(&out_path),
         keys_map.len()
     );
 }
