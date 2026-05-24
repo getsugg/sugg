@@ -5,6 +5,14 @@ members = [
     "crates/sugg-cli",
     "crates/sugg-deploy",
 ]
+# 添加此行：指定默认编译和测试的成员
+default-members = [
+    "crates/sugg-core",
+    "crates/sugg-engine",
+    "crates/sugg-cli",
+    "crates/sugg-deploy",
+    ".",                  # "." 代表根目录下的 sugg-tests 包
+]
 resolver = "2"
 
 [workspace.package]

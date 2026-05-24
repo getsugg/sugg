@@ -5,7 +5,8 @@ use sugg_core::cache::print_results;
 use sugg_core::cache::{
     CompletionItem, SuggestionStyle,
     structs::{
-        ArchivedCommandNode, ArchivedCompletionCache, ArchivedOptionItem, ArchivedSuggestionStyle,
+        ArchivedCommandNode, ArchivedCompletionCache, ArchivedOptionItem, ArchivedStaticSuggestion,
+        ArchivedSuggestionStyle,
     },
 };
 use sugg_core::js::runtime::inject_globals;
@@ -87,15 +88,35 @@ fn parse_cli_state<'a>(root: &'a ArchivedCommandNode, words: &[&'a str]) -> Pars
         }
 
         if !no_more_options && word.starts_with('-') {
-            // 处理选项：查找 labels 中是否包含当前输入的 word
+            // 支持 -opt=value 或 --opt=value 语法：将选项名与等号后的值分离
+            let (opt_label, attached_value) = if word.contains('=') {
+                let (lbl, val) = word.split_once('=').unwrap();
+                (lbl, Some(val))
+            } else {
+                (*word, None)
+            };
+
+            // 处理选项：查找 labels 中是否包含 opt_label
             if let Some(opt) = current
                 .options
                 .iter()
-                .find(|o| o.labels.iter().any(|l| l == word))
+                .find(|o| o.labels.iter().any(|l| l == opt_label))
             {
                 if opt.takes_value {
-                    // 该选项需要后续参数，进入等待状态
-                    waiting = Some(opt);
+                    if let Some(val) = attached_value {
+                        // --opt=value 形式：直接消费值，无需进入 waiting 状态
+                        for label in opt.labels.iter() {
+                            let entry = parsed_options
+                                .entry(label.as_str())
+                                .or_insert_with(|| ParsedValue::Values(Vec::new()));
+                            if let ParsedValue::Values(vec) = entry {
+                                vec.push(val);
+                            }
+                        }
+                    } else {
+                        // --opt value 形式：进入等待状态
+                        waiting = Some(opt);
+                    }
                 } else {
                     // 布尔选项：标记为 Flag（多次出现依然是 Flag）
                     for label in opt.labels.iter() {
@@ -104,24 +125,22 @@ fn parse_cli_state<'a>(root: &'a ArchivedCommandNode, words: &[&'a str]) -> Pars
                 }
             }
         } else {
-            // 处理子命令：仅在没有遇到未知位置参数时才继续尝试匹配
-            if !is_positional_mode {
-                if let Ok(idx) = current
-                    .subcommands
-                    .binary_search_by(|c| c.name.as_str().cmp(word))
-                {
-                    let matched = &current.subcommands[idx];
-                    // O(1) 瞬移：通过 target 下标直接跳转到主命令节点
-                    current = match &matched.target {
-                        rkyv::option::ArchivedOption::Some(target_idx) => current
-                            .subcommands
-                            .get(target_idx.to_native() as usize)
-                            .unwrap_or(matched),
-                        rkyv::option::ArchivedOption::None => matched,
-                    };
-                } else {
-                    is_positional_mode = true;
-                }
+            // 处理子命令
+            if let Ok(idx) = current
+                .subcommands
+                .binary_search_by(|c| c.name.as_str().cmp(word))
+            {
+                let matched = &current.subcommands[idx];
+                // O(1) 瞬移：通过 target 下标直接跳转到主命令节点
+                current = match &matched.target {
+                    rkyv::option::ArchivedOption::Some(target_idx) => current
+                        .subcommands
+                        .get(target_idx.to_native() as usize)
+                        .unwrap_or(matched),
+                    rkyv::option::ArchivedOption::None => matched,
+                };
+            } else {
+                is_positional_mode = true;
             }
         }
     }
@@ -256,41 +275,30 @@ async fn main() {
         sugg_core::logger::set_ui_mode();
     }
 
-    let parsed = parse_complete_args();
+    let mut parsed = parse_complete_args();
 
-    // 处理补全逻辑
-    let input = parsed.input_words.join(" ");
-
-    // 单词切分与清理
-    let mut words: Vec<&str> = if input.is_empty() {
-        Vec::new()
-    } else {
-        input.split(' ').collect()
-    };
-
-    let clean_root_cmd;
-    if let Some(first) = words.first_mut() {
-        clean_root_cmd = std::path::Path::new(*first)
+    if let Some(first) = parsed.input_words.first_mut() {
+        *first = std::path::Path::new(first.as_str())
             .file_stem()
             .unwrap_or_default()
             .to_string_lossy()
             .into_owned();
-        *first = &clean_root_cmd;
     }
 
+    let mut words: Vec<&str> = parsed.input_words.iter().map(|s| s.as_str()).collect();
+
     // 提取用户正在输入的"前缀"（最后一个单词），以及之前的上下文单词
+    let mut prefix = String::new();
+
     if !words.is_empty() {
         let last = words.pop().unwrap();
         words.retain(|w| !w.is_empty());
-        words.push(last);
-    }
 
-    let prefix = words.last().copied().unwrap_or("").to_string();
-    let words_before_prefix: &[&str] = if words.len() > 1 {
-        &words[..words.len() - 1]
-    } else {
-        &[]
-    };
+        // 直接作为普通前缀对待，不拆分 -opt= 语法
+        // 因为不同 Shell 对 '=' 的处理千差万别，强行拆分极易造成双等号 Bug
+        prefix = last.to_string();
+    }
+    let words_before_prefix: &[&str] = &words;
 
     // 打开补全缓存文件，使用 mmap 映射到内存
     let cache_path = parsed
@@ -366,64 +374,34 @@ async fn main() {
                 }));
             }
 
-            // 动态/静态参数
-            match (node.dynamic_func.as_deref(), node.static_args.as_ref()) {
-                (Some(func_name), _) => {
-                    if let Some(bytecode) = find_bytecode(archived, func_name) {
-                        items.extend(
-                            run_dynamic_js(
-                                func_name,
-                                &bytecode,
-                                &prefix,
-                                "",
-                                words.clone(),
-                                parsed_options.clone(),
-                                &parsed.shell,
-                            )
-                            .await,
-                        );
-                    }
-                }
-                (None, Some(static_args)) => {
-                    items.extend(static_args.iter().map(|i| CompletionItem {
-                        display: i.display.as_str().to_string(),
-                        value: i.value.as_str().to_string(),
-                        description: i.description.as_str().to_string(),
-                        style: i.style.as_ref().map(from_archived_style),
-                    }));
-                }
-                _ => {}
-            }
+            // 动态/静态参数：提取公共逻辑
+            items.extend(
+                resolve_completions(
+                    node.dynamic_func.as_deref(),
+                    node.static_args.as_ref().map(|v| v.as_slice()),
+                    archived,
+                    &prefix,
+                    &words,
+                    &parsed_options,
+                    &parsed.shell,
+                )
+                .await,
+            );
         }
 
         EffectiveCtx::OptionValue(opt) => {
-            match (opt.dynamic_func.as_deref(), opt.static_args.as_ref()) {
-                (Some(func_name), _) => {
-                    if let Some(bytecode) = find_bytecode(archived, func_name) {
-                        items.extend(
-                            run_dynamic_js(
-                                func_name,
-                                &bytecode,
-                                &prefix,
-                                "",
-                                words.clone(),
-                                parsed_options.clone(),
-                                &parsed.shell,
-                            )
-                            .await,
-                        );
-                    }
-                }
-                (None, Some(static_args)) => {
-                    items.extend(static_args.iter().map(|i| CompletionItem {
-                        display: i.display.as_str().to_string(),
-                        value: i.value.as_str().to_string(),
-                        description: i.description.as_str().to_string(),
-                        style: i.style.as_ref().map(from_archived_style),
-                    }));
-                }
-                _ => {}
-            }
+            items.extend(
+                resolve_completions(
+                    opt.dynamic_func.as_deref(),
+                    opt.static_args.as_ref().map(|v| v.as_slice()),
+                    archived,
+                    &prefix,
+                    &words,
+                    &parsed_options,
+                    &parsed.shell,
+                )
+                .await,
+            );
         }
     }
 
@@ -491,6 +469,47 @@ fn find_bytecode(archived: &ArchivedCompletionCache, func_name: &str) -> Option<
         .ok()
         .map(|i| archived.dyn_index[i].1.to_native() as usize)?;
     archived.bytecodes.get(idx).map(|bc| bc.as_slice().to_vec())
+}
+
+/// 提取出的公共辅助函数：用于解析静态参数或运行 JS 获取动态补全项
+async fn resolve_completions<'a>(
+    dynamic_func: Option<&str>,
+    static_args: Option<&[ArchivedStaticSuggestion]>,
+    archived: &ArchivedCompletionCache,
+    prefix: &str,
+    words: &[&str],
+    parsed_options: &HashMap<&str, ParsedValue<'a>>,
+    shell: &Shell,
+) -> Vec<CompletionItem> {
+    let mut items = Vec::new();
+    match (dynamic_func, static_args) {
+        (Some(func_name), _) => {
+            if let Some(bytecode) = find_bytecode(archived, func_name) {
+                items.extend(
+                    run_dynamic_js(
+                        func_name,
+                        &bytecode,
+                        prefix,
+                        "",
+                        words.to_vec(),
+                        parsed_options.clone(),
+                        shell,
+                    )
+                    .await,
+                );
+            }
+        }
+        (None, Some(static_args)) => {
+            items.extend(static_args.iter().map(|i| CompletionItem {
+                display: i.display.as_str().to_string(),
+                value: i.value.as_str().to_string(),
+                description: i.description.as_str().to_string(),
+                style: i.style.as_ref().map(from_archived_style),
+            }));
+        }
+        _ => {}
+    }
+    items
 }
 
 /// 运行嵌入式 JavaScript 动态获取补全项

@@ -63,16 +63,18 @@ pub fn reload_with_lang(cache_dir: &PathBuf, completions_dir: &Path, lang: &str)
 }
 
 pub fn complete(input: &str, project_dir: &Path, cache_dir: &PathBuf) -> Vec<Value> {
-    let output = Command::new(sugg_bin())
-        .arg("complete")
+    let mut cmd = Command::new(sugg_bin());
+    cmd.arg("complete")
         .arg("nushell")
         .current_dir(project_dir)
         .arg("--cache-dir")
         .arg(cache_dir)
-        .arg("--")
-        .arg(input)
-        .output()
-        .expect("failed to run complete");
+        .arg("--");
+    // 按空格拆分，每个单词作为单独的参数传入
+    for word in input.split(' ') {
+        cmd.arg(word);
+    }
+    let output = cmd.output().expect("failed to run complete");
 
     if !output.stderr.is_empty() {
         eprintln!(

@@ -1,5 +1,3 @@
-let complete_exe = ($env.CURRENT_FILE | path dirname | path join 'bin' 'sugg')
-
 let complete_completer = {|spans|
     let expanded_alias = (scope aliases | where name == $spans.0 | $in.0?.expansion?)
 
@@ -9,10 +7,8 @@ let complete_completer = {|spans|
         $spans
     })
 
-    let input = ($processed_spans | str join ' ')
-
     let output = (try {
-        ^($complete_exe) complete nushell -- $input | from json
+        ^'{{SUGG_BIN}}' complete nushell -- ...$processed_spans | from json
     } catch {
         []
     })

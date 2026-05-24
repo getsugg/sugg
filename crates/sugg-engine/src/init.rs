@@ -46,6 +46,24 @@ pub fn run_init(shell_name: &str) -> Result<(), Box<dyn std::error::Error>> {
     let content = file
         .contents_utf8()
         .ok_or_else(|| format!("Bridge script for '{}' is not valid UTF-8", file_name))?;
+
+    // 将占位符替换为 sugg 可执行文件的绝对路径（位于 sugg-engine 所在目录下的 bin 子目录中）
+    // nushell 中反斜杠需转为正斜杠
+    let sugg_bin = std::env::current_exe()
+        .ok()
+        .map(|p| {
+            let exe = if cfg!(windows) { "sugg.exe" } else { "sugg" };
+            // p 通常为 .../sugg/sugg-engine[.exe]，需要定位到 .../sugg/bin/sugg[.exe]
+            p.parent()
+                .expect("current_exe should have a parent directory")
+                .join("bin")
+                .join(exe)
+                .to_string_lossy()
+                .replace('\\', "/")
+        })
+        .unwrap_or_else(|| "sugg".to_string());
+    let content = content.replace("{{SUGG_BIN}}", &sugg_bin);
+
     print!("{}", content);
 
     if console::user_attended() {
