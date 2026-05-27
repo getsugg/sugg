@@ -277,11 +277,11 @@ mod display_tests {
     /// 验证 Emoji 常量至少能渲染出内容（不 panic）
     #[test]
     fn test_emoji_constants_render() {
-        let s = format!("{}", ICON_SUCCESS);
+        let s = ICON_SUCCESS.to_string();
         assert!(!s.is_empty(), "ICON_SUCCESS 应渲染出内容");
-        let s = format!("{}", ICON_ERROR);
+        let s = ICON_ERROR.to_string();
         assert!(!s.is_empty(), "ICON_ERROR 应渲染出内容");
-        let s = format!("{}", ICON_PARTY);
+        let s = ICON_PARTY.to_string();
         assert!(!s.is_empty(), "ICON_PARTY 应渲染出内容");
     }
 }

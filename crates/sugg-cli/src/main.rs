@@ -155,7 +155,6 @@ fn parse_cli_state<'a>(root: &'a ArchivedCommandNode, words: &[&'a str]) -> Pars
     }
 }
 
-/// 获取引擎路径：消除 4 处平台宏重复，用 cfg!() 一次判断
 /// 获取引擎路径：直接使用全局安装根目录
 fn engine_path() -> std::path::PathBuf {
     if let Ok(p) = std::env::var("SUGG_ENGINE_PATH") {
@@ -421,12 +420,30 @@ fn handle_results(items: Vec<CompletionItem>, prefix: &str, shell: &Shell, limit
         let mut ui_items = Vec::new();
 
         for (level, msg) in logs {
+            // 针对不同终端的菜单渲染机制进行适配
+            let (display, description) = match shell {
+                Shell::Powershell => {
+                    // pwsh 菜单中，如果 value 和 desc 相同可能会导致只显示 desc，
+                    // 因此把完整日志直接拼接放到 display (映射到 ListItemText) 中，description 留空。
+                    (
+                        format!("{} {} {}", level.icon(), level.text(), msg),
+                        String::new(),
+                    )
+                }
+                Shell::Nushell => {
+                    // Nushell 左右分栏效果极佳：左边状态图标，右边详情内容
+                    (format!("{} {}", level.icon(), level.text()), msg.clone())
+                }
+                _ => {
+                    // Zsh / Fish 等通常依赖 description 列显示额外说明
+                    (format!("{} {}", level.icon(), level.text()), msg.clone())
+                }
+            };
+
             ui_items.push(CompletionItem {
-                // display 仅显示等级和图标，如 "❌ ERR" 或 "📝 LOG"
-                display: format!("{} {}", level.icon(), level.text()),
-                // value 和 description 承载完整的真实报错/调试信息
-                value: msg.clone(),
-                description: msg.clone(),
+                display,
+                value: msg.clone(), // 即使插入也是插入日志，对 dummy 占位符没影响
+                description,
                 style: Some(SuggestionStyle {
                     fg: Some(level.color().to_string()),
                     bg: None,

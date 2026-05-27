@@ -20,6 +20,7 @@ macro_rules! i18n_gen_snapshot {
 
 fn run_i18n_gen(completions_dir: &std::path::Path) {
     let status = std::process::Command::new(common::sugg_bin())
+        .env("SUGG_ENGINE_PATH", common::sugg_engine_bin())
         .args(["dev", "i18n"])
         .arg("--completions-dir")
         .arg(completions_dir)
@@ -31,6 +32,7 @@ fn run_i18n_gen(completions_dir: &std::path::Path) {
 #[allow(dead_code)]
 fn run_i18n_gen_with_lang(completions_dir: &std::path::Path, lang: &str) {
     let status = std::process::Command::new(common::sugg_bin())
+        .env("SUGG_ENGINE_PATH", common::sugg_engine_bin())
         .args(["dev", "i18n", "--completions-dir"])
         .arg(completions_dir)
         .arg("--lang")

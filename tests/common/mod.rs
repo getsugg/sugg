@@ -6,9 +6,27 @@ use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::Once;
 use std::sync::OnceLock;
 
+static BUILD_ONCE: Once = Once::new();
+
+pub fn ensure_binaries_built() {
+    BUILD_ONCE.call_once(|| {
+        println!("\n🚀 [Test Init] Auto-building 'sugg' and 'sugg-engine' to ensure tests run on the latest code...");
+
+        let status = Command::new(env!("CARGO"))
+            .args(["build", "-p", "sugg", "-p", "sugg-engine"])
+            .status()
+            .expect("failed to auto-compile binaries during test initialization");
+
+        assert!(status.success(), "Failed to build 'sugg' and 'sugg-engine' binaries for integration tests!");
+    });
+}
+
 pub fn sugg_bin() -> PathBuf {
+    ensure_binaries_built();
+
     let mut path = env::current_exe().unwrap();
     path.pop();
     if path.file_name().map(|n| n == "deps").unwrap_or(false) {
@@ -23,6 +41,8 @@ pub fn sugg_bin() -> PathBuf {
 }
 
 pub fn sugg_engine_bin() -> PathBuf {
+    ensure_binaries_built();
+
     let mut path = env::current_exe().unwrap();
     path.pop();
     if path.file_name().map(|n| n == "deps").unwrap_or(false) {
@@ -38,6 +58,7 @@ pub fn sugg_engine_bin() -> PathBuf {
 
 pub fn reload(cache_dir: &PathBuf, completions_dir: &Path) {
     let status = Command::new(sugg_bin())
+        .env("SUGG_ENGINE_PATH", sugg_engine_bin())
         .arg("reload")
         .arg("--cache-dir")
         .arg(cache_dir)
@@ -50,6 +71,7 @@ pub fn reload(cache_dir: &PathBuf, completions_dir: &Path) {
 #[allow(dead_code)]
 pub fn reload_with_lang(cache_dir: &PathBuf, completions_dir: &Path, lang: &str) {
     let status = Command::new(sugg_bin())
+        .env("SUGG_ENGINE_PATH", sugg_engine_bin())
         .arg("reload")
         .arg("--cache-dir")
         .arg(cache_dir)

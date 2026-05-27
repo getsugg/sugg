@@ -129,34 +129,95 @@ pub fn run_init(shell_name: &str) -> Result<(), Box<dyn std::error::Error>> {
                         .yellow()
                         .to_string(),
                     )
+                    .line("")
                     .line(
                         style(
-                            "    Legacy (any version — requires editing config.nu):",
+                            "    Legacy (edit config.nu — script stored in sugg's own directory):",
                         )
                         .cyan()
                         .to_string(),
                     )
                     .line(
                         style(
-                            "      sugg init nushell | save -f ~/.sugg_init.nu",
+                            r#"  let sugg_dir = if ('SUGG_HOME' in $env) { $env.SUGG_HOME } else { ($nu.data-dir | path join 'sugg') }"#,
                         )
                         .yellow()
                         .to_string(),
                     )
                     .line(
                         style(
-                            "      (Then add source ~/.sugg_init.nu to your config.nu)",
+                            r#"  mkdir ($sugg_dir | path join 'shells')"#,
+                        )
+                        .yellow()
+                        .to_string(),
+                    )
+                    .line(
+                        style(
+                            r#"  sugg init nushell | save -f ($sugg_dir | path join 'shells/nushell.nu')"#,
+                        )
+                        .yellow()
+                        .to_string(),
+                    )
+                    .line(
+                        style(
+                            r#"  # Then add to your config.nu:"#,
+                        )
+                        .yellow()
+                        .to_string(),
+                    )
+                    .line(
+                        style(
+                            r#"  source ($sugg_dir | path join 'shells/nushell.nu')"#,
                         )
                         .yellow()
                         .to_string(),
                     );
             }
             sugg_core::Shell::Powershell => {
-                banner = banner.line(
-                    style("    sugg init powershell | Invoke-Expression")
+                banner = banner
+                    .line(
+                        style(format!(
+                            "{}  Save as static script (recommended, lower startup overhead):",
+                            sugg_core::ICON_SPARKLES,
+                        ))
+                        .cyan()
+                        .to_string(),
+                    )
+                    .line(
+                        style(
+                            r#"  $suggDir = if ($env:SUGG_HOME) { $env:SUGG_HOME } else { "$env:APPDATA\sugg" }"#,
+                        )
                         .yellow()
                         .to_string(),
-                );
+                    )
+                    .line(
+                        style(
+                            r#"  New-Item -ItemType Directory -Path (Join-Path $suggDir "shells") -Force | Out-Null"#,
+                        )
+                        .yellow()
+                        .to_string(),
+                    )
+                    .line(
+                        style(
+                            r#"  sugg init powershell | Out-File -FilePath (Join-Path $suggDir "shells\powershell.ps1") -Encoding utf8"#,
+                        )
+                        .yellow()
+                        .to_string(),
+                    )
+                    .line(
+                        style(
+                            r#"  # Then add to your $PROFILE:"#,
+                        )
+                        .green()
+                        .to_string(),
+                    )
+                    .line(
+                        style(
+                            r#"  . (Join-Path (if ($env:SUGG_HOME) { $env:SUGG_HOME } else { "$env:APPDATA\sugg" }) "shells\powershell.ps1")"#,
+                        )
+                        .yellow()
+                        .to_string(),
+                    );
             }
         }
 
