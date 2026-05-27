@@ -49,14 +49,14 @@ impl Shell {
     }
 }
 
-/// 统一的 sugg 根目录（可通过 SUGG_HOME 覆盖）
+/// 统一的 sugg 根目录：~/.sugg（可通过 SUGG_HOME 覆盖）
 pub fn sugg_root() -> std::path::PathBuf {
     if let Ok(var) = std::env::var("SUGG_HOME") {
         return std::path::PathBuf::from(var);
     }
-    dirs_next::data_dir()
+    dirs_next::home_dir()
         .unwrap_or_else(|| std::path::PathBuf::from("."))
-        .join("sugg")
+        .join(".sugg")
 }
 
 /// 缓存文件路径

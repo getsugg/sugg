@@ -11,9 +11,7 @@
 //!   cargo deploy --release --no-build --add-path
 //!
 //! 安装目录（可通过 SUGG_HOME 环境变量覆盖）:
-//!   Windows:  %APPDATA%/sugg/
-//!   Linux:    ~/.local/share/sugg/
-//!   macOS:    ~/Library/Application Support/sugg/
+//!   ~/.sugg/
 
 use std::path::PathBuf;
 use std::process::Command;
@@ -31,9 +29,9 @@ fn sugg_root() -> PathBuf {
     if let Ok(var) = std::env::var("SUGG_HOME") {
         return PathBuf::from(var);
     }
-    dirs_next::data_dir()
+    dirs_next::home_dir()
         .unwrap_or_else(|| PathBuf::from("."))
-        .join("sugg")
+        .join(".sugg")
 }
 
 fn main() {
