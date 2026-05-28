@@ -27,7 +27,7 @@ ARCH="$(uname -m)"
 
 if [ "$OS" = "Linux" ]; then
     if [ "$ARCH" = "x86_64" ] || [ "$ARCH" = "amd64" ]; then
-        ASSET_NAME="sugg-x86_64-unknown-linux-gnu.tar.gz"
+        ASSET_NAME="sugg-x86_64-unknown-linux-musl.tar.gz"
     else
         echo -e "${RED}Unsupported architecture: $ARCH on Linux${NC}"
         exit 1
