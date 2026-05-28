@@ -3,8 +3,8 @@
 Sugg Windows Installation Script
 
 .DESCRIPTION
-Downloads the latest version of Sugg and installs it to %APPDATA%\sugg.
-It automatically adds %APPDATA%\sugg\bin to the User's PATH environment variable.
+Downloads the latest version of Sugg and installs it to ~\.sugg.
+It automatically adds ~\.sugg\bin to the User's PATH environment variable.
 
 .EXAMPLE
 Invoke-RestMethod -Uri "https://raw.githubusercontent.com/YOUR_GITHUB_NAME/sugg/main/install.ps1" | Invoke-Expression
@@ -18,8 +18,8 @@ $ErrorActionPreference = "Stop"
 $GithubRepo = "axuj/sugg" # TODO: Change to your actual GitHub repo
 $AssetName  = "sugg-x86_64-pc-windows-msvc.zip" # TODO: Ensure this matches your release filename
 
-# Installation paths (Aligned with your deploy.rs logic)
-$InstallDir = "$env:APPDATA\sugg"
+# Installation paths
+$InstallDir = "$env:USERPROFILE\.sugg"
 $BinDir     = "$InstallDir\bin"
 
 Write-Host "🚀 Starting Sugg installation..." -ForegroundColor Cyan

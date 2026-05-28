@@ -185,7 +185,7 @@ pub fn run_init(shell_name: &str) -> Result<(), Box<dyn std::error::Error>> {
                     )
                     .line(
                         style(
-                            r#"  $suggDir = if ($env:SUGG_HOME) { $env:SUGG_HOME } else { "$env:APPDATA\sugg" }"#,
+                            r#"  $suggDir = if ($env:SUGG_HOME) { $env:SUGG_HOME } else { "$env:USERPROFILE\.sugg" }"#,
                         )
                         .yellow()
                         .to_string(),
@@ -213,7 +213,7 @@ pub fn run_init(shell_name: &str) -> Result<(), Box<dyn std::error::Error>> {
                     )
                     .line(
                         style(
-                            r#"  . (Join-Path (if ($env:SUGG_HOME) { $env:SUGG_HOME } else { "$env:APPDATA\sugg" }) "shells\powershell.ps1")"#,
+                            r#"  . (Join-Path (if ($env:SUGG_HOME) { $env:SUGG_HOME } else { "$env:USERPROFILE\.sugg" }) "shells\powershell.ps1")"#,
                         )
                         .yellow()
                         .to_string(),

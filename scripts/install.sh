@@ -50,12 +50,7 @@ fi
 if [ -n "${SUGG_HOME:-}" ]; then
     INSTALL_DIR="$SUGG_HOME"
 else
-    if [ "$OS" = "Linux" ]; then
-        DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}"
-        INSTALL_DIR="$DATA_DIR/sugg"
-    elif [ "$OS" = "Darwin" ]; then
-        INSTALL_DIR="$HOME/Library/Application Support/sugg"
-    fi
+    INSTALL_DIR="$HOME/.sugg"
 fi
 BIN_DIR="$INSTALL_DIR/bin"
 
