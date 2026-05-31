@@ -22,7 +22,7 @@ pub async fn run_upgrade() -> Result<(), Box<dyn std::error::Error>> {
         .trim_start_matches('v');
     let current = env!("CARGO_PKG_VERSION");
 
-    if latest_tag == current {
+    if !is_newer_version(latest_tag, current) {
         println!(
             "{} Already up-to-date (v{}).",
             sugg_core::ICON_SUCCESS,
@@ -44,7 +44,7 @@ pub async fn run_upgrade() -> Result<(), Box<dyn std::error::Error>> {
     } else if cfg!(target_os = "macos") {
         ("sugg-x86_64-apple-darwin.tar.gz", false)
     } else {
-        ("sugg-x86_64-unknown-linux-gnu.tar.gz", false)
+        ("sugg-x86_64-unknown-linux-musl.tar.gz", false)
     };
 
     let download_url = format!(
@@ -137,4 +137,21 @@ pub async fn run_upgrade() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("{} Upgrade complete!", sugg_core::ICON_SUCCESS);
     Ok(())
+}
+
+fn is_newer_version(latest: &str, current: &str) -> bool {
+    let parse =
+        |v: &str| -> Vec<u64> { v.split('.').filter_map(|s| s.parse::<u64>().ok()).collect() };
+    let latest_parts = parse(latest);
+    let current_parts = parse(current);
+    for i in 0..latest_parts.len().max(current_parts.len()) {
+        let l = latest_parts.get(i).copied().unwrap_or(0);
+        let c = current_parts.get(i).copied().unwrap_or(0);
+        if l > c {
+            return true;
+        } else if l < c {
+            return false;
+        }
+    }
+    false
 }
