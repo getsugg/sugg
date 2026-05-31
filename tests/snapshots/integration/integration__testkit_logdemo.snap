@@ -8,7 +8,12 @@ expression: all
     "input": "testkit logdemo ",
     "result": [
       {
-        "value": "[DEBUG] prefix=",
+        "value": "alpha",
+        "display_override": "alpha",
+        "description": "First item"
+      },
+      {
+        "value": "# [DEBUG] prefix=",
         "display_override": "📝 LOG",
         "description": "[DEBUG] prefix=",
         "style": {
@@ -19,7 +24,7 @@ expression: all
         }
       },
       {
-        "value": "[INFO] configuration loaded successfully",
+        "value": "# [INFO] configuration loaded successfully",
         "display_override": "📝 LOG",
         "description": "[INFO] configuration loaded successfully",
         "style": {
@@ -28,15 +33,6 @@ expression: all
             "bold"
           ]
         }
-      },
-      {
-        "value": " ",
-        "display_override": " "
-      },
-      {
-        "value": "alpha",
-        "display_override": "alpha",
-        "description": "First item"
       },
       {
         "value": "beta",
@@ -55,7 +51,7 @@ expression: all
     "input": "testkit logdemo bad-",
     "result": [
       {
-        "value": "Dynamic JS execution failed: Promise resolution failed: Exception(Exception { message: Some(\"❌ Invalid prefix detected: \\\"bad-\\\" — please remove the leading \\\"bad-\\\"\"), stack: Some(\"    at __dyn_testkit_logdemo_args (testkit:38:43)\\n\") })",
+        "value": "# Dynamic JS execution failed: Promise resolution failed: Exception(Exception { message: Some(\"❌ Invalid prefix detected: \\\"bad-\\\" — please remove the leading \\\"bad-\\\"\"), stack: Some(\"    at __dyn_testkit_logdemo_args (testkit:38:43)\\n\") })",
         "display_override": "❌ ERR",
         "description": "Dynamic JS execution failed: Promise resolution failed: Exception(Exception { message: Some(\"❌ Invalid prefix detected: \\\"bad-\\\" — please remove the leading \\\"bad-\\\"\"), stack: Some(\"    at __dyn_testkit_logdemo_args (testkit:38:43)\\n\") })",
         "style": {
@@ -76,7 +72,12 @@ expression: all
     "input": "testkit logdemo a",
     "result": [
       {
-        "value": "[DEBUG] prefix= a",
+        "value": "alpha",
+        "display_override": "alpha",
+        "description": "First item"
+      },
+      {
+        "value": "# [DEBUG] prefix= a",
         "display_override": "📝 LOG",
         "description": "[DEBUG] prefix= a",
         "style": {
@@ -87,7 +88,7 @@ expression: all
         }
       },
       {
-        "value": "[INFO] configuration loaded successfully",
+        "value": "# [INFO] configuration loaded successfully",
         "display_override": "📝 LOG",
         "description": "[INFO] configuration loaded successfully",
         "style": {
@@ -96,15 +97,6 @@ expression: all
             "bold"
           ]
         }
-      },
-      {
-        "value": "a ",
-        "display_override": " "
-      },
-      {
-        "value": "alpha",
-        "display_override": "alpha",
-        "description": "First item"
       }
     ]
   }

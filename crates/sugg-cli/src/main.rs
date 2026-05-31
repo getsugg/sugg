@@ -406,16 +406,14 @@ async fn main() {
 }
 
 fn handle_results(items: Vec<CompletionItem>, prefix: &str, shell: &Shell, limit: usize) {
-    let mut filtered: Vec<_> = items
+    let logs = sugg_core::logger::get_ui_logs();
+    let filtered: Vec<_> = items
         .into_iter()
         .filter(|i| i.value.starts_with(prefix) || i.display.starts_with(prefix))
         .take(limit)
         .collect();
 
-    // 取出拦截到的 UI 日志（包括 Error, Warn，甚至 JS 脚本里的 log 调试信息）
-    let logs = sugg_core::logger::get_ui_logs();
-
-    // Zsh：日志走 __msg__ 协议 + _message，不走补全项包装
+    // Zsh：日志走 __msg__ 协议，不混入补全菜单
     if *shell == Shell::Zsh {
         if !logs.is_empty() {
             for (level, msg) in &logs {
@@ -426,46 +424,56 @@ fn handle_results(items: Vec<CompletionItem>, prefix: &str, shell: &Shell, limit
         return;
     }
 
-    if !logs.is_empty() {
-        let mut ui_items = Vec::new();
+    if logs.is_empty() {
+        print_results(filtered, shell);
+        return;
+    }
 
-        for (level, msg) in logs {
-            // 针对不同终端的菜单渲染机制进行适配
-            let (display, description) = match shell {
-                Shell::Powershell => (
-                    format!("{} {} {}", level.icon(), level.text(), msg),
-                    String::new(),
-                ),
-                Shell::Nushell => (format!("{} {}", level.icon(), level.text()), msg.clone()),
-                _ => (format!("{} {}", level.icon(), level.text()), msg.clone()),
-            };
+    // 首项置顶（保证默认选中正常命令），日志插入其后，剩余补全项追加
+    let mut final_items = Vec::new();
+    let mut filtered_iter = filtered.into_iter();
 
-            ui_items.push(CompletionItem {
-                display,
-                value: msg.clone(),
-                description,
-                style: Some(SuggestionStyle {
-                    fg: Some(level.color().to_string()),
-                    bg: None,
-                    attr: Some(vec!["bold".to_string()]),
-                }),
-            });
-        }
+    let has_valid = if let Some(first) = filtered_iter.next() {
+        final_items.push(first);
+        true
+    } else {
+        false
+    };
 
-        // 垫片 Dummy 项：防止只有日志时被终端自动填入上屏
-        ui_items.push(CompletionItem {
+    for (level, msg) in logs {
+        let (display, description) = match shell {
+            Shell::Powershell => (
+                format!("{} {} {}", level.icon(), level.text(), msg),
+                String::new(),
+            ),
+            Shell::Nushell => (format!("{} {}", level.icon(), level.text()), msg.clone()),
+            _ => (format!("{} {}", level.icon(), level.text()), msg.clone()),
+        };
+
+        final_items.push(CompletionItem {
+            display,
+            value: format!("# {}", msg),
+            description,
+            style: Some(SuggestionStyle {
+                fg: Some(level.color().to_string()),
+                bg: None,
+                attr: Some(vec!["bold".to_string()]),
+            }),
+        });
+    }
+
+    // 仅当无有效项时才加垫片，防止单条日志被自动填入
+    if !has_valid {
+        final_items.push(CompletionItem {
             display: " ".to_string(),
             value: format!("{} ", prefix),
             description: String::new(),
             style: None,
         });
-
-        // 把日志项置顶显示
-        ui_items.extend(filtered);
-        filtered = ui_items;
     }
 
-    print_results(filtered, shell);
+    final_items.extend(filtered_iter);
+    print_results(final_items, shell);
 }
 
 fn from_archived_style(archived: &ArchivedSuggestionStyle) -> SuggestionStyle {
