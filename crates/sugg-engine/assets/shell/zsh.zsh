@@ -7,20 +7,35 @@ _sugg_completion() {
     fi
     local IFS=$'\n'
     local -a output=($("{{SUGG_BIN}}" complete zsh -- "${args[@]}"))
-    local -a matches
+
+    local -a messages=()
+    local -a displays=() values=()
+
     for line in "${output[@]}"; do
-        local val="${line%%$'\t'*}"
-        local desc="${line#*$'\t'}"
-        val="${val//:/\\:}"
-        desc="${desc//:/\\:}"
-        if [[ -n "$desc" && "$desc" != "$val" ]]; then
-            matches+=("$val:$desc")
+        if [[ "$line" == "__msg__"$'\t'* ]]; then
+            messages+=("${line#*$'\t'}")
         else
-            matches+=("$val")
+            local val="${line%%$'\t'*}"
+            local rest="${line#*$'\t'}"
+            local disp="${rest%%$'\t'*}"
+            local desc="${rest#*$'\t'}"
+            local disp_safe="${disp//:/\\:}"
+            local desc_safe="${desc//:/\\:}"
+            if [[ -n "$desc_safe" ]]; then
+                displays+=("$disp_safe:$desc_safe")
+            else
+                displays+=("$disp_safe")
+            fi
+            values+=("$val")
         fi
     done
-    if (( ${#matches} > 0 )); then
-        _describe -t completions 'completions' matches -Q -S ''
+
+    if (( ${#displays} > 0 )); then
+        _describe -t completions 'completions' displays values -Q -S ''
+    fi
+
+    if (( ${#messages} > 0 )); then
+        _message -r "${(j:; :)messages}"
     fi
 }
 
