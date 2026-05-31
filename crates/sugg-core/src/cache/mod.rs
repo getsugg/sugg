@@ -70,11 +70,9 @@ pub fn print_results(items: Vec<CompletionItem>, shell: &Shell) {
         Shell::Zsh => {
             for item in items {
                 let v = item.value.trim_end();
-                if item.description.is_empty() {
-                    println!("{}", v);
-                } else {
-                    println!("{}:{}", v, item.description);
-                }
+                let d = item.display.trim_end();
+                let desc = item.description.trim_end();
+                println!("{}\t{}\t{}", v, d, desc);
             }
         }
         Shell::Fish => {

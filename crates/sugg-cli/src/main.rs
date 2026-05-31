@@ -364,7 +364,6 @@ async fn main() {
         }
 
         EffectiveCtx::SubcommandsAndArgs(node) => {
-            // 子命令：如果遇到未命中的词汇，就不再补全下级命令
             if !is_positional_mode {
                 items.extend(node.subcommands.iter().map(|c| {
                     let style = c.style.as_ref().map(from_archived_style);
@@ -373,7 +372,6 @@ async fn main() {
                 }));
             }
 
-            // 动态/静态参数：提取公共逻辑
             items.extend(
                 resolve_completions(
                     node.dynamic_func.as_deref(),
@@ -416,33 +414,35 @@ fn handle_results(items: Vec<CompletionItem>, prefix: &str, shell: &Shell, limit
 
     // 取出拦截到的 UI 日志（包括 Error, Warn，甚至 JS 脚本里的 log 调试信息）
     let logs = sugg_core::logger::get_ui_logs();
+
+    // Zsh：日志走 __msg__ 协议 + _message，不走补全项包装
+    if *shell == Shell::Zsh {
+        if !logs.is_empty() {
+            for (level, msg) in &logs {
+                println!("__msg__\t{} {}: {}", level.icon(), level.text(), msg);
+            }
+        }
+        print_results(filtered, shell);
+        return;
+    }
+
     if !logs.is_empty() {
         let mut ui_items = Vec::new();
 
         for (level, msg) in logs {
             // 针对不同终端的菜单渲染机制进行适配
             let (display, description) = match shell {
-                Shell::Powershell => {
-                    // pwsh 菜单中，如果 value 和 desc 相同可能会导致只显示 desc，
-                    // 因此把完整日志直接拼接放到 display (映射到 ListItemText) 中，description 留空。
-                    (
-                        format!("{} {} {}", level.icon(), level.text(), msg),
-                        String::new(),
-                    )
-                }
-                Shell::Nushell => {
-                    // Nushell 左右分栏效果极佳：左边状态图标，右边详情内容
-                    (format!("{} {}", level.icon(), level.text()), msg.clone())
-                }
-                _ => {
-                    // Zsh / Fish 等通常依赖 description 列显示额外说明
-                    (format!("{} {}", level.icon(), level.text()), msg.clone())
-                }
+                Shell::Powershell => (
+                    format!("{} {} {}", level.icon(), level.text(), msg),
+                    String::new(),
+                ),
+                Shell::Nushell => (format!("{} {}", level.icon(), level.text()), msg.clone()),
+                _ => (format!("{} {}", level.icon(), level.text()), msg.clone()),
             };
 
             ui_items.push(CompletionItem {
                 display,
-                value: msg.clone(), // 即使插入也是插入日志，对 dummy 占位符没影响
+                value: msg.clone(),
                 description,
                 style: Some(SuggestionStyle {
                     fg: Some(level.color().to_string()),
