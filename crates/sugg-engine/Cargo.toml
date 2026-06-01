@@ -17,14 +17,14 @@ serde_json.workspace = true
 serde.workspace = true
 
 # 重型依赖
-oxc = { version = "0.132.0", default-features = false, features = ["ast_visit"] }
-rolldown = { version = "1.0.0" }
-rolldown_common = { version = "1.0.0" }
+oxc = { version = "0.133.0", default-features = false, features = ["ast_visit"] }
+rolldown = { version = "1.0.3" }
+rolldown_common = { version = "1.0.3" }
 icu = { version = "2.2.0", features = ["compiled_data"] }
 
 # CLI & 其他工具
 console.workspace = true
-clap = { version = "4.5", features = ["derive"] }
+clap = { version = "4.6", features = ["derive"] }
 include_dir = "0.7.4"
 self-replace = "1.5.0"
 tempfile.workspace = true
