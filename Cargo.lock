@@ -1695,6 +1695,7 @@ checksum = "3fecf76aaae6c29dd8dcde82e8a526ba8e7859ecfa98a2b8b5d54fc17965a241"
 dependencies = [
  "oxc_allocator 0.132.0",
  "oxc_ast 0.132.0",
+ "oxc_ast_visit 0.132.0",
  "oxc_diagnostics 0.132.0",
  "oxc_parser 0.132.0",
  "oxc_span 0.132.0",
@@ -1709,7 +1710,7 @@ checksum = "cd840e7bf69e7db0148361251349bc85939dc81506b22584245ec539bff53e66"
 dependencies = [
  "oxc_allocator 0.133.0",
  "oxc_ast 0.133.0",
- "oxc_ast_visit",
+ "oxc_ast_visit 0.133.0",
  "oxc_cfg",
  "oxc_codegen",
  "oxc_diagnostics 0.133.0",
@@ -1848,6 +1849,18 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "oxc_ast_visit"
+version = "0.132.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c56f75c8a3204594b0f2cf3334378de270b7cec98ed336c77f83ae39db5c088b"
+dependencies = [
+ "oxc_allocator 0.132.0",
+ "oxc_ast 0.132.0",
+ "oxc_span 0.132.0",
+ "oxc_syntax 0.132.0",
 ]
 
 [[package]]
@@ -2017,7 +2030,7 @@ dependencies = [
  "bitflags",
  "oxc_allocator 0.133.0",
  "oxc_ast 0.133.0",
- "oxc_ast_visit",
+ "oxc_ast_visit 0.133.0",
  "oxc_diagnostics 0.133.0",
  "oxc_ecmascript 0.133.0",
  "oxc_span 0.133.0",
@@ -2054,7 +2067,7 @@ dependencies = [
  "itoa",
  "oxc_allocator 0.133.0",
  "oxc_ast 0.133.0",
- "oxc_ast_visit",
+ "oxc_ast_visit 0.133.0",
  "oxc_compat",
  "oxc_data_structures 0.133.0",
  "oxc_ecmascript 0.133.0",
@@ -2190,7 +2203,7 @@ dependencies = [
  "memchr",
  "oxc_allocator 0.133.0",
  "oxc_ast 0.133.0",
- "oxc_ast_visit",
+ "oxc_ast_visit 0.133.0",
  "oxc_cfg",
  "oxc_diagnostics 0.133.0",
  "oxc_ecmascript 0.133.0",
@@ -2324,7 +2337,7 @@ dependencies = [
  "memchr",
  "oxc_allocator 0.133.0",
  "oxc_ast 0.133.0",
- "oxc_ast_visit",
+ "oxc_ast_visit 0.133.0",
  "oxc_compat",
  "oxc_data_structures 0.133.0",
  "oxc_diagnostics 0.133.0",
@@ -2351,7 +2364,7 @@ dependencies = [
  "itoa",
  "oxc_allocator 0.133.0",
  "oxc_ast 0.133.0",
- "oxc_ast_visit",
+ "oxc_ast_visit 0.133.0",
  "oxc_diagnostics 0.133.0",
  "oxc_ecmascript 0.133.0",
  "oxc_parser 0.133.0",
@@ -2373,7 +2386,7 @@ dependencies = [
  "itoa",
  "oxc_allocator 0.133.0",
  "oxc_ast 0.133.0",
- "oxc_ast_visit",
+ "oxc_ast_visit 0.133.0",
  "oxc_data_structures 0.133.0",
  "oxc_ecmascript 0.133.0",
  "oxc_semantic",

@@ -17,7 +17,7 @@ serde_json.workspace = true
 serde.workspace = true
 
 # 重型依赖
-oxc = { version = "0.132.0", default-features = false }
+oxc = { version = "0.132.0", default-features = false, features = ["ast_visit"] }
 rolldown = { version = "1.0.0" }
 rolldown_common = { version = "1.0.0" }
 icu = { version = "2.2.0", features = ["compiled_data"] }
