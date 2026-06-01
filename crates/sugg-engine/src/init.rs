@@ -74,7 +74,7 @@ pub fn run_init(shell_name: &str) -> Result<(), Box<dyn std::error::Error>> {
             .border_color(console::Style::new().bold().cyan())
             .line(
                 style(format!(
-                    "{} Sugg {} shell integration generated successfully!",
+                    "{} Sugg integration script for {} is ready!",
                     sugg_core::ICON_PARTY,
                     shell.as_str(),
                 ))

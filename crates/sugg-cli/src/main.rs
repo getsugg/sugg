@@ -441,18 +441,32 @@ fn handle_results(items: Vec<CompletionItem>, prefix: &str, shell: &Shell, limit
     };
 
     for (level, msg) in logs {
-        let (display, description) = match shell {
+        let (display, description, value) = match shell {
             Shell::Powershell => (
                 format!("{} {} {}", level.icon(), level.text(), msg),
                 String::new(),
+                format!("# {}", msg),
             ),
-            Shell::Nushell => (format!("{} {}", level.icon(), level.text()), msg.clone()),
-            _ => (format!("{} {}", level.icon(), level.text()), msg.clone()),
+            Shell::Nushell => (
+                format!("{} {}", level.icon(), level.text()),
+                msg.clone(),
+                format!("# {}", msg),
+            ),
+            Shell::Fish => {
+                // Fish 丢弃了 display，将图标和日志级别拼入 value，保留 # 前缀以确保安全
+                let val = format!("# {} {}: {}", level.icon(), level.text(), msg);
+                (String::new(), String::new(), val)
+            }
+            _ => (
+                format!("{} {}", level.icon(), level.text()),
+                msg.clone(),
+                format!("# {}", msg),
+            ),
         };
 
         final_items.push(CompletionItem {
             display,
-            value: format!("# {}", msg),
+            value,
             description,
             style: Some(SuggestionStyle {
                 fg: Some(level.color().to_string()),
