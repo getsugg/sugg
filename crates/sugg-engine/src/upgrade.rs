@@ -1,3 +1,4 @@
+use indicatif::{ProgressBar, ProgressStyle};
 use std::path::{Path, PathBuf};
 
 pub async fn run_upgrade() -> Result<(), Box<dyn std::error::Error>> {
@@ -6,16 +7,23 @@ pub async fn run_upgrade() -> Result<(), Box<dyn std::error::Error>> {
         sugg_core::ICON_SCAN
     );
 
-    let api_output = std::process::Command::new("curl")
-        .args([
-            "-fsSL",
-            "https://api.github.com/repos/axuj/sugg/releases/latest",
-        ])
-        .output()?;
-    if !api_output.status.success() {
-        return Err("Failed to fetch release info from GitHub.".into());
+    let client = reqwest::Client::builder()
+        .user_agent(concat!("sugg-updater/", env!("CARGO_PKG_VERSION")))
+        .build()?;
+
+    let api_response = client
+        .get("https://api.github.com/repos/axuj/sugg/releases/latest")
+        .send()
+        .await?;
+    if !api_response.status().is_success() {
+        return Err(format!(
+            "Failed to fetch release info: HTTP {}",
+            api_response.status()
+        )
+        .into());
     }
-    let api_json: serde_json::Value = serde_json::from_slice(&api_output.stdout)?;
+
+    let api_json: serde_json::Value = api_response.json().await?;
     let latest_tag = api_json["tag_name"]
         .as_str()
         .ok_or("Missing tag_name in GitHub API response.")?
@@ -52,6 +60,12 @@ pub async fn run_upgrade() -> Result<(), Box<dyn std::error::Error>> {
         asset_name
     );
 
+    let total_size = api_json["assets"]
+        .as_array()
+        .and_then(|assets| assets.iter().find(|a| a["name"] == asset_name))
+        .and_then(|a| a["size"].as_u64())
+        .unwrap_or(0);
+
     let tmp_dir = tempfile::tempdir()?;
     let tmp_path = tmp_dir.path();
     let archive_path = tmp_path.join(if is_zip { "sugg.zip" } else { "sugg.tar.gz" });
@@ -63,12 +77,27 @@ pub async fn run_upgrade() -> Result<(), Box<dyn std::error::Error>> {
         sugg_core::ICON_DOWNLOAD,
         download_url
     );
-    let status = std::process::Command::new("curl")
-        .args(["-fL", &download_url, "-o", &archive_path.to_string_lossy()])
-        .status()?;
-    if !status.success() {
-        return Err("Download failed: curl returned non-zero status.".into());
+
+    let mut response = client.get(&download_url).send().await?;
+    if !response.status().is_success() {
+        return Err(format!("Download failed: HTTP {}", response.status()).into());
     }
+
+    let pb = ProgressBar::new(total_size);
+    pb.set_style(
+        ProgressStyle::default_bar()
+            .template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})")?
+            .progress_chars("█░"),
+    );
+
+    let mut file = std::fs::File::create(&archive_path)?;
+    while let Some(chunk) = response.chunk().await? {
+        use std::io::Write;
+        file.write_all(&chunk)?;
+        pb.inc(chunk.len() as u64);
+    }
+    pb.finish_and_clear();
+    drop(file);
 
     println!("{} Extracting binaries...", sugg_core::ICON_PACKAGE);
     if is_zip {
@@ -127,15 +156,46 @@ pub async fn run_upgrade() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("{} Replacing binaries...", sugg_core::ICON_SYNC);
     let sugg_root = sugg_core::sugg_root();
-    let sugg_dest = sugg_root.join("bin").join(sugg_name);
-    if let Some(p) = sugg_dest.parent() {
-        std::fs::create_dir_all(p)?;
-    }
-    std::fs::copy(&new_sugg, &sugg_dest)?;
+    let backup_dir = sugg_root.join(".old");
+    std::fs::create_dir_all(&backup_dir)?;
 
-    self_replace::self_replace(&new_engine)?;
+    let sugg_dest = sugg_root.join("bin").join(sugg_name);
+    let engine_dest = sugg_root.join(engine_name);
+
+    replace_binary_safe(&new_sugg, &sugg_dest, &backup_dir)?;
+    replace_binary_safe(&new_engine, &engine_dest, &backup_dir)?;
 
     println!("{} Upgrade complete!", sugg_core::ICON_SUCCESS);
+    Ok(())
+}
+
+fn replace_binary_safe(
+    new_path: &Path,
+    dest_path: &Path,
+    backup_dir: &Path,
+) -> Result<(), Box<dyn std::error::Error>> {
+    if let Some(p) = dest_path.parent() {
+        std::fs::create_dir_all(p)?;
+    }
+
+    let backup = backup_dir.join(dest_path.file_name().unwrap());
+    let _ = std::fs::remove_file(&backup);
+
+    if dest_path.exists() {
+        std::fs::rename(dest_path, &backup)?;
+        std::fs::copy(new_path, dest_path)?;
+    } else {
+        std::fs::copy(new_path, dest_path)?;
+    }
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = std::fs::metadata(dest_path)?.permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(dest_path, perms)?;
+    }
+
     Ok(())
 }
 

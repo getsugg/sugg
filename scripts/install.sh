@@ -81,7 +81,7 @@ TEMP_TAR="$TEMP_DIR/$ASSET_NAME"
 
 echo -e "Downloading binaries from $DOWNLOAD_URL..."
 if command -v curl >/dev/null 2>&1; then
-    curl -fL "$DOWNLOAD_URL" -o "$TEMP_TAR"
+    curl -#fL "$DOWNLOAD_URL" -o "$TEMP_TAR"
 else
     wget -qO "$TEMP_TAR" "$DOWNLOAD_URL"
 fi
