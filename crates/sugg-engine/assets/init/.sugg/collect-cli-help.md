@@ -2,20 +2,24 @@
 
 A workflow for generating a complete offline help reference for any CLI tool, used as context when writing Sugg completion scripts.
 
-## Workflow
+## Workflow (AI-driven recursion)
 
-1. **Run level-1** → collect the tool's own help and every top-level subcommand's `--help`
-2. **Inspect** → identify which top-level commands list further subcommands
-3. **Append level-2** → fill in the subcommand map and run the append script
-4. **Done** → the output file is your complete reference
+Each level follows the same cycle — AI identifies which commands have subcommands, you run the script, repeat:
 
-All intermediate files (scripts + output) go into `_tmp/`. Nothing is written to the workspace root.
+```
+Set tool → run script → send output to AI → AI tells you next subs → update script → run → ...
+                                            ↓
+                                    Done when AI says
+                                    no more subcommands
+```
+
+All intermediate files go into `_tmp/`. Nothing is written to the workspace root.
 
 ---
 
-## Step 1 — Collect top-level help (overwrite)
+## Initial — Collect root `--help`
 
-Save as `_tmp/run1.sh`, set `tool` and `cmds`, then run.
+Save as `_tmp/run0.sh`, set `tool`, then run.
 
 ```bash
 #!/bin/bash
@@ -26,12 +30,6 @@ file="_tmp/${tool}_help"
 
 mkdir -p "$(dirname "$file")"
 
-cmds=(
-    subcommand1
-    subcommand2
-    # copy from: your-command --help
-)
-
 echo "========== $tool HELP ==========" > "$file"
 echo "Version: $($tool --version 2>/dev/null || echo 'unknown')" >> "$file"
 echo "Generated: $(date)" >> "$file"
@@ -40,24 +38,20 @@ echo "" >> "$file"
 echo "========== PART 0: $tool --help ==========" >> "$file"
 $tool --help >> "$file" 2>&1
 echo "" >> "$file"
-
-echo "========== PART 1: subcommand --help ==========" >> "$file"
-for cmd in "${cmds[@]}"; do
-    echo "---------- $tool $cmd --help ----------" >> "$file"
-    $tool $cmd --help >> "$file" 2>&1
-    echo "" >> "$file"
-done
-
-echo "Level-1 help collected."
 ```
 
-Run: `bash _tmp/run1.sh`
+Run: `bash _tmp/run0.sh`
+
+Then send `_tmp/${tool}_help` to AI and ask:
+> "List all top-level subcommands of `${tool}` from the help above. Output as a bash array, e.g. `cmds=(commit push pull)`"
+
+Fill the result into `cmds` in step 1 below.
 
 ---
 
-## Step 2 — Append level-2 help
+## Step 1 — Collect subcommand `--help`
 
-Save as `_tmp/run2.sh`, fill in the `subs` map, then run. Output is appended to the same file.
+Save as `_tmp/run1.sh`, fill in `tool` and `cmds`, then run.
 
 ```bash
 #!/bin/bash
@@ -66,11 +60,40 @@ set -e
 tool="your-command"
 file="_tmp/${tool}_help"
 
-mkdir -p "$(dirname "$file")"
+cmds=(
+    # paste AI output here
+)
+
+echo "========== PART 1: subcommand --help ==========" >> "$file"
+for cmd in "${cmds[@]}"; do
+    echo "---------- $tool $cmd --help ----------" >> "$file"
+    $tool $cmd --help >> "$file" 2>&1
+    echo "" >> "$file"
+done
+```
+
+Run: `bash _tmp/run1.sh`
+
+Then send the updated `_tmp/${tool}_help` to AI and ask:
+> "Which of these subcommands have further subcommands? Output as a bash associative array, e.g. `subs["parent"]="child1 child2"`"
+
+Fill the result into `subs` in step 2 below.
+
+---
+
+## Step 2 (and beyond) — Collect deeper levels
+
+Save as `_tmp/run2.sh`, fill in `tool` and `subs`, then run. Append further levels by repeating the same pattern.
+
+```bash
+#!/bin/bash
+set -e
+
+tool="your-command"
+file="_tmp/${tool}_help"
 
 declare -A subs
-subs["parent1"]="child-a child-b"
-subs["parent2"]="child-x child-y"
+# paste AI output here
 # e.g. subs["config"]="set get delete list"
 
 echo "" >> "$file"
@@ -83,18 +106,28 @@ for cmd in "${!subs[@]}"; do
         echo "" >> "$file"
     done
 done
-
-echo "Level-2 help appended."
 ```
 
 Run: `bash _tmp/run2.sh`
 
-For level-3, repeat the same pattern with one more loop level.
+Repeat: send the updated help to AI, ask for the next level's subcommands, create `run3.sh`, run it. Keep going until AI says there are no more subcommands.
 
 ---
 
 ## Notes
 
-- Copy the subcommand list directly from the `Commands:` section of `your-tool --help`.
-- The append script is safe to re-run (it appends again); to start over, re-run Step 1 to overwrite.
+- The script appends to the file. To start over, re-run section **Initial** to overwrite.
 - `--version` failures are non-fatal and won't abort the script.
+- For deeper levels, just repeat the step 2 pattern with one more loop level.
+- AI never misses a subcommand — it reads the raw `Commands:` section. Trust its output over manual copying.
+
+---
+
+## Verify — Check for omissions
+
+After writing the completion script, send these two files to AI to check for missing subcommands:
+
+1. `_tmp/<tool>_help` — the collected help reference
+2. Your completion script (`<tool>.ts` or `<tool>/index.ts`)
+
+AI will compare the subcommand lists and report what's missing.

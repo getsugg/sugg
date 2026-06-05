@@ -173,7 +173,30 @@ args: dynamic(async (ctx) => {
 
 ---
 
-## TypeScript Reuse Patterns
+## TypeScript Reuse & Organization
+
+Three tiers:
+
+| Tier | Condition | Practice |
+|------|-----------|----------|
+| **Inline** | Small structure (~20 lines), used once | Keep it in-place |
+| **Extract** | Large structure (20+ lines), even if used once | Extract for readability |
+| **Must extract** | Shared across multiple references | Always extract |
+
+```ts
+// ⚠️ Small, used once → inline
+// ❌ Unnecessary extraction
+const fooArgs = dynamic(async (ctx) => scanPath(ctx.prefix));
+cmd: { args: fooArgs }
+
+// ✅ Inline
+cmd: { args: dynamic(async (ctx) => scanPath(ctx.prefix)) }
+
+// ⚠️ Large, used once → extract for readability
+// bunCommands is 150+ lines — pulling it out keeps createCompletion readable
+const bunCommands: Record<string, CommandNode> = { ... };
+export default createCompletion({ bun: { commands: bunCommands } });
+```
 
 #### Extract shared options
 
@@ -234,6 +257,7 @@ args: dynamic(async (ctx) => {
 - ❌ Omitting `args` on options that take a value (write `args: []` even with no suggestions)
 - ❌ Using placeholders like `<file>` in `args` (use `args: []` instead)
 - ❌ i18n keys containing `.`
+- ❌ Unnecessary variable extraction of single-use small structures — inline ~20 lines or fewer; extract only large or shared logic
 
 ---
 
