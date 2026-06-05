@@ -3,17 +3,6 @@ source: tests/bundle.rs
 expression: "normalize(combined, &dir)"
 ---
 // === bun ===
-//#region virtual:env
-const readJson = async (path) => {
-	const content = await globalThis.readFile(path);
-	if (!content) return {};
-	try {
-		return JSON.parse(content);
-	} catch {
-		return {};
-	}
-};
-//#endregion
 //#region virtual:i18n/bun
 const suggestion_file = "file";
 const suggestion_global_installed = "globally installed";
@@ -21,6 +10,22 @@ const suggestion_installed = "installed";
 const suggestion_package_bin = "package bin";
 const suggestion_package_from_registry = "package from registry";
 const suggestion_script = "script";
+//#endregion
+//#region sugg
+const readJson = async (path) => {
+	const content = await globalThis.__readFile(path);
+	if (!content) return {};
+	try {
+		return JSON.parse(content);
+	} catch {
+		return {};
+	}
+};
+const exec = globalThis.__exec;
+globalThis.__execFile;
+const scanPath = globalThis.__scanPath;
+globalThis.__readFile;
+globalThis.__ui;
 //#endregion
 //#region tests/fixtures/completions/bun/__v_dyn_bun.ts
 async function getCompletes(type) {
@@ -131,6 +136,13 @@ export { __dyn_bunCommands_add_args, __dyn_bunCommands_build_args, __dyn_bunComm
 //#region virtual:i18n/docker
 const container_desc = "Running container";
 //#endregion
+//#region sugg
+const exec = globalThis.__exec;
+globalThis.__execFile;
+globalThis.__scanPath;
+globalThis.__readFile;
+globalThis.__ui;
+//#endregion
 //#region tests/fixtures/completions/docker/__v_dyn_docker.ts
 const __dyn_docker_ps_args = async () => {
 	return (await exec("docker ps --format '{{.Names}}'")).split("\n").filter(Boolean).map((name) => ({
@@ -158,9 +170,12 @@ const __dyn_greet_dynamic_args = () => [{
 export { __dyn_greet_dynamic_args };
 
 // === pnpm ===
-//#region virtual:env
+//#region tests/fixtures/completions/_lib.ts
+const a = "外部引入的变量";
+//#endregion
+//#region sugg
 const readJson = async (path) => {
-	const content = await globalThis.readFile(path);
+	const content = await globalThis.__readFile(path);
 	if (!content) return {};
 	try {
 		return JSON.parse(content);
@@ -168,9 +183,11 @@ const readJson = async (path) => {
 		return {};
 	}
 };
-//#endregion
-//#region tests/fixtures/completions/_lib.ts
-const a = "外部引入的变量";
+globalThis.__exec;
+globalThis.__execFile;
+globalThis.__scanPath;
+globalThis.__readFile;
+globalThis.__ui;
 //#endregion
 //#region tests/fixtures/completions/__v_dyn_pnpm.ts
 const __dyn_pnpm_run_args = async () => {
@@ -184,6 +201,12 @@ const __dyn_pnpm_run_args = async () => {
 export { __dyn_pnpm_run_args };
 
 // === testkit ===
+globalThis.__exec;
+globalThis.__execFile;
+globalThis.__scanPath;
+globalThis.__readFile;
+const ui = globalThis.__ui;
+//#endregion
 //#region tests/fixtures/completions/__v_dyn_testkit.ts
 const __dyn_sharedDynamic = async () => {
 	return [

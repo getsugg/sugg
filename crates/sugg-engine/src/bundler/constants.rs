@@ -3,6 +3,9 @@
 /// 环境虚拟模块标识符
 pub const VIRTUAL_ENV: &str = "virtual:env";
 
+/// 用户友好的裸导入名，解析为 env 虚拟模块
+pub const VIRTUAL_SUGG: &str = "sugg";
+
 /// i18n 翻译常量虚拟模块标识符
 pub const VIRTUAL_I18N: &str = "virtual:i18n";
 

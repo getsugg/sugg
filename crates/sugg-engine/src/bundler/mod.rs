@@ -19,10 +19,10 @@ pub async fn bundle_virtual(
             name: Some("main".to_string()),
             import: entry_id.to_string(),
         }]),
+
         inject: Some(vec![
+            // createCompletion 由 generate_import_stmt() 注入到每个用户模块
             InjectImport::named("createCompletion".into(), None, "virtual:env".into()),
-            InjectImport::named("readJson".into(), None, "virtual:env".into()),
-            InjectImport::named("cache".into(), None, "virtual:env".into()),
         ]),
         ..Default::default()
     };

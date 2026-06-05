@@ -1,7 +1,19 @@
+use std::sync::OnceLock;
+
 use rquickjs::{
     Ctx, Function, Object, Value,
     function::{Async, Opt, Rest},
 };
+
+fn http_client() -> &'static reqwest::Client {
+    static CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
+    CLIENT.get_or_init(|| {
+        reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(5))
+            .build()
+            .expect("Failed to create reqwest Client")
+    })
+}
 
 /// Rust 原生结构体，通过 IntoJs 自动转化为 JS 对象
 #[derive(Debug, Clone)]
@@ -46,7 +58,7 @@ pub fn inject_globals(ctx: Ctx<'_>) {
     let globals = ctx.globals();
 
     if let Err(e) = globals.set(
-        "readFile",
+        "__readFile",
         Function::new(
             ctx.clone(),
             Async(|path: String| async move {
@@ -62,7 +74,7 @@ pub fn inject_globals(ctx: Ctx<'_>) {
             }),
         ),
     ) {
-        crate::log_error!("Failed to inject readFile global: {:?}", e);
+        crate::log_error!("Failed to inject __readFile global: {:?}", e);
     }
 
     // =========================================================================
@@ -70,7 +82,7 @@ pub fn inject_globals(ctx: Ctx<'_>) {
     // 大一统方案：同时解决普通文件补全与 bun x 虚拟根目录补全
     // =========================================================================
     if let Err(e) = globals.set(
-        "scanPath",
+        "__scanPath",
         Function::new(
             ctx.clone(),
             Async(|input: String, base_dir_opt: Opt<String>| async move {
@@ -135,7 +147,7 @@ pub fn inject_globals(ctx: Ctx<'_>) {
     }
 
     if let Err(e) = globals.set(
-        "exec",
+        "__exec",
         Function::new(
             ctx.clone(),
             Async(|command: String| async move {
@@ -170,7 +182,7 @@ pub fn inject_globals(ctx: Ctx<'_>) {
     // execFile(cmd, args) —— 极速直接进程拉起，无 Shell 开销与注入风险
     // =========================================================================
     if let Err(e) = globals.set(
-        "execFile",
+        "__execFile",
         Function::new(
             ctx.clone(),
             Async(|cmd: String, args: Opt<Vec<String>>| async move {
@@ -189,7 +201,72 @@ pub fn inject_globals(ctx: Ctx<'_>) {
             }),
         ),
     ) {
-        crate::log_error!("Failed to inject execFile global: {:?}", e);
+        crate::log_error!("Failed to inject __execFile global: {:?}", e);
+    }
+
+    // =========================================================================
+    // __fetch_raw(config) — 底层 HTTP 请求，返回 JSON 序列化的响应
+    // =========================================================================
+    if let Err(e) = globals.set(
+        "__fetch_raw",
+        Function::new(
+            ctx.clone(),
+            Async(|config_obj: Object<'_>| {
+                let url: String = config_obj.get("url").unwrap_or_default();
+                let method_str: String = config_obj
+                    .get("method")
+                    .unwrap_or_else(|_| "GET".to_string());
+                let headers: std::collections::HashMap<String, String> =
+                    config_obj.get("headers").unwrap_or_default();
+                let body: String = config_obj.get("body").unwrap_or_default();
+                let timeout_ms: u64 = config_obj.get("timeout").unwrap_or(2000);
+                async move {
+                    let client = http_client();
+                    let timeout = std::time::Duration::from_millis(timeout_ms);
+                    let method = match method_str.to_uppercase().as_str() {
+                        "POST" => reqwest::Method::POST,
+                        "PUT" => reqwest::Method::PUT,
+                        "DELETE" => reqwest::Method::DELETE,
+                        "PATCH" => reqwest::Method::PATCH,
+                        _ => reqwest::Method::GET,
+                    };
+                    let mut req = client.request(method, &url).timeout(timeout);
+                    for (k, v) in &headers {
+                        req = req.header(k.as_str(), v.as_str());
+                    }
+                    if !body.is_empty() {
+                        req = req.body(body.clone());
+                    }
+                    match req.send().await {
+                        Ok(resp) => {
+                            let status = resp.status().as_u16();
+                            let status_text =
+                                resp.status().canonical_reason().unwrap_or("").to_string();
+                            let mut resp_headers = std::collections::HashMap::new();
+                            for (key, val) in resp.headers().iter() {
+                                if let Ok(val_str) = val.to_str() {
+                                    resp_headers.insert(key.to_string(), val_str.to_string());
+                                }
+                            }
+                            let resp_body = resp.text().await.unwrap_or_default();
+                            let res_map = serde_json::json!({
+                                "status": status,
+                                "statusText": status_text,
+                                "headers": resp_headers,
+                                "body": resp_body
+                            });
+                            serde_json::to_string(&res_map).unwrap_or_default()
+                        }
+                        Err(e) => {
+                            crate::log_warn!("__fetch_raw request failed or timed out: {:?}", e);
+                            String::new()
+                        }
+                    }
+                }
+            }),
+        ),
+    ) {
+        crate::log_error!("Failed to inject __fetch_raw global: {:?}", e);
     }
 
     fn args_to_string<'js>(ctx: &Ctx<'js>, args: Rest<Value<'js>>) -> String {
@@ -246,8 +323,8 @@ pub fn inject_globals(ctx: Ctx<'_>) {
                 let _ = ui_obj.set(name, f);
             }
         }
-        if let Err(e) = globals.set("ui", ui_obj) {
-            crate::log_error!("Failed to inject ui global: {:?}", e);
+        if let Err(e) = globals.set("__ui", ui_obj) {
+            crate::log_error!("Failed to inject __ui global: {:?}", e);
         }
     }
 
@@ -298,22 +375,27 @@ mod tests {
             inject_globals(ctx.clone());
 
             let is_func: bool = ctx
-                .eval("typeof globalThis.readFile === 'function'")
+                .eval("typeof globalThis.__readFile === 'function'")
                 .unwrap();
-            assert!(is_func, "readFile should be injected");
+            assert!(is_func, "__readFile should be injected");
 
             let is_scan_path_func: bool = ctx
-                .eval("typeof globalThis.scanPath === 'function'")
+                .eval("typeof globalThis.__scanPath === 'function'")
                 .unwrap();
-            assert!(is_scan_path_func, "scanPath should be injected");
+            assert!(is_scan_path_func, "__scanPath should be injected");
 
-            let is_exec_func: bool = ctx.eval("typeof globalThis.exec === 'function'").unwrap();
-            assert!(is_exec_func, "exec should be injected");
+            let is_exec_func: bool = ctx.eval("typeof globalThis.__exec === 'function'").unwrap();
+            assert!(is_exec_func, "__exec should be injected");
 
             let is_exec_file_func: bool = ctx
-                .eval("typeof globalThis.execFile === 'function'")
+                .eval("typeof globalThis.__execFile === 'function'")
                 .unwrap();
-            assert!(is_exec_file_func, "execFile should be injected");
+            assert!(is_exec_file_func, "__execFile should be injected");
+
+            let is_fetch_func: bool = ctx
+                .eval("typeof globalThis.__fetch_raw === 'function'")
+                .unwrap();
+            assert!(is_fetch_func, "__fetch_raw should be injected");
         }
 
         async_with!(ctx => |ctx| { async_with_fn(ctx).await }).await;
@@ -331,7 +413,7 @@ mod tests {
 
             let script = r#"
                 (async () => {
-                    const out = await execFile("rustc", ["--version"]);
+                    const out = await __execFile("rustc", ["--version"]);
                     return out.trim();
                 })()
             "#;
@@ -347,7 +429,7 @@ mod tests {
             {
                 let script2 = r#"
                     (async () => {
-                        const out = await execFile("/bin/echo", ["hello", "world"]);
+                        const out = await __execFile("/bin/echo", ["hello", "world"]);
                         return out.trim();
                     })()
                 "#;
@@ -360,7 +442,7 @@ mod tests {
             {
                 let script2 = r#"
                     (async () => {
-                        const out = await execFile("cmd.exe", ["/c", "echo", "hello"]);
+                        const out = await __execFile("cmd.exe", ["/c", "echo", "hello"]);
                         return out.trim();
                     })()
                 "#;
@@ -372,7 +454,7 @@ mod tests {
             {
                 let script3 = r#"
                     (async () => {
-                        const out = await execFile("rustc");
+                        const out = await __execFile("rustc");
                         return typeof out === 'string' ? 'ok' : 'wrong_type';
                     })()
                 "#;
@@ -388,7 +470,7 @@ mod tests {
             {
                 let script4 = r#"
                     (async () => {
-                        const out = await execFile("/bin/echo", []);
+                        const out = await __execFile("/bin/echo", []);
                         return out.trim();
                     })()
                 "#;
@@ -416,7 +498,7 @@ mod tests {
 
             let script = r#"
                 (async () => {
-                    const out = await execFile("nonexistent_command_xyz", ["--version"]);
+                    const out = await __execFile("nonexistent_command_xyz", ["--version"]);
                     return out;
                 })()
             "#;
@@ -463,19 +545,19 @@ mod tests {
                 base_str = base_str.replace("\\", "/");
             }
 
-            let script1 = format!("scanPath('bi', '{}')", base_str);
+            let script1 = format!("__scanPath('bi', '{}')", base_str);
             let promise1: rquickjs::Promise = ctx.eval(script1.as_str()).unwrap();
             let items1: Vec<rquickjs::Object> = promise1.into_future().await.unwrap();
             let d1: Vec<String> = items1.iter().map(|o| o.get("display").unwrap()).collect();
             assert_eq!(d1, vec!["bin/"]);
 
-            let script2 = format!("globalThis.scanPath('', '{}/bin')", base_str);
+            let script2 = format!("globalThis.__scanPath('', '{}/bin')", base_str);
             let promise2: rquickjs::Promise = ctx.eval(script2.as_str()).unwrap();
             let items2: Vec<rquickjs::Object> = promise2.into_future().await.unwrap();
             let d2: Vec<String> = items2.iter().map(|o| o.get("display").unwrap()).collect();
             assert_eq!(d2, vec!["sub/", "eslint"]);
 
-            let script3 = format!("globalThis.scanPath('sub/', '{}/bin')", base_str);
+            let script3 = format!("globalThis.__scanPath('sub/', '{}/bin')", base_str);
             let promise3: rquickjs::Promise = ctx.eval(script3.as_str()).unwrap();
             let items3: Vec<rquickjs::Object> = promise3.into_future().await.unwrap();
             let d3: Vec<String> = items3.iter().map(|o| o.get("display").unwrap()).collect();
@@ -483,6 +565,76 @@ mod tests {
         }
 
         async_with!(ctx => |ctx| { async_with_fn(ctx).await }).await;
+    }
+
+    #[tokio::test]
+    async fn test_fetch_raw() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("bind");
+        let port = listener.local_addr().unwrap().port();
+
+        tokio::spawn(async move {
+            use tokio::io::{AsyncReadExt, AsyncWriteExt};
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let mut buf = [0u8; 4096];
+            let _ = stream.read(&mut buf).await;
+            let body = r#"{"message":"ok"}"#;
+            let resp = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream.write_all(resp.as_bytes()).await.unwrap();
+        });
+
+        let rt = AsyncRuntime::new().unwrap();
+        let ctx = AsyncContext::full(&rt).await.unwrap();
+
+        async fn run(ctx: Ctx<'_>, port: u16) {
+            inject_globals(ctx.clone());
+
+            let script = format!(
+                r#"
+                (async () => {{
+                    const raw = await __fetch_raw({{ url: "http://127.0.0.1:{}/test", timeout: 3000 }});
+                    return raw;
+                }})()
+                "#,
+                port
+            );
+            let promise: rquickjs::Promise = ctx.eval(script.as_str()).unwrap();
+            let raw: String = promise.into_future().await.unwrap();
+            assert!(!raw.is_empty(), "raw response should not be empty");
+            let parsed: serde_json::Value = serde_json::from_str(&raw).unwrap();
+            assert_eq!(parsed["status"], 200);
+            let body: String = serde_json::from_value(parsed["body"].clone()).unwrap();
+            assert_eq!(body, r#"{"message":"ok"}"#);
+        }
+
+        async_with!(ctx => |ctx| { run(ctx, port).await }).await;
+    }
+
+    #[tokio::test]
+    async fn test_fetch_raw_timeout() {
+        let rt = AsyncRuntime::new().unwrap();
+        let ctx = AsyncContext::full(&rt).await.unwrap();
+
+        async fn run(ctx: Ctx<'_>) {
+            inject_globals(ctx.clone());
+
+            let script = r#"
+                (async () => {
+                    const raw = await __fetch_raw({ url: "http://127.0.0.1:1/nonexistent", timeout: 100 });
+                    return raw === "";
+                })()
+            "#;
+            let promise: rquickjs::Promise = ctx.eval(script).unwrap();
+            let timed_out: bool = promise.into_future().await.unwrap();
+            assert!(timed_out, "timeout should return empty string");
+        }
+
+        async_with!(ctx => |ctx| { run(ctx).await }).await;
     }
 
     #[tokio::test]

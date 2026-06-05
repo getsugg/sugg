@@ -3875,7 +3875,7 @@ dependencies = [
 
 [[package]]
 name = "sugg"
-version = "0.2.9"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "lexopt",
@@ -3888,11 +3888,12 @@ dependencies = [
 
 [[package]]
 name = "sugg-core"
-version = "0.2.9"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "console",
  "dirs-next",
+ "reqwest",
  "rkyv",
  "rquickjs",
  "serde",
@@ -3903,14 +3904,14 @@ dependencies = [
 
 [[package]]
 name = "sugg-deploy"
-version = "0.2.9"
+version = "0.3.0"
 dependencies = [
  "dirs-next",
 ]
 
 [[package]]
 name = "sugg-engine"
-version = "0.2.9"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -3933,7 +3934,7 @@ dependencies = [
 
 [[package]]
 name = "sugg-tests"
-version = "0.2.9"
+version = "0.3.0"
 dependencies = [
  "insta",
  "serde",

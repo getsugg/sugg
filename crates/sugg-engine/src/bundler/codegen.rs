@@ -1,6 +1,6 @@
 /// 生成注入到每个用户脚本顶部的 import 语句。
 pub fn generate_import_stmt() -> String {
-    "import { createCompletion, readJson, __parseConfig } from 'virtual:env';\n".to_string()
+    "import { createCompletion, __parseConfig } from 'virtual:env';\n".to_string()
 }
 
 /// 生成 virtual:env 模块内容（不含翻译，不含 globalThis）。
@@ -48,8 +48,8 @@ mod tests {
     fn test_generate_import_stmt() {
         let s = generate_import_stmt();
         assert!(s.contains("createCompletion"));
-        assert!(s.contains("readJson"));
         assert!(s.contains("__parseConfig"));
+        assert!(!s.contains("readJson"));
         assert!(s.contains("from 'virtual:env'"));
         assert!(!s.contains("virtual:i18n"));
     }

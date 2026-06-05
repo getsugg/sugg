@@ -51,9 +51,9 @@ expression: all
     "input": "testkit logdemo bad-",
     "result": [
       {
-        "value": "# Dynamic JS execution failed: Promise resolution failed: Exception(Exception { message: Some(\"❌ Invalid prefix detected: \\\"bad-\\\" — please remove the leading \\\"bad-\\\"\"), stack: Some(\"    at __dyn_testkit_logdemo_args (testkit:38:43)\\n\") })",
+        "value": "# Dynamic JS execution failed: Promise resolution failed: Exception(Exception { message: Some(\"❌ Invalid prefix detected: \\\"bad-\\\" — please remove the leading \\\"bad-\\\"\"), stack: Some(\"    at __dyn_testkit_logdemo_args (testkit:44:43)\\n\") })",
         "display_override": "❌ ERR",
-        "description": "Dynamic JS execution failed: Promise resolution failed: Exception(Exception { message: Some(\"❌ Invalid prefix detected: \\\"bad-\\\" — please remove the leading \\\"bad-\\\"\"), stack: Some(\"    at __dyn_testkit_logdemo_args (testkit:38:43)\\n\") })",
+        "description": "Dynamic JS execution failed: Promise resolution failed: Exception(Exception { message: Some(\"❌ Invalid prefix detected: \\\"bad-\\\" — please remove the leading \\\"bad-\\\"\"), stack: Some(\"    at __dyn_testkit_logdemo_args (testkit:44:43)\\n\") })",
         "style": {
           "fg": "red",
           "attr": [

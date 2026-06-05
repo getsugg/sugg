@@ -1,6 +1,6 @@
 # Sugg Completion Script Guide
 
-Sugg completion scripts are written in TypeScript, placed in the `completions/` directory. The engine is built on QuickJS + Rolldown. Most global APIs are injected automatically — **no manual imports needed** (except i18n virtual modules).
+Sugg completion scripts are written in TypeScript, placed in the `completions/` directory. The engine is built on QuickJS + Rolldown.
 
 For full type signatures (`CommandNode`, `OptionNode`, `Suggestion`, `DynamicCommand`, etc.), read `sugg.d.ts` directly.
 
@@ -14,18 +14,29 @@ For full type signatures (`CommandNode`, `OptionNode`, `Suggestion`, `DynamicCom
 
 ---
 
-## Global API Reference
+## ESM Module API
 
-| Function / Object | Purpose |
+```ts
+import { exec, execFile, scanPath, readFile, readJson, ui, cache, fetch } from "sugg";
+// createCompletion and dynamic are built-in (no import needed)
+```
+
+| Import | Purpose |
 |---|---|
 | `scanPath(input, baseDir?)` | Smart path/file scanner, auto-resolves directory prefix |
-| `exec(cmd)` | Run a shell command, returns stdout string |
+| `exec(cmd)` | Run a shell command (via shell), returns stdout string |
 | `execFile(cmd, args)` | Execute a process directly (no shell overhead) |
 | `readFile(path)` | Read a text file |
 | `readJson(path)` | Read and parse a JSON file; returns `{}` on failure |
+| `fetch(url, options?)` | HTTP request with configurable timeout (default 2000ms) |
 | `ui.log/info/warn/error(...args)` | Write to Sugg logs |
 | `cache.get(key, ttlMs?, fetcher?)` | Disk cache with TTL; see Cache section |
 | `cache.delete(key)` | Delete a cache entry |
+
+The `CompletionContext` object received by `dynamic` callbacks also provides context fields:
+
+| Field | Purpose |
+|---|---|
 | `ctx.shell` | Current shell: `"bash" \| "zsh" \| "fish" \| "nushell" \| "powershell"` |
 | `ctx.os` | Current OS: `"windows" \| "linux" \| "macos"` |
 | `ctx.prefix` | The word currently being typed |
@@ -264,6 +275,8 @@ args: dynamic(async (ctx) => {
 ## Full Example
 
 ```ts
+import { readJson } from "sugg";
+
 const commonOpts: OptionNode[] = [
   { labels: ["-h", "--help"] },
   { labels: ["-v", "--version"] },

@@ -1,4 +1,5 @@
 import * as t from "virtual:i18n/bun";
+import { exec, scanPath, readJson } from "sugg";
 
 // ---------- 通用辅助函数（基于 bun getcompletes）----------
 // 执行 bun getcompletes 并解析结果

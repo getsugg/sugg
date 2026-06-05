@@ -1,4 +1,5 @@
 import { a } from "./_lib.ts";
+import { readJson } from "sugg";
 export default createCompletion({
   pnpm: {
     commands: {

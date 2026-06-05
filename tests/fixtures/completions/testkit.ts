@@ -1,5 +1,6 @@
 // tests/fixtures/completions/testkit.ts
 // 综合性测试脚本，覆盖选项值补全、options 传递、dynamic 复用、混合节点、display/value 分离等特性
+import { ui } from "sugg";
 
 // 外部 dynamic 变量，用于测试复用
 const sharedDynamic = dynamic(async () => {

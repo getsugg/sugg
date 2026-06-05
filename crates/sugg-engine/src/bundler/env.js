@@ -1,13 +1,42 @@
 export const createCompletion = (obj) => obj;
 
 export const readJson = async (path) => {
-  const content = await globalThis.readFile(path);
+  const content = await globalThis.__readFile(path);
   if (!content) return {};
   try {
     return JSON.parse(content);
   } catch {
     return {};
   }
+};
+
+export const exec = globalThis.__exec;
+export const execFile = globalThis.__execFile;
+export const scanPath = globalThis.__scanPath;
+export const readFile = globalThis.__readFile;
+export const ui = globalThis.__ui;
+
+export const fetch = async (url, options = {}) => {
+  const timeout = typeof options.timeout === 'number' ? options.timeout : 2000;
+  const rawResponseStr = await globalThis.__fetch_raw({
+    url: url,
+    method: options.method || "GET",
+    headers: options.headers || {},
+    body: options.body || "",
+    timeout: timeout
+  });
+  if (!rawResponseStr) {
+    throw new Error(`Request timed out after ${timeout}ms or failed.`);
+  }
+  const raw = JSON.parse(rawResponseStr);
+  return {
+    ok: raw.status >= 200 && raw.status < 300,
+    status: raw.status,
+    statusText: raw.statusText,
+    headers: { get: (name) => raw.headers[name.toLowerCase()] || null },
+    text: async () => raw.body,
+    json: async () => JSON.parse(raw.body),
+  };
 };
 
 export const __parseConfig = (modules) => {

@@ -4,6 +4,11 @@ expression: "normalize(static_js, &dir)"
 ---
 //#region virtual:env
 const createCompletion = (obj) => obj;
+globalThis.__exec;
+globalThis.__execFile;
+globalThis.__scanPath;
+globalThis.__readFile;
+globalThis.__ui;
 const __parseConfig = (modules) => {
 	function sortAndResolveAliases(subcommands) {
 		subcommands.sort((a, b) => a.name.localeCompare(b.name));
@@ -299,6 +304,11 @@ const x_option_no_install = "Skip installation if package is not already install
 const x_option_package = "Specify package to install when binary name differs from package name";
 const x_option_silent = "Suppress output during installation";
 const x_option_verbose = "Enable verbose output during installation";
+globalThis.__exec;
+globalThis.__execFile;
+globalThis.__scanPath;
+globalThis.__readFile;
+globalThis.__ui;
 //#endregion
 //#region tests/fixtures/completions/bun/__v_stat_bun.ts
 const commonGlobalOpts = [

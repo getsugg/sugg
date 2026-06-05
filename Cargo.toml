@@ -16,7 +16,7 @@ default-members = [
 resolver = "2"
 
 [workspace.package]
-version = "0.2.9"
+version = "0.3.0"
 edition = "2024"
 authors = ["Your Name <your.email@example.com>"]
 
@@ -25,7 +25,8 @@ authors = ["Your Name <your.email@example.com>"]
 sugg-core = { path = "crates/sugg-core" }
 sugg-engine = { path = "crates/sugg-engine" }
 anyhow = "1.0.102"
-tokio = { version = "1.52.3", features = ["rt", "macros", "fs", "process"] }
+tokio = { version = "1.52.3", features = ["rt", "macros", "fs", "process", "net"] }
+reqwest = { version = "0.13", default-features = false, features = ["rustls", "rustls-native-certs", "json", "stream"] }
 rquickjs = { version = "0.11.0", features = ["futures"] }
 rkyv = { version = "0.8.16" }
 serde = { version = "1.0.228", features = ["derive"] }

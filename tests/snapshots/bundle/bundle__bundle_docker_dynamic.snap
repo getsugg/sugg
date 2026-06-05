@@ -5,6 +5,13 @@ expression: "normalize(docker, &dir)"
 //#region virtual:i18n/docker
 const container_desc = "Running container";
 //#endregion
+//#region sugg
+const exec = globalThis.__exec;
+globalThis.__execFile;
+globalThis.__scanPath;
+globalThis.__readFile;
+globalThis.__ui;
+//#endregion
 //#region tests/fixtures/completions/docker/__v_dyn_docker.ts
 const __dyn_docker_ps_args = async () => {
 	return (await exec("docker ps --format '{{.Names}}'")).split("\n").filter(Boolean).map((name) => ({

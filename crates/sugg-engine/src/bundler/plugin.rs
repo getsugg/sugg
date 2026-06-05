@@ -1,4 +1,4 @@
-use crate::bundler::constants::{VIRTUAL_ENV, VIRTUAL_I18N};
+use crate::bundler::constants::{VIRTUAL_ENV, VIRTUAL_I18N, VIRTUAL_SUGG};
 use rolldown::plugin::{
     HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
     HookResolveIdReturn, HookUsage, LoadPluginContext, Plugin, PluginContext,
@@ -31,6 +31,7 @@ impl Plugin for VirtualPlugin {
     ) -> HookResolveIdReturn {
         let specifier = path_to_slash(std::path::Path::new(args.specifier));
         if specifier == VIRTUAL_ENV
+            || specifier == VIRTUAL_SUGG
             || specifier.starts_with(VIRTUAL_I18N)
             || self.virtual_modules.contains_key(&specifier)
         {
@@ -43,7 +44,7 @@ impl Plugin for VirtualPlugin {
     }
 
     async fn load(&self, _ctx: Arc<LoadPluginContext>, args: &HookLoadArgs<'_>) -> HookLoadReturn {
-        if args.id == VIRTUAL_ENV {
+        if args.id == VIRTUAL_ENV || args.id == VIRTUAL_SUGG {
             return Ok(Some(HookLoadOutput {
                 code: self.env_code.clone().into(),
                 ..Default::default()

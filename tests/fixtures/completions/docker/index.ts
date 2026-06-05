@@ -1,4 +1,5 @@
 import * as docker from "virtual:i18n/docker";
+import { exec } from "sugg";
 
 export default createCompletion({
   docker: {

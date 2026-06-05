@@ -1,5 +1,7 @@
 # Sugg
 
+**English** | [简体中文](./README.zh-CN.md)
+
 **Sugg** is a lightweight, high-performance shell completion engine written in Rust. It enables developers to author complex shell completion scripts in modern TypeScript/JavaScript, compiling them into precompiled bytecode with zero-copy (`rkyv`) caching to deliver near-zero latency completions in terminal environments.
 
 ## Features
@@ -21,7 +23,8 @@ The following is an annotated snippet of the actual `bun` completion schema show
 
 ```typescript
 // completions/bun/index.ts
-import * as t from "virtual:i18n/bun"; // [1] Native i18n virtual module (the only manual import required)
+import * as t from "virtual:i18n/bun";
+import { execFile, scanPath, ui, cache } from "sugg"; // ESM imports
 
 // [2] Externalized Helpers: Direct process spawning via execFile (no shell overhead, secure arg arrays)
 async function getScriptNames(): Promise<Suggestion[]> {

@@ -4,6 +4,11 @@ expression: "normalize(static_js, &dir)"
 ---
 //#region virtual:env
 const createCompletion = (obj) => obj;
+globalThis.__exec;
+globalThis.__execFile;
+globalThis.__scanPath;
+globalThis.__readFile;
+globalThis.__ui;
 const __parseConfig = (modules) => {
 	function sortAndResolveAliases(subcommands) {
 		subcommands.sort((a, b) => a.name.localeCompare(b.name));
@@ -299,6 +304,11 @@ const x_option_no_install = "如果包尚未安装则跳过安装";
 const x_option_package = "当二进制名称与包名称不同时指定要安装的包";
 const x_option_silent = "在安装期间抑制输出";
 const x_option_verbose = "在安装期间启用详细输出";
+globalThis.__exec;
+globalThis.__execFile;
+globalThis.__scanPath;
+globalThis.__readFile;
+globalThis.__ui;
 //#endregion
 //#region tests/fixtures/completions/bun/__v_stat_bun.ts
 const commonGlobalOpts = [
