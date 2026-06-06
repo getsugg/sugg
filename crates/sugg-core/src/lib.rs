@@ -218,60 +218,88 @@ impl Default for TerminalBox {
 mod display_tests {
     use super::*;
 
-    /// 验证 Style(for_stderr) 在颜色开关下的行为
+    /// 验证 Style(for_stderr) 在 force_styling 下的行为
+    ///
+    /// 用 `force_styling` 而非全局 `set_colors_enabled_stderr`：
+    /// - 避免依赖 `console::colors_enabled_stderr()` 的全局状态（cargo test 并行测试会竞争）
+    /// - 避免依赖 stderr 实际是否为真实终端（cargo test 抓取 stderr 时不是 tty）
+    /// - `force_styling(true)` 强制覆盖所有自动检测
     #[test]
     fn test_style_color_on_off_stderr() {
-        let prev = console::colors_enabled_stderr();
-
-        // ===== 关闭颜色 =====
-        console::set_colors_enabled_stderr(false);
-        let style = console::Style::new().bold().cyan().for_stderr();
-        let output = style.apply_to("hello").to_string();
+        // ===== 关闭 =====
+        let off = console::Style::new()
+            .bold()
+            .cyan()
+            .for_stderr()
+            .force_styling(false);
+        let output = off.apply_to("hello").to_string();
         assert!(
             !output.contains('\x1b'),
-            "颜色关闭时不应包含 ANSI 码: {:?}",
+            "force_styling(false) 时应抑制 ANSI 码: {:?}",
             output
         );
-        assert_eq!(output, "hello", "颜色关闭时应输出纯文本");
+        assert_eq!(output, "hello", "force_styling(false) 时应输出纯文本");
 
-        // ===== 开启颜色 =====
-        console::set_colors_enabled_stderr(true);
-        let style = console::Style::new().bold().cyan().for_stderr();
-        let output = style.apply_to("hello").to_string();
-        assert!(output.contains('\x1b'), "颜色开启时应包含 ANSI 码");
+        // ===== 开启 =====
+        let on = console::Style::new()
+            .bold()
+            .cyan()
+            .for_stderr()
+            .force_styling(true);
+        let output = on.apply_to("hello").to_string();
+        assert!(
+            output.contains('\x1b'),
+            "force_styling(true) 时应包含 ANSI 码"
+        );
         assert!(output.starts_with("\x1b["), "应以 ANSI 转义序列开头");
         assert!(output.ends_with("\x1b[0m"), "应以 ANSI 重置结尾");
         assert!(output.contains("hello"), "应保留原始文本");
-
-        console::set_colors_enabled_stderr(prev);
     }
 
-    /// 验证 Style（for_stdout）不受 stderr 颜色设置影响
+    /// 验证 for_stdout / for_stderr 是独立的输出目标标记
+    ///
+    /// 同样用 `force_styling` 解耦：每侧显式控制颜色开关，断言两侧输出按各自配置走。
     #[test]
     fn test_for_stdout_independent_from_stderr() {
-        let prev_stderr = console::colors_enabled_stderr();
-        let prev_stdout = console::colors_enabled();
-
-        // stderr 关闭，stdout 保持原样
-        console::set_colors_enabled_stderr(false);
-
-        let stderr_style = console::Style::new().bold().cyan().for_stderr();
-        let stdout_style = console::Style::new().bold().cyan().for_stdout();
-
-        let stderr_out = stderr_style.apply_to("x").to_string();
-        let stdout_out = stdout_style.apply_to("x").to_string();
-
-        // stderr 颜色被抑制
-        assert!(!stderr_out.contains('\x1b'), "stderr 不应有 ANSI 码");
-        // stdout 不受影响（取决于实际环境，这里只验证它们可以不同）
-        assert_eq!(
-            stdout_out.contains('\x1b'),
-            prev_stdout,
-            "stdout 应与之前一致"
+        // 组合 1：stderr 关、stdout 开
+        let stderr_off = console::Style::new()
+            .bold()
+            .cyan()
+            .for_stderr()
+            .force_styling(false);
+        let stdout_on = console::Style::new()
+            .bold()
+            .cyan()
+            .for_stdout()
+            .force_styling(true);
+        assert!(
+            !stderr_off.apply_to("x").to_string().contains('\x1b'),
+            "stderr force_styling(false) 应抑制 ANSI 码"
+        );
+        assert!(
+            stdout_on.apply_to("x").to_string().contains('\x1b'),
+            "stdout force_styling(true) 应输出 ANSI 码"
         );
 
-        console::set_colors_enabled_stderr(prev_stderr);
-        console::set_colors_enabled(prev_stdout);
+        // 组合 2：stderr 开、stdout 关
+        let stderr_on = console::Style::new()
+            .bold()
+            .cyan()
+            .for_stderr()
+            .force_styling(true);
+        let stdout_off = console::Style::new()
+            .bold()
+            .cyan()
+            .for_stdout()
+            .force_styling(false);
+        assert!(
+            stderr_on.apply_to("x").to_string().contains('\x1b'),
+            "stderr force_styling(true) 应输出 ANSI 码"
+        );
+        assert!(
+            !stdout_off.apply_to("x").to_string().contains('\x1b'),
+            "stdout force_styling(false) 应抑制 ANSI 码"
+        );
     }
 
     /// 验证 Emoji 常量至少能渲染出内容（不 panic）
