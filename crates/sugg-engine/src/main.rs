@@ -110,10 +110,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             .map(PathBuf::from)
                     })
                     .unwrap_or_else(sugg_core::default_completions_dir);
-                let lang = l
-                    .or(lang)
-                    .or_else(|| std::env::var("SUGG_LANG").ok())
-                    .unwrap_or_else(|| "en".to_string());
+                let lang = l.or(lang).unwrap_or_else(sugg_engine::detect_locale);
                 i18n::run_i18n_gen(&dir, &lang);
                 Ok(())
             }

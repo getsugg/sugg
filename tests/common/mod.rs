@@ -57,16 +57,7 @@ pub fn sugg_engine_bin() -> PathBuf {
 }
 
 pub fn reload(cache_dir: &PathBuf, completions_dir: &Path) {
-    let status = Command::new(sugg_bin())
-        .env("SUGG_ENGINE_PATH", sugg_engine_bin())
-        .arg("reload")
-        .arg("--cache-dir")
-        .arg(cache_dir)
-        .arg("--completions-dir")
-        .arg(completions_dir)
-        .status()
-        .expect("failed to run reload");
-    assert!(status.success(), "reload failed");
+    reload_with_lang(cache_dir, completions_dir, "en")
 }
 #[allow(dead_code)]
 pub fn reload_with_lang(cache_dir: &PathBuf, completions_dir: &Path, lang: &str) {

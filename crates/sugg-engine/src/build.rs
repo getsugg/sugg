@@ -40,10 +40,7 @@ pub async fn run_build(
         sugg_core::path_to_slash(&dir_path)
     );
 
-    let lang = lang
-        .clone()
-        .or_else(|| std::env::var("SUGG_LANG").ok())
-        .unwrap_or_else(|| "en".to_string());
+    let lang = lang.clone().unwrap_or_else(sugg_engine::detect_locale);
     let (bundled_static, dynamic_bundles) = match sugg_engine::build_bundles(&dir_path, &lang).await
     {
         Ok(res) => res,

@@ -8,8 +8,10 @@
 pub mod ast;
 pub mod bundler;
 pub mod icu_utils;
+pub mod locale;
 
 pub use icu_utils::get_fallback_chain;
+pub use locale::detect_locale;
 
 use std::collections::HashMap;
 use std::path::Path;
