@@ -205,6 +205,12 @@ fn parse_complete_args() -> CompleteArgs {
                     .and_then(|v| v.to_string_lossy().parse().ok())
                     .unwrap_or(max_results);
             }
+            // `-h` / `--help` 立即转发 engine。lexopt 在 `--` 之后会把后续 token
+            // 全部作为 Arg::Value 产出（不再当 flag），所以 `sugg complete -- -h`
+            // 不会被误判为 help 请求
+            lexopt::Arg::Short('h') | lexopt::Arg::Long("help") => {
+                delegate_to_engine();
+            }
             lexopt::Arg::Value(v) => {
                 if shell.is_none() {
                     // 第一个位置参数是 Shell 名称

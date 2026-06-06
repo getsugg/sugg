@@ -1,12 +1,19 @@
 {
   "desc": "Shell completion engine",
+  "complete_desc": "Run shell completion against the local cache",
+  "commands_desc": "List all cached top-level commands",
   "reload_desc": "Build completion cache from scripts",
   "upgrade_desc": "Self-upgrade to the latest release",
   "dev_desc": "Development utilities",
   "dev_init_desc": "Initialize workspace: write types, guides, and tsconfig",
   "dev_i18n_desc": "Generate i18n.d.ts type declarations from translation files",
+  "init_desc": "Print shell integration script",
+  "help_desc": "Print this message or the help of the given subcommand",
   "opt_completions_dir": "Path to completions directory",
   "opt_lang": "Language for i18n (e.g. en, zh)",
   "opt_cache_dir": "Override cache directory",
-  "opt_dump_dynamic": "Dump compiled JS bundles to directory"
+  "opt_dump_dynamic": "Dump compiled JS bundles to directory",
+  "opt_max_results": "Max results to return",
+  "opt_help": "Print help",
+  "opt_version": "Print version"
 }

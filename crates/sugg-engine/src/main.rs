@@ -17,6 +17,18 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Run shell completion against the local cache
+    Complete {
+        /// Override cache directory
+        #[arg(long, value_name = "DIR")]
+        cache_dir: Option<PathBuf>,
+        /// Max results to return
+        #[arg(long, value_name = "N")]
+        max_results: Option<usize>,
+        /// Shell name and input words (collected as-is)
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
     /// Developer tools
     Dev {
         #[command(subcommand)]
@@ -79,6 +91,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
     match cli.command {
+        Commands::Complete { .. } => {
+            eprintln!(
+                "{} `complete` is handled by the `sugg` CLI, not `sugg-engine`.",
+                sugg_core::ICON_ERROR
+            );
+            eprintln!("   Usage: sugg complete <shell> -- <input...>");
+            std::process::exit(1);
+        }
         Commands::Dev {
             sub,
             completions_dir,
