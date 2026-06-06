@@ -115,8 +115,8 @@ export default createCompletion({
 });
 ```
 
-- Language is selected at build time via `sugg reload --lang zh`.
-- Fallback order: specified lang → `en` → first available.
+- Language resolution order: `--lang` CLI flag → system locale (via `sys-locale`) → `en`.
+- Fallback chain follows ICU4X BCP47 (e.g. `zh-Hans-CN` → `[en, zh, zh-CN]`); `en` is always last-resort.
 - Run `sugg dev i18n` to generate type declarations for `virtual:i18n/*`.
 
 ---
