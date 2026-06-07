@@ -7,40 +7,23 @@ interface CompletionContext {
   words: string[];
 
   /**
-   * 引擎安全解析出的参数表（自动处理了传值和别名映射，支持多值收集）
-   *
-   * - 布尔型参数：如果出现，值为 true（不管输入多少次）
-   * - 传值型参数：永远为 string[] 数组（出现一次是单元素数组，多次出现则包含所有值）
-   *
-   * 同一选项的所有别名都会被收集，脚本作者只需检查任意一个 key 即可覆盖所有别名输入。
-   *
-   * 例如：\
-   * // 布尔选项：直接判断 \
-   * ctx.options["-g"]  = true \
-   * // 传值选项值为 string[]： \
-   * ctx.options["--cwd"]  = ["mydir"] \
-   * ctx.options["--exclude"]  = ["react", "vue"]
+   * Parsed options. All aliases are merged into one key, so check any label.
+   * - Bool flag: `true` (regardless of repetition)
+   * - Value-taking: always `string[]` (one occurrence → `[v]`, repeated → all values)
    */
   options: Record<string, true | string[]>;
 
   /**
-   * 当前节点已消耗的位置参数值（flat 累计；切子命令时清空）
-   *
-   * - `positionals.length` 等于"已填的位置参数数量"
-   * - 多值节点（`args_count > 1`）下，多次消耗按时间顺序独立计入
-   * - 跨子命令时清空（父节点 subcommand 名字不会出现在 positionals 中）
-   * - prefix 正在输入的字符**不计入**（仅"已提交"的 word 计入）
-   *
-   * 典型用法：根据"之前填过的值"决定当前该补什么
-   *
-   * 例如 `git remote add <name> <url>`：\
-   * `args: dynamic(ctx => ctx.positionals.length === 0 ? getRemotes() : null)`
+   * Submitted positional args on the current node (flat, reset on subcommand switch).
+   * - Excludes the in-progress `prefix`
+   * - Resets when walking into a subcommand
+   * - Repeated consumptions on `args_count > 1` nodes are recorded in order
    */
   positionals: string[];
 
-  /** 当前 Shell 名称 */
+  /** Current shell */
   shell: ShellName;
-  /** 当前操作系统 */
+  /** Current OS */
   os: OsName;
 }
 
@@ -69,24 +52,21 @@ interface SuggestionStyle {
 }
 
 interface Suggestion {
-  /**
-   * 在补全菜单中显示的主文本（必填）。
-   */
+  /** Displayed text in the completion menu (required). */
   display: string;
 
   /**
-   * 实际插入到命令行的值。
-   * 少数情况下使用（当插入值与显示值不同时）。
-   * 如果省略，则最终 value = display + 末尾空格。
+   * Value actually inserted into the command line.
+   * Omit when display == value; otherwise the inserted string differs from what the user sees.
+   * A trailing space is appended by default.
    */
   value?: string;
 
   description?: string;
 
   /**
-   * 别名列表：用户在命令行中输入这些字符串时，
-   * 菜单里仍然显示这个建议，并且插入 value。
-   * 别名本身不会作为插入值，除非 value 就是它。
+   * Extra input strings that should also accept this suggestion and insert `value`.
+   * The aliases themselves are not inserted unless they equal `value`.
    */
   aliases?: string[];
   style?: SuggestionStyle;
@@ -99,28 +79,22 @@ type SuggestionResult = string[] | Suggestion[] | Promise<string[] | Suggestion[
 
 interface ArgsSpec {
   /**
-   * 该节点消耗的 token 总容量上限
-   *  - `0` — 不消耗（option 是 bool / command 不接位置参数）
-   *  - `1` — 单值（默认）
-   *  - `N` — 多值
-   *  - `Infinity` — 无限（`args_count` 在内部记为 `u32::MAX`）
+   * Total tokens this node consumes.
+   * - `0`: consumes none (bool flag / command with no positionals)
+   * - `1`: single value (default)
+   * - `N`: fixed N values
+   * - `Infinity`: unlimited (internally `u32::MAX`)
    *
-   * **Saturate 规则**（bundler 跨语言类型适配）：
-   *  - `Infinity` 和 `> 0xFFFFFFFF` 的正有限数 → saturate 到 `0xFFFFFFFF`（无限）
-   *  - `NaN` / `-Infinity` / 负数 **不 saturate**——`JSON.stringify` 会把它们变 `"null"` / `"-5"`，serde 解析 u32 字段会 Err，整个 root 会 fallback 到空。这是 fail-loud：用户笔误自己负责。
-   *
-   * 省略时按形态推断：数组/动态 → 1，嵌套对象 → 用显式 count
+   * Use a positive integer or `Infinity`. NaN / negative numbers will collapse the
+   * entire root to empty at bundle time (fail-loud).
    */
   count?: number;
-  /**
-   * 建议项（静态数组或动态回调）
-   * 省略时不提供补全（如 `args: { count: 1 }` 表示需要值但不建议）
-   */
+  /** Suggestions (static or dynamic). Omit to require a value with no suggestions. */
   items?: string[] | Suggestion[] | DynamicCommand;
 }
 
 interface OptionNode {
-  /** 选项别名列表，如 ['-v', '--verbose'] */
+  /** Option labels, e.g. `['-v', '--verbose']`. */
   labels: string[];
   description?: string;
   style?: SuggestionStyle;
@@ -132,7 +106,7 @@ interface CommandNode {
   aliases?: string[];
   style?: SuggestionStyle;
   options?: OptionNode[];
-  /** 静态子命令映射 */
+  /** Static subcommand map. */
   commands?: Record<string, CommandNode>;
   args?: string[] | Suggestion[] | DynamicCommand | ArgsSpec;
 }
@@ -140,8 +114,8 @@ interface CommandNode {
 function createCompletion(config: Record<string, CommandNode>): Record<string, CommandNode>;
 
 /**
- * 标记动态补全回调。回调可返回 string[]、Suggestion[] 或其 Promise。
- * 返回 `[]` 表示"无补全"（静默，no ERR UI）。
+ * Mark a dynamic completion callback. May return `string[]`, `Suggestion[]`, or a Promise thereof.
+ * Returning `[]` means "no suggestions" (silent, no error UI).
  */
 function dynamic(callback: (ctx: CompletionContext) => SuggestionResult): DynamicCommand;
 
@@ -163,39 +137,19 @@ declare module "sugg" {
   }
 
   /**
-   * 超时可控的轻量 HTTP 请求。
-   * 默认超时 2000ms，避免补全场景下网络请求卡死终端。
+   * Lightweight HTTP request with a configurable timeout (default 2000ms) to avoid
+   * hanging the terminal during completion.
    */
   export function fetch(url: string, options?: FetchOptions): Promise<FetchResponse>;
 
-  /**
-   * 通过 Shell 执行命令（sh -c / cmd /C）。
-   * 需要管道 |、重定向 >、变量展开 $HOME 等 Shell 功能时用此 API。
-   */
+  /** Run a command through a shell (sh -c / cmd /C). Use for pipes, redirects, `$VAR` expansion. */
   export function exec(cmd: string): Promise<string>;
 
   /**
-   * 极速直接进程拉起 API——不经过 Shell，零中间进程损耗。
-   *
-   * 与 `exec`（走 sh -c / cmd /C）不同，execFile 直接把
-   * 可执行文件路径和参数数组传给操作系统内核，避免了：
-   *
-   * 1. **Shell 进程开销**：不 fork sh/cmd，每次省去几毫秒
-   * 2. **命令注入风险**：参数以数组形式传递，而非拼接到字符串中
-   * 3. **参数解析歧义**：不存在引号嵌套、转义字符的困扰
-   *
-   * 典型用法：
-   * ```ts
-   * // 获取 git 状态（纯命令，无需 Shell 特性）
-   * const out = await execFile("git", ["status", "--porcelain"]);
-   *
-   * // 获取当前 git 分支
-   * const branch = await execFile("git", ["rev-parse", "--abbrev-ref", "HEAD"]);
-   * ```
-   *
-   * @param cmd  可执行文件路径（如 "git"、"node"、"/usr/bin/ls"）
-   * @param args 参数数组（每个元素对应一个 argv 条目，无需手动转义）
-   * @returns    命令标准输出（stdout）的字符串内容
+   * Spawn a process directly (no shell). Faster than `exec` and immune to shell-quoting issues.
+   * @param cmd  Executable path (e.g. `"git"`, `"node"`, `"/usr/bin/ls"`).
+   * @param args Argument vector; no manual escaping required.
+   * @returns    Standard output as a string.
    */
   export function execFile(cmd: string, args?: string[]): Promise<string>;
 
@@ -207,12 +161,12 @@ declare module "sugg" {
   }
 
   /**
-   * 大一统路径扫描 API。
-   * - 传一个参数时，自动解析用户输入的路径片段，扫描当前目录下匹配项。
-   * - 传两个参数时，baseDir 指定虚拟根目录（如 "node_modules/.bin"），input 为用户输入。
-   * - 如果 input 以斜杠结尾（如 "src/"），则扫描该子目录并保留其前缀。
-   * - 如果 input 包含斜杠（如 "src/com"），自动拆分目录和文件名前缀。
-   * - 如果 input 是纯文件名片段（如 "te"），扫描当前目录。
+   * Unified path scanner. With one arg, scans the current directory matching the input fragment.
+   * With two args, `baseDir` sets a virtual root (e.g. `"node_modules/.bin"`).
+   * Handles directory prefixes transparently:
+   * - trailing `/` (e.g. `"src/"`) keeps the prefix and lists the subdirectory
+   * - mid slash (e.g. `"src/com"`) splits dir and file prefix
+   * - bare fragment (e.g. `"te"`) scans the current dir
    */
   export function scanPath(input: string, baseDir?: string): Promise<ScanDirItem[]>;
   export function readJson(path: string): Promise<any>;
@@ -225,21 +179,19 @@ declare module "sugg" {
     error(...args: any[]): void;
   }
 
-  /** 终端内联日志，在补全菜单中输出彩色信息。 */
+  /** Inline terminal log, surfaces colored output in the completion menu. */
   export const ui: Ui;
 
   interface CacheHelper {
     /**
-     * 读取缓存，未命中时调用 fetcher 获取并写入缓存。
-     *
-     * `key` 支持三种形式：
-     * - `string`：直接作为缓存键
-     * - `string[]`：数组元素拼接为缓存键
-     * - `CompletionContext`：自动取 `words`（去掉末尾输入前缀）+ `path` 作为缓存键，
-     *   适合同一命令行上下文内多次触发补全共享同一份数据，避免重复调用外部命令。
+     * Read-through cache. `key` accepts:
+     * - `string` — used as-is
+     * - `string[]` — joined as the cache key
+     * - `CompletionContext` — auto-keyed from `ctx.words` (minus the in-progress prefix) + `ctx.path`,
+     *   ideal for sharing data across multiple completions in the same command context.
      *
      * @example
-     * // 传 ctx：用户输入 "bun run b"、"bun run bu" 时命中同一份缓存
+     * // Both "bun run b" and "bun run bu" hit the same cache entry:
      * const [scripts, bins] = await cache.get(ctx, 5000, () =>
      *   Promise.all([getScriptNames(), getBinNames()])
      * );
