@@ -54,7 +54,7 @@ const __parseConfig = (modules) => {
 		};
 		if (typeof args === "object" && args.count !== void 0) {
 			const items = args.items;
-			const count = !Number.isFinite(args.count) && args.count > 0 ? UNLIMITED : args.count;
+			const count = args.count > UNLIMITED ? UNLIMITED : args.count;
 			if (items == null) return {
 				args_count: count,
 				dynamic_func: null,

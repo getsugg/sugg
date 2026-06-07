@@ -105,6 +105,10 @@ interface ArgsSpec {
    *  - `N` — 多值
    *  - `Infinity` — 无限（`args_count` 在内部记为 `u32::MAX`）
    *
+   * **Saturate 规则**（bundler 跨语言类型适配）：
+   *  - `Infinity` 和 `> 0xFFFFFFFF` 的正有限数 → saturate 到 `0xFFFFFFFF`（无限）
+   *  - `NaN` / `-Infinity` / 负数 **不 saturate**——`JSON.stringify` 会把它们变 `"null"` / `"-5"`，serde 解析 u32 字段会 Err，整个 root 会 fallback 到空。这是 fail-loud：用户笔误自己负责。
+   *
    * 省略时按形态推断：数组/动态 → 1，嵌套对象 → 用显式 count
    */
   count?: number;

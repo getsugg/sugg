@@ -79,6 +79,11 @@ export const __parseConfig = (modules) => {
   //   DynamicObj                      → count=1（默认向后兼容）
   //   { count, items? }               → count=count（显式多值；count=Infinity → 无限）
   // 无限值用 JS 字面量 Infinity，bundler 映射为 u32::MAX；省略时严格按 count 消耗（默认 1），不隐式无限
+  //
+  // Saturate 规则：只保护 Infinity 和 > u32::MAX 的正有限数 → 0xFFFFFFFF
+  // 不保护 NaN / -Infinity / 负数：JSON.stringify 会把 NaN / -Infinity 变 "null"，
+  // 负数变 "-5"，serde 解析 u32 字段会 Err → unwrap_or_default() 让整个 root 变空。
+  // 这是 fail-loud：用户手贱写 NaN / 负数，崩 root 是用户的责任，引擎不替用户擦屁股。
   const UNLIMITED = 0xFFFFFFFF;  // u32::MAX，CLI step 4 看到这个值不检查 remaining
   function resolveArgs(args) {
     if (args == null) {
@@ -92,10 +97,14 @@ export const __parseConfig = (modules) => {
     }
     if (typeof args === "object" && args.count !== undefined) {
       const items = args.items;
-      // Infinity（无其他正有限值）映射为 UNLIMITED；其他值（包括 0、NaN）原样
-      const count = !Number.isFinite(args.count) && args.count > 0
-        ? UNLIMITED
-        : args.count;
+      // Saturate：Infinity 和 > 0xFFFFFFFF 的正有限数 → UNLIMITED
+      // 实测 QuickJS 比较：
+      //   Infinity    > 0xFFFFFFFF → true   (saturate)
+      //   0xFFFFFFFF > 0xFFFFFFFF → false  (合法值，0xFFFFFFFF == u32::MAX)
+      //   NaN         > 0xFFFFFFFF → false  (NaN 比较永远 false，fail-loud)
+      //   -Infinity   > 0xFFFFFFFF → false  (fail-loud)
+      //   -5          > 0xFFFFFFFF → false  (fail-loud)
+      const count = args.count > UNLIMITED ? UNLIMITED : args.count;
       if (items == null) {
         return { args_count: count, dynamic_func: null, static_args: null };
       }

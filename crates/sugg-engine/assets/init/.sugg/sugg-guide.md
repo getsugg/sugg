@@ -171,6 +171,18 @@ noPositional: { count: 0, commands: { only: { ... } } }
 
 The state machine consumes up to `count` tokens for options/commands. When the cap is reached, waiting auto-releases and subsequent tokens walk the normal path. With `count: Infinity` the cap is mathematically unreachable, so the node stays in "is_positional_mode" for the rest of input — dynamic functions should `return []` for positions beyond what they have suggestions for.
 
+### `count` value validation (saturate rules)
+
+The bundler cross-language adapter (`JS f64` → `Rust u32`) protects only two cases — everything else is **fail-loud** (user is responsible for typos):
+
+| `count` value | bundler action | result |
+|---|---|---|
+| `Infinity` | saturate to `0xFFFFFFFF` | unlimited |
+| `> 0xFFFFFFFF` (positive finite) | saturate to `0xFFFFFFFF` | unlimited |
+| `NaN` / `-Infinity` / negative (`-5` etc.) | **pass through** | **entire root falls back to `CommandNode::default()`** (empty) |
+
+The "pass through → root collapse" happens because `JSON.stringify(NaN / -Infinity) === "null"` and `JSON.stringify(-5) === "-5"`. serde_json then refuses to deserialize `u32` from those, `build.rs:11` `unwrap_or_default()` kicks in, and the whole completion script vanishes. This is intentional fail-loud: writing `NaN` is a user bug, not something the engine should silently paper over.
+
 ---
 
 ## Context-Aware Completions
