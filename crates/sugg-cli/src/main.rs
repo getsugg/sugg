@@ -30,12 +30,21 @@ enum Context<'a> {
 }
 
 /// 解析出的选项值的内部枚举
-/// Flag: 布尔选项（takes_value=false），对应 JS true
-/// Values: 传值选项（takes_value=true），对应 JS string[]，支持同一选项多次出现时追加
+/// Flag: 布尔选项（args_count=0），对应 JS true
+/// Values: 传值选项（args_count>=1），对应 JS string[]，支持同一选项多次出现时追加
 #[derive(Debug, Clone)]
 enum ParsedValue<'a> {
     Flag,
     Values(Vec<&'a str>),
+}
+
+/// 选项值等待状态：跟踪 waiting 中已消耗的 token 数。
+/// `cap` = 选项的 args_count（总容量），`used` = 已消费的 token 数。
+/// `used == cap` 时自动释放，剩余 token 走正常路径。
+struct WaitingState<'a> {
+    opt: &'a ArchivedOptionItem,
+    cap: u32,
+    used: u32,
 }
 
 /// parse_cli_state 的返回结果
@@ -44,51 +53,37 @@ enum ParsedValue<'a> {
 ///   布尔型参数：值为 ParsedValue::Flag
 ///   传值型参数：值为 ParsedValue::Values(vec)，同一选项多次出现时追加到同一数组
 ///   同一选项的所有别名都会被收集，脚本作者可检查任意一个 key
+/// positional_remaining: 节点剩余可消耗的位置参数 token 数（0 表示已"释放"）
+/// positional_args: 当前节点已消耗的位置参数值（按消耗时间 flat 累计；切子命令时清空）
+///   注入到 dynamic 函数的 ctx.args，供脚本按"之前已填的值"决定当前补全
 struct ParseResult<'a> {
     ctx: Context<'a>,
     options: HashMap<&'a str, ParsedValue<'a>>,
-    is_positional_mode: bool,
+    positional_remaining: u32,
+    positional_args: Vec<String>,
 }
 
 /// 核心状态机：零拷贝游标
 /// 功能：遍历用户输入的单词，在补全树中寻找匹配的节点，且全程不产生堆分配
 /// 同时安全收集已解析的选项及其值，避免扁平的 words.includes() 误判
+///
+/// 统一模型：每个节点（command/option）都消耗 N 个 token，由 args_count 声明。
+///  - boolean 选项（args_count=0）：不消耗 token
+///  - 单值选项（args_count=1）：消耗 1 个 token
+///  - 多值选项（args_count=N）：消耗 N 个 token，容量满自动释放
+///  - 重复模式：每次选项 label 出现开新 waiting，Values(vec) 累加
+///  - 未知选项（未在 current.options 中）：降级，光标留 current，不修改剩余计数
 fn parse_cli_state<'a>(root: &'a ArchivedCommandNode, words: &[&'a str]) -> ParseResult<'a> {
     let mut current = root;
-    let mut waiting: Option<&'a ArchivedOptionItem> = None;
+    let mut waiting: Option<WaitingState<'a>> = None;
     let mut parsed_options: HashMap<&'a str, ParsedValue<'a>> = HashMap::new();
-    let mut is_positional_mode = false;
-    // 新增：标记是否已遇到 '--'，之后不再解析选项，但允许子命令
+    let mut positional_remaining: u32 = current.args_count.into();
+    let mut positional_args: Vec<String> = Vec::new();
     let mut no_more_options = false;
 
     for word in words {
-        // 如果上一个单词是一个需要值的 Option（如 --file），则消耗当前单词作为其值
-        if let Some(opt) = waiting.take() {
-            // 将该选项的所有别名都关联到这个值，支持同一选项多次出现时追加
-            for label in opt.labels.iter() {
-                let entry = parsed_options
-                    .entry(label.as_str())
-                    .or_insert_with(|| ParsedValue::Values(Vec::new()));
-                if let ParsedValue::Values(vec) = entry {
-                    vec.push(word);
-                }
-            }
-            continue;
-        }
-
-        // 标准的 -- 分隔符：之后所有单词强制为位置参数，不再解析选项
-        if *word == "--" {
-            no_more_options = true;
-            continue;
-        }
-
-        // 位置参数模式下，跳过所有选项/子命令解析
-        if is_positional_mode {
-            continue;
-        }
-
+        // 0. 显式选项（标签）必须先于 waiting 消费：避免重复选项标签被误当成值
         if !no_more_options && word.starts_with('-') {
-            // 支持 -opt=value 或 --opt=value 语法：将选项名与等号后的值分离
             let (opt_label, attached_value) = if word.contains('=') {
                 let (lbl, val) = word.split_once('=').unwrap();
                 (lbl, Some(val))
@@ -96,62 +91,106 @@ fn parse_cli_state<'a>(root: &'a ArchivedCommandNode, words: &[&'a str]) -> Pars
                 (*word, None)
             };
 
-            // 处理选项：查找 labels 中是否包含 opt_label
             if let Some(opt) = current
                 .options
                 .iter()
                 .find(|o| o.labels.iter().any(|l| l == opt_label))
             {
-                if opt.takes_value {
-                    if let Some(val) = attached_value {
-                        // --opt=value 形式：直接消费值，无需进入 waiting 状态
-                        for label in opt.labels.iter() {
-                            let entry = parsed_options
-                                .entry(label.as_str())
-                                .or_insert_with(|| ParsedValue::Values(Vec::new()));
-                            if let ParsedValue::Values(vec) = entry {
-                                vec.push(val);
-                            }
-                        }
-                    } else {
-                        // --opt value 形式：进入等待状态
-                        waiting = Some(opt);
-                    }
-                } else {
-                    // 布尔选项：标记为 Flag（多次出现依然是 Flag）
+                // 终止当前 waiting（同选项重复也终止旧的，重复行为由 Values(vec) 累加）
+                waiting = None;
+                let cap: u32 = opt.args_count.into();
+                if cap == 0 {
                     for label in opt.labels.iter() {
                         parsed_options.insert(label.as_str(), ParsedValue::Flag);
                     }
+                } else if let Some(val) = attached_value {
+                    for label in opt.labels.iter() {
+                        let entry = parsed_options
+                            .entry(label.as_str())
+                            .or_insert_with(|| ParsedValue::Values(Vec::new()));
+                        if let ParsedValue::Values(vec) = entry {
+                            vec.push(val);
+                        }
+                    }
+                } else {
+                    waiting = Some(WaitingState { opt, cap, used: 0 });
                 }
-            }
-        } else {
-            // 处理子命令
-            if let Ok(idx) = current
-                .subcommands
-                .binary_search_by(|c| c.name.as_str().cmp(word))
-            {
-                let matched = &current.subcommands[idx];
-                // O(1) 瞬移：通过 target 下标直接跳转到主命令节点
-                current = match &matched.target {
-                    rkyv::option::ArchivedOption::Some(target_idx) => current
-                        .subcommands
-                        .get(target_idx.to_native() as usize)
-                        .unwrap_or(matched),
-                    rkyv::option::ArchivedOption::None => matched,
-                };
-            } else {
-                is_positional_mode = true;
+                continue;
             }
         }
+
+        // 1. waiting 消费：仅当 token 不是选项标签时
+        if let Some(w) = waiting.as_mut() {
+            if w.used < w.cap {
+                // 还有容量：消费当前 token
+                for label in w.opt.labels.iter() {
+                    let entry = parsed_options
+                        .entry(label.as_str())
+                        .or_insert_with(|| ParsedValue::Values(Vec::new()));
+                    if let ParsedValue::Values(vec) = entry {
+                        vec.push(word);
+                    }
+                }
+                w.used += 1;
+                // 消费完正好满容量：立刻释放，让后续 token 走正常路径
+                if w.used >= w.cap {
+                    waiting = None;
+                }
+                continue;
+            } else {
+                // 容量已满，释放 waiting；当前 token 重新走正常路径
+                waiting = None;
+            }
+        }
+
+        // 2. 标准的 -- 分隔符：之后所有单词强制为位置参数，不再解析选项
+        if *word == "--" {
+            no_more_options = true;
+            continue;
+        }
+
+        // 4. 位置参数：消耗一个 token，flat 累计进 positional_args
+        // 统一规则：所有节点（command/option × dynamic/static）严格按 args_count 消耗，
+        // 不做任何"dynamic 节点隐式无限"之类的特例
+        if positional_remaining > 0 {
+            positional_args.push(word.to_string());
+            positional_remaining -= 1;
+            continue;
+        }
+
+        // 5. 子命令匹配
+        if let Ok(idx) = current
+            .subcommands
+            .binary_search_by(|c| c.name.as_str().cmp(word))
+        {
+            let matched = &current.subcommands[idx];
+            // O(1) 瞬移：通过 target 下标直接跳转到主命令节点
+            current = match &matched.target {
+                rkyv::option::ArchivedOption::Some(target_idx) => current
+                    .subcommands
+                    .get(target_idx.to_native() as usize)
+                    .unwrap_or(matched),
+                rkyv::option::ArchivedOption::None => matched,
+            };
+            // 切到新节点时终止 waiting（不同上下文不应继续消费）
+            waiting = None;
+            positional_remaining = current.args_count.into();
+            // 跨节点重置位置参数列表（父节点信息通过 words 数组取）
+            positional_args.clear();
+            continue;
+        }
+
+        // 6. 超模式：positional_remaining=0 + 未知 token，静默忽略
     }
 
     ParseResult {
         ctx: match waiting {
-            Some(opt) => Context::OptionValue(opt),
+            Some(w) => Context::OptionValue(w.opt),
             None => Context::Node(current),
         },
         options: parsed_options,
-        is_positional_mode,
+        positional_remaining,
+        positional_args,
     }
 }
 
@@ -338,7 +377,10 @@ async fn main() {
     let parse_result = parse_cli_state(&archived.root, words_before_prefix);
     // 提取 options 避免 match 部分 move 导致无法在多个分支中使用
     let parsed_options = parse_result.options;
-    let is_positional_mode = parse_result.is_positional_mode;
+    // 当前节点已消耗的位置参数值（用于 dynamic ctx.args）
+    let positional_args = parse_result.positional_args;
+    // "位置参数通道开启"等价于节点还有可消耗的位置参数配额
+    let is_positional_mode = parse_result.positional_remaining > 0;
 
     // 细化补全上下文：根据前缀是否以 '-' 开头决定补全选项还是子命令+参数
     enum EffectiveCtx<'a> {
@@ -370,26 +412,29 @@ async fn main() {
         }
 
         EffectiveCtx::SubcommandsAndArgs(node) => {
-            if !is_positional_mode {
-                items.extend(node.subcommands.iter().map(|c| {
-                    let style = c.style.as_ref().map(from_archived_style);
-                    CompletionItem::new(c.name.to_string(), c.description.to_string(), style)
-                        .with_trailing_space()
-                }));
+            // 总是先列子命令（用户可能想切子命令上下文）
+            items.extend(node.subcommands.iter().map(|c| {
+                let style = c.style.as_ref().map(from_archived_style);
+                CompletionItem::new(c.name.to_string(), c.description.to_string(), style)
+                    .with_trailing_space()
+            }));
+            // 位置参数补全：仅在 is_positional_mode 时调用（remaining > 0 才有位置参数待补）
+            // 所有节点统一规则，无 dynamic/static 特例
+            if is_positional_mode {
+                items.extend(
+                    resolve_completions(
+                        node.dynamic_func.as_deref(),
+                        node.static_args.as_ref().map(|v| v.as_slice()),
+                        archived,
+                        &prefix,
+                        &words,
+                        &parsed_options,
+                        &parsed.shell,
+                        positional_args.clone(),
+                    )
+                    .await,
+                );
             }
-
-            items.extend(
-                resolve_completions(
-                    node.dynamic_func.as_deref(),
-                    node.static_args.as_ref().map(|v| v.as_slice()),
-                    archived,
-                    &prefix,
-                    &words,
-                    &parsed_options,
-                    &parsed.shell,
-                )
-                .await,
-            );
         }
 
         EffectiveCtx::OptionValue(opt) => {
@@ -402,6 +447,7 @@ async fn main() {
                     &words,
                     &parsed_options,
                     &parsed.shell,
+                    positional_args.clone(),
                 )
                 .await,
             );
@@ -517,6 +563,7 @@ fn find_bytecode(archived: &ArchivedCompletionCache, func_name: &str) -> Option<
 }
 
 /// 提取出的公共辅助函数：用于解析静态参数或运行 JS 获取动态补全项
+#[allow(clippy::too_many_arguments)]
 async fn resolve_completions<'a>(
     dynamic_func: Option<&str>,
     static_args: Option<&[ArchivedStaticSuggestion]>,
@@ -525,6 +572,7 @@ async fn resolve_completions<'a>(
     words: &[&str],
     parsed_options: &HashMap<&str, ParsedValue<'a>>,
     shell: &Shell,
+    positional_args: Vec<String>,
 ) -> Vec<CompletionItem> {
     let mut items = Vec::new();
     match (dynamic_func, static_args) {
@@ -539,6 +587,7 @@ async fn resolve_completions<'a>(
                         words.to_vec(),
                         parsed_options.clone(),
                         shell,
+                        positional_args,
                     )
                     .await,
                 );
@@ -559,6 +608,7 @@ async fn resolve_completions<'a>(
 
 /// 运行嵌入式 JavaScript 动态获取补全项
 /// 适合处理需要实时逻辑（如读取目录、查询数据库）的补全场景
+#[allow(clippy::too_many_arguments)]
 async fn run_dynamic_js<'a>(
     func_name: &str,
     bytecode: &[u8],
@@ -567,6 +617,7 @@ async fn run_dynamic_js<'a>(
     words: Vec<&'a str>,
     options: HashMap<&'a str, ParsedValue<'a>>,
     shell: &Shell,
+    positional_args: Vec<String>,
 ) -> Vec<CompletionItem> {
     /// 在 JS 上下文中执行动态补全（内部 try 函数，返回 Result）
     #[allow(clippy::too_many_arguments)]
@@ -579,6 +630,7 @@ async fn run_dynamic_js<'a>(
         words: Vec<&'a str>,
         options: HashMap<&'a str, ParsedValue<'a>>,
         shell: &Shell,
+        positional_args: Vec<String>,
     ) -> anyhow::Result<Vec<CompletionItem>> {
         let mut results: Vec<CompletionItem> = Vec::new();
         // 注入全局 API（如 fetch, fs 等，取决于 inject_globals 的实现）
@@ -601,6 +653,8 @@ async fn run_dynamic_js<'a>(
         let _ = ctx_obj.set("prefix", prefix);
         let _ = ctx_obj.set("path", path);
         let _ = ctx_obj.set("words", words);
+        // 当前节点已消耗的位置参数值（flat 累计；切子命令时已重置）
+        let _ = ctx_obj.set("positionals", positional_args);
 
         // 注入引擎安全解析的选项表
         // 布尔型参数：值为 true（JS 布尔值）
@@ -637,6 +691,12 @@ async fn run_dynamic_js<'a>(
         } else {
             js_result
         };
+
+        // 静默处理 null/undefined：JS dynamic 显式 "不补" 与 "返回空数组" 等价，
+        // 不写 ERR 日志（避免污染补全菜单）。true/false/数字等其他非数组值才记 ERR。
+        if resolved.is_null() || resolved.is_undefined() {
+            return Ok(Vec::new());
+        }
 
         // 优先尝试解析为 {value, description, aliases?}[]
         let as_objects: Result<Vec<rquickjs::Object>, _> =
@@ -697,7 +757,7 @@ async fn run_dynamic_js<'a>(
 
     // 在上下文中执行，通过 match 兜底错误
     async_with!(ctx => |ctx| {
-        match try_execute(ctx, func_name, bytecode, prefix, path, words, options, shell).await {
+        match try_execute(ctx, func_name, bytecode, prefix, path, words, options, shell, positional_args).await {
             Ok(items) => items,
             Err(e) => {
                 log_error!("Dynamic JS execution failed: {:#}", e);

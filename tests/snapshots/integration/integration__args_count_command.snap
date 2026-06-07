@@ -1,0 +1,34 @@
+---
+source: tests/integration.rs
+expression: all
+---
+[
+  {
+    "name": "partial_2_left",
+    "input": "testkit positionalCount x ",
+    "result": [
+      {
+        "value": "x ",
+        "display_override": "x"
+      },
+      {
+        "value": "y ",
+        "display_override": "y"
+      },
+      {
+        "value": "z ",
+        "display_override": "z"
+      }
+    ]
+  },
+  {
+    "name": "full_release",
+    "input": "testkit positionalCount x y z ",
+    "result": []
+  },
+  {
+    "name": "option_after_full",
+    "input": "testkit positionalCount x y z --multiValueOpt --exclude ",
+    "result": []
+  }
+]

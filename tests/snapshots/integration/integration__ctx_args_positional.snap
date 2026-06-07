@@ -1,0 +1,43 @@
+---
+source: tests/integration.rs
+expression: all
+---
+[
+  {
+    "name": "first_position",
+    "input": "testkit dynamicPositional ",
+    "result": [
+      {
+        "value": "origin",
+        "display_override": "origin"
+      },
+      {
+        "value": "upstream",
+        "display_override": "upstream"
+      },
+      {
+        "value": "mine",
+        "display_override": "mine"
+      }
+    ]
+  },
+  {
+    "name": "second_position",
+    "input": "testkit dynamicPositional origin ",
+    "result": [
+      {
+        "value": "url-for:origin",
+        "display_override": "url-for:origin"
+      },
+      {
+        "value": "https://github.com/x",
+        "display_override": "https://github.com/x"
+      }
+    ]
+  },
+  {
+    "name": "third_position",
+    "input": "testkit dynamicPositional origin xxx ",
+    "result": []
+  }
+]

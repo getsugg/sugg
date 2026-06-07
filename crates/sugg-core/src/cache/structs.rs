@@ -44,7 +44,8 @@ pub struct OptionItem {
     pub labels: Vec<String>,
     pub description: String,
     pub style: Option<SuggestionStyle>,
-    pub takes_value: bool,
+    /// 该选项消耗的 token 数：0 = bool 选项，1 = 单值（默认），N = 多值
+    pub args_count: u32,
     pub dynamic_func: Option<String>,
     pub static_args: Option<Vec<StaticSuggestion>>,
 }
@@ -68,6 +69,8 @@ pub struct CommandNode {
     #[rkyv(omit_bounds)]
     pub subcommands: Vec<CommandNode>,
     pub options: Vec<OptionItem>,
+    /// 该节点消耗的位置参数 token 数：0 = 不接，1 = 单值（默认），N = 多值
+    pub args_count: u32,
     pub dynamic_func: Option<String>,
     pub static_args: Option<Vec<StaticSuggestion>>,
 }

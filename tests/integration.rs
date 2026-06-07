@@ -313,7 +313,7 @@ fn test_testkit_empty_args_option() {
     // 选项 --token 需要值但无补全建议
     let items = complete("testkit emptyArgs --token ", proj, &sandbox.cache_dir);
     // 应返回空数组（没有补全建议，引擎不弹窗）
-    assert!(items.is_empty());
+    integration_snapshot!(items);
 }
 
 #[test]
@@ -336,6 +336,117 @@ fn test_testkit_double_dash_stops_option_parsing() {
         { "name": "dash_dyn_cmd1","input": "testkit -- dynamicReuse cmd1 ", "result": complete("testkit -- dynamicReuse cmd1 ", proj, &sandbox.cache_dir) },
         // -- 后选项 --mode 被视为位置参数，子命令匹配失败后进入位置参数模式
         { "name": "with_dash",    "input": "testkit opts -- --mode ", "result": complete("testkit opts -- --mode ", proj, &sandbox.cache_dir) },
+    ]);
+
+    integration_snapshot!(all);
+}
+
+#[test]
+fn test_args_count_command() {
+    let sandbox = get_sandbox();
+    let proj = &sandbox.project_dirs["minimal"];
+
+    let all = serde_json::json!([
+        // command 节点 args_count=3：填一个，remaining=2，列 static_args
+        { "name": "partial_2_left",   "input": "testkit positionalCount x ",         "result": complete("testkit positionalCount x ",         proj, &sandbox.cache_dir) },
+        // 填三个，remaining=0，光标释放列子命令（无子命令）
+        { "name": "full_release",     "input": "testkit positionalCount x y z ",     "result": complete("testkit positionalCount x y z ",     proj, &sandbox.cache_dir) },
+        // 关键 case：位置参数填完后写 --option 仍能解析（用户报告的 case）
+        { "name": "option_after_full","input": "testkit positionalCount x y z --multiValueOpt --exclude ", "result": complete("testkit positionalCount x y z --multiValueOpt --exclude ", proj, &sandbox.cache_dir) },
+    ]);
+
+    integration_snapshot!(all);
+}
+
+#[test]
+fn test_args_count_option() {
+    let sandbox = get_sandbox();
+    let proj = &sandbox.project_dirs["minimal"];
+
+    let all = serde_json::json!([
+        // 选项 args_count=3：填一个，waiting used=1/3，ctx=OptionValue
+        { "name": "single_value",   "input": "testkit multiValueOpt --exclude a ",  "result": complete("testkit multiValueOpt --exclude a ",  proj, &sandbox.cache_dir) },
+        // 填满 3 个，waiting 释放，ctx=Node，列子命令（无）
+        { "name": "full_values",    "input": "testkit multiValueOpt --exclude a b c ", "result": complete("testkit multiValueOpt --exclude a b c ", proj, &sandbox.cache_dir) },
+        // 超额：第 4 个走兜底（静默）
+        { "name": "over_capacity",  "input": "testkit multiValueOpt --exclude a b c d ", "result": complete("testkit multiValueOpt --exclude a b c d ", proj, &sandbox.cache_dir) },
+        // bool 选项不消耗 token
+        { "name": "bool_option",    "input": "testkit multiValueOpt --include ",     "result": complete("testkit multiValueOpt --include ",     proj, &sandbox.cache_dir) },
+        // 重复：标签必须先于 waiting 消费（--exclude 不能被当成值），
+        // parsed.exclude 应累加为 [a, b]，ctx 应为 OptionValue(exclude)
+        { "name": "repeated",       "input": "testkit multiValueOpt --exclude a --exclude b ", "result": complete("testkit multiValueOpt --exclude a --exclude b ", proj, &sandbox.cache_dir) },
+        // 重复 + 第三个值：三次 --exclude 累加 parsed.exclude = [a, b, c]
+        { "name": "repeated_thrice", "input": "testkit multiValueOpt --exclude a --exclude b --exclude c ", "result": complete("testkit multiValueOpt --exclude a --exclude b --exclude c ", proj, &sandbox.cache_dir) },
+        // 重复 + 中间 bool 选项：--include (bool) 终止 --exclude 的 waiting
+        { "name": "repeated_then_bool", "input": "testkit multiValueOpt --exclude a --include ", "result": complete("testkit multiValueOpt --exclude a --include ", proj, &sandbox.cache_dir) },
+    ]);
+
+    integration_snapshot!(all);
+}
+
+#[test]
+fn test_args_count_zero() {
+    let sandbox = get_sandbox();
+    let proj = &sandbox.project_dirs["minimal"];
+
+    let all = serde_json::json!([
+        // count=0 的 command：列出子命令
+        { "name": "zero_command",       "input": "testkit noPositional ",     "result": complete("testkit noPositional ",     proj, &sandbox.cache_dir) },
+        // 未知 token 走超模式（remaining=0，不消耗，列 static_args = 空）
+        { "name": "zero_overflow",      "input": "testkit noPositional xxx ", "result": complete("testkit noPositional xxx ", proj, &sandbox.cache_dir) },
+    ]);
+
+    integration_snapshot!(all);
+}
+
+#[test]
+fn test_ctx_args_positional() {
+    let sandbox = get_sandbox();
+    let proj = &sandbox.project_dirs["minimal"];
+
+    // 验证 dynamic(ctx => ctx.args) 能区分位置
+    // fixture 行为：
+    //   args.length === 0 → 返回 [origin, upstream, mine]
+    //   args.length === 1 → 返回 [url-for:<arg0>, https://github.com/x]
+    let all = serde_json::json!([
+        // 第一个位置：args=[], 返回 remote name 列表
+        { "name": "first_position",  "input": "testkit dynamicPositional ",         "result": complete("testkit dynamicPositional ",         proj, &sandbox.cache_dir) },
+        // 第二个位置：args=[origin], 返回依赖第一位置的 url 列表
+        { "name": "second_position", "input": "testkit dynamicPositional origin ",  "result": complete("testkit dynamicPositional origin ",  proj, &sandbox.cache_dir) },
+        // 第三个位置：args=[origin,xxx], 返回 null → []
+        { "name": "third_position",  "input": "testkit dynamicPositional origin xxx ", "result": complete("testkit dynamicPositional origin xxx ", proj, &sandbox.cache_dir) },
+    ]);
+
+    integration_snapshot!(all);
+}
+
+#[test]
+fn test_git_remote_add_positional() {
+    let sandbox = get_sandbox();
+    let proj = &sandbox.project_dirs["minimal"];
+
+    // git remote add <name> <url>：
+    //   - 第一位置 (args=[])  → 补 remote name 列表
+    //   - 第二位置 (args=[name]) → 补 url 模板，依赖 ctx.args[0]
+    //   - 第三位置 (args=[name,url]) → null
+    // git push <remote> <branch>：同上结构
+    let all = serde_json::json!([
+        // remote add 第一位置
+        { "name": "add_first",       "input": "git remote add ",                       "result": complete("git remote add ",                       proj, &sandbox.cache_dir) },
+        // remote add 第二位置（依赖 args[0]=origin）
+        { "name": "add_second",      "input": "git remote add origin ",                "result": complete("git remote add origin ",                proj, &sandbox.cache_dir) },
+        // remote add 第二位置（依赖 args[0]=upstream，url 应含 upstream）
+        { "name": "add_second_diff", "input": "git remote add upstream ",              "result": complete("git remote add upstream ",              proj, &sandbox.cache_dir) },
+        // remote add 第三位置：null → []
+        { "name": "add_third",       "input": "git remote add origin git@github.com:x ", "result": complete("git remote add origin git@github.com:x ", proj, &sandbox.cache_dir) },
+        // push 第一位置
+        { "name": "push_first",      "input": "git push ",                             "result": complete("git push ",                             proj, &sandbox.cache_dir) },
+        // push 第二位置（依赖 args[0]）
+        { "name": "push_second",     "input": "git push origin ",                      "result": complete("git push origin ",                      proj, &sandbox.cache_dir) },
+        // remote rename 第一位置
+        { "name": "rename_first",    "input": "git remote rename ",                   "result": complete("git remote rename ",                   proj, &sandbox.cache_dir) },
+        // checkout 第一位置
+        { "name": "checkout_first",  "input": "git checkout ",                         "result": complete("git checkout ",                         proj, &sandbox.cache_dir) },
     ]);
 
     integration_snapshot!(all);

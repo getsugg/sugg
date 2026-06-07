@@ -56,6 +56,59 @@ export const __parseConfig = (modules) => {
     }
   }
 
+  // 把用户写在 args 上的"项"转换为 StaticSuggestion 数组
+  function toStaticArgs(items) {
+    if (!Array.isArray(items)) return null;
+    return items.map((item) => {
+      if (typeof item === "string") {
+        return { value: item + " ", display: item, description: "", style: null };
+      }
+      return {
+        value: item.value !== undefined ? item.value : item.display + " ",
+        display: item.display,
+        description: item.description || "",
+        style: item.style || null,
+      };
+    });
+  }
+
+  // 解析节点的 args 字段：返回 { args_count, dynamic_func, static_args }
+  // 支持四种形式：
+  //   undefined                       → count=0（不接：command 不接位置参数 / option bool）
+  //   string[]                        → count=1（默认向后兼容）
+  //   DynamicObj                      → count=1（默认向后兼容）
+  //   { count, items? }               → count=count（显式多值；count=Infinity → 无限）
+  // 无限值用 JS 字面量 Infinity，bundler 映射为 u32::MAX；省略时严格按 count 消耗（默认 1），不隐式无限
+  const UNLIMITED = 0xFFFFFFFF;  // u32::MAX，CLI step 4 看到这个值不检查 remaining
+  function resolveArgs(args) {
+    if (args == null) {
+      return { args_count: 0, dynamic_func: null, static_args: null };
+    }
+    if (Array.isArray(args)) {
+      return { args_count: 1, dynamic_func: null, static_args: toStaticArgs(args) };
+    }
+    if (args.__is_dynamic) {
+      return { args_count: 1, dynamic_func: args.id, static_args: null };
+    }
+    if (typeof args === "object" && args.count !== undefined) {
+      const items = args.items;
+      // Infinity（无其他正有限值）映射为 UNLIMITED；其他值（包括 0、NaN）原样
+      const count = !Number.isFinite(args.count) && args.count > 0
+        ? UNLIMITED
+        : args.count;
+      if (items == null) {
+        return { args_count: count, dynamic_func: null, static_args: null };
+      }
+      if (Array.isArray(items)) {
+        return { args_count: count, dynamic_func: null, static_args: toStaticArgs(items) };
+      }
+      if (items.__is_dynamic) {
+        return { args_count: count, dynamic_func: items.id, static_args: null };
+      }
+    }
+    return { args_count: 0, dynamic_func: null, static_args: null };
+  }
+
   function traverse(name, node, description = "") {
     let cmdNode = {
       name,
@@ -64,6 +117,7 @@ export const __parseConfig = (modules) => {
       target: null,
       subcommands: [],
       options: [],
+      args_count: 0,
       dynamic_func: null,
       static_args: null,
     };
@@ -71,56 +125,23 @@ export const __parseConfig = (modules) => {
     if (node.options) {
       for (let opt of node.options) {
         let labels = opt.labels || [];
-        let takes_value = false;
-        let dynamic_func = null;
-        let static_args = null;
-        if (opt.args) {
-          takes_value = true;
-          if (opt.args.__is_dynamic) {
-            dynamic_func = opt.args.id;
-          } else if (Array.isArray(opt.args)) {
-            static_args = opt.args.map((item) => {
-              if (typeof item === "string") {
-                return { value: item + " ", display: item, description: "", style: null };
-              } else {
-                return {
-                  value: item.value !== undefined ? item.value : item.display + " ",
-                  display: item.display,
-                  description: item.description || "",
-                  style: item.style || null,
-                };
-              }
-            });
-          }
-        }
+        const resolved = resolveArgs(opt.args);
         cmdNode.options.push({
           labels,
           description: opt.description || "",
           style: opt.style ?? null,
-          takes_value,
-          dynamic_func,
-          static_args,
+          args_count: resolved.args_count,
+          dynamic_func: resolved.dynamic_func,
+          static_args: resolved.static_args,
         });
       }
     }
-    // 支持 args: dynamic(...) 或是静态数组
-    if (node.args) {
-      if (node.args.__is_dynamic) {
-        cmdNode.dynamic_func = node.args.id;
-      } else if (Array.isArray(node.args)) {
-        cmdNode.static_args = node.args.map((item) => {
-          if (typeof item === "string") {
-            return { value: item + " ", display: item, description: "", style: null };
-          } else {
-            return {
-              value: item.value !== undefined ? item.value : item.display + " ",
-              display: item.display,
-              description: item.description || "",
-              style: item.style || null,
-            };
-          }
-        });
-      }
+    // command 节点本身的 args
+    {
+      const resolved = resolveArgs(node.args);
+      cmdNode.args_count = resolved.args_count;
+      cmdNode.dynamic_func = resolved.dynamic_func;
+      cmdNode.static_args = resolved.static_args;
     }
     if (node.commands) {
       for (let [cmd, def] of Object.entries(node.commands)) {
@@ -136,6 +157,7 @@ export const __parseConfig = (modules) => {
             target: null,
             subcommands: [],
             options: [],
+            args_count: 0,
             dynamic_func: null,
             static_args: null,
           });
@@ -152,6 +174,7 @@ export const __parseConfig = (modules) => {
     target: null,
     subcommands: [],
     options: [],
+    args_count: 0,
     dynamic_func: null,
     static_args: null,
   };

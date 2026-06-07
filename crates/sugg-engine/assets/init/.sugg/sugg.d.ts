@@ -23,6 +23,21 @@ interface CompletionContext {
    */
   options: Record<string, true | string[]>;
 
+  /**
+   * 当前节点已消耗的位置参数值（flat 累计；切子命令时清空）
+   *
+   * - `positionals.length` 等于"已填的位置参数数量"
+   * - 多值节点（`args_count > 1`）下，多次消耗按时间顺序独立计入
+   * - 跨子命令时清空（父节点 subcommand 名字不会出现在 positionals 中）
+   * - prefix 正在输入的字符**不计入**（仅"已提交"的 word 计入）
+   *
+   * 典型用法：根据"之前填过的值"决定当前该补什么
+   *
+   * 例如 `git remote add <name> <url>`：\
+   * `args: dynamic(ctx => ctx.positionals.length === 0 ? getRemotes() : null)`
+   */
+  positionals: string[];
+
   /** 当前 Shell 名称 */
   shell: ShellName;
   /** 当前操作系统 */
@@ -82,12 +97,30 @@ type DynamicCommand = { [DynamicBrand]: never };
 
 type SuggestionResult = string[] | Suggestion[] | Promise<string[] | Suggestion[]>;
 
+interface ArgsSpec {
+  /**
+   * 该节点消耗的 token 总容量上限
+   *  - `0` — 不消耗（option 是 bool / command 不接位置参数）
+   *  - `1` — 单值（默认）
+   *  - `N` — 多值
+   *  - `Infinity` — 无限（`args_count` 在内部记为 `u32::MAX`）
+   *
+   * 省略时按形态推断：数组/动态 → 1，嵌套对象 → 用显式 count
+   */
+  count?: number;
+  /**
+   * 建议项（静态数组或动态回调）
+   * 省略时不提供补全（如 `args: { count: 1 }` 表示需要值但不建议）
+   */
+  items?: string[] | Suggestion[] | DynamicCommand;
+}
+
 interface OptionNode {
   /** 选项别名列表，如 ['-v', '--verbose'] */
   labels: string[];
   description?: string;
   style?: SuggestionStyle;
-  args?: string[] | Suggestion[] | DynamicCommand;
+  args?: string[] | Suggestion[] | DynamicCommand | ArgsSpec;
 }
 
 interface CommandNode {
@@ -97,13 +130,14 @@ interface CommandNode {
   options?: OptionNode[];
   /** 静态子命令映射 */
   commands?: Record<string, CommandNode>;
-  args?: string[] | Suggestion[] | DynamicCommand;
+  args?: string[] | Suggestion[] | DynamicCommand | ArgsSpec;
 }
 
 function createCompletion(config: Record<string, CommandNode>): Record<string, CommandNode>;
 
 /**
  * 标记动态补全回调。回调可返回 string[]、Suggestion[] 或其 Promise。
+ * 返回 `[]` 表示"无补全"（静默，no ERR UI）。
  */
 function dynamic(callback: (ctx: CompletionContext) => SuggestionResult): DynamicCommand;
 

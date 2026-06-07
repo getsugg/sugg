@@ -2,35 +2,4 @@
 source: tests/unmatched.rs
 expression: "normalize_items(&items, &sandbox.project_dirs[\"bun\"])"
 ---
-[
-  {
-    "value": "acorn.exe ",
-    "display_override": "acorn.exe",
-    "description": "package bin"
-  },
-  {
-    "value": "build ",
-    "display_override": "build",
-    "description": "script"
-  },
-  {
-    "value": "dev ",
-    "display_override": "dev",
-    "description": "script"
-  },
-  {
-    "value": "index.ts ",
-    "display_override": "index.ts",
-    "description": "file"
-  },
-  {
-    "value": "server.js ",
-    "display_override": "server.js",
-    "description": "file"
-  },
-  {
-    "value": "test ",
-    "display_override": "test",
-    "description": "script"
-  }
-]
+[]

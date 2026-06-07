@@ -151,6 +151,55 @@ export default createCompletion({
           ];
         }),
       },
+
+      // 多值位置参数节点：args_count=3
+      positionalCount: {
+        description: "Command that consumes 3 positional tokens",
+        args: { count: 3, items: ["x", "y", "z"] },
+      },
+
+      // 多值选项节点：选项 args_count=3
+      multiValueOpt: {
+        description: "Command with multi-value option (--exclude accepts 3 values)",
+        options: [
+          { labels: ["--exclude"], args: { count: 3, items: dynamic(() => ["a", "b", "c"]) } },
+          { labels: ["--include"] }, // bool 对比
+        ],
+      },
+
+      // 不接位置参数的命令节点：count=0
+      noPositional: {
+        description: "Command that accepts 0 positional tokens",
+        args: { count: 0 },
+        commands: {
+          only: { description: "Only subcommand" },
+        },
+      },
+
+      // 位置相关补全：ctx.positionals 按消耗顺序累计
+      // 显式 count: Infinity 表达"无限位置参数"（内部映射为 u32::MAX）；
+      // dynamic 函数根据 ctx.positionals.length 判断当前位置，返回相应补全
+      dynamicPositional: {
+        description: "Test ctx.positionals provides prior positional values",
+        args: {
+          count: Infinity,
+          items: dynamic(async (ctx) => {
+            if (ctx.positionals.length === 0) {
+              return ["origin", "upstream", "mine"];
+            }
+            if (ctx.positionals.length === 1) {
+              return [`url-for:${ctx.positionals[0]}`, "https://github.com/x"];
+            }
+            return [];
+          }),
+        },
+      },
+
+      // 无限位置参数 + 静态项（演示 count: Infinity + items: [...]）
+      staticUnlimited: {
+        description: "Static unlimited positional args",
+        args: { count: Infinity, items: ["alpha", "beta", "gamma"] },
+      },
     },
   },
 });

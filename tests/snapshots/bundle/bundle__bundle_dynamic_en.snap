@@ -153,6 +153,64 @@ const __dyn_docker_ps_args = async () => {
 //#endregion
 export { __dyn_docker_ps_args };
 
+// === git ===
+//#region sugg
+const exec = globalThis.__exec;
+globalThis.__execFile;
+globalThis.__scanPath;
+globalThis.__readFile;
+globalThis.__ui;
+//#endregion
+//#region tests/fixtures/completions/git/__v_dyn_git.ts
+const getRemotes = async () => {
+	try {
+		return (await exec("git remote")).split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+	} catch {
+		return [];
+	}
+};
+const getBranches = async () => {
+	try {
+		return (await exec("git branch --format=%(refname:short)")).split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+	} catch {
+		return [];
+	}
+};
+const __dyn_git_add_args_items = async (ctx) => {
+	if (ctx.positionals.length === 0) return ["."];
+	return [];
+};
+const __dyn_git_checkout_args = async () => {
+	return await getBranches();
+};
+const __dyn_git_branch_args = async () => {
+	return await getBranches();
+};
+const __dyn_git_push_args_items = async (ctx) => {
+	if (ctx.positionals.length === 0) return getRemotes();
+	if (ctx.positionals.length === 1) return getBranches();
+	return [];
+};
+const __dyn_git_pull_args_items = async (ctx) => {
+	if (ctx.positionals.length === 0) return getRemotes();
+	if (ctx.positionals.length === 1) return getBranches();
+	return [];
+};
+const __dyn_git_remote_add_args_items = async (ctx) => {
+	if (ctx.positionals.length === 0) return getRemotes();
+	if (ctx.positionals.length === 1) return [`git@github.com:user/${ctx.positionals[0]}.git`, `https://github.com/user/${ctx.positionals[0]}.git`];
+	return [];
+};
+const __dyn_git_remote_rename_args_items = async (ctx) => {
+	if (ctx.positionals.length === 0) return getRemotes();
+	return [];
+};
+const __dyn_git_remote_remove_args = async () => {
+	return getRemotes();
+};
+//#endregion
+export { __dyn_git_add_args_items, __dyn_git_branch_args, __dyn_git_checkout_args, __dyn_git_pull_args_items, __dyn_git_push_args_items, __dyn_git_remote_add_args_items, __dyn_git_remote_remove_args, __dyn_git_remote_rename_args_items };
+
 // === greet_dynamic ===
 //#region virtual:i18n/greet_dynamic
 const bye_desc = "Bye description";
@@ -267,5 +325,19 @@ const __dyn_testkit_logdemo_args = async (ctx) => {
 		}
 	];
 };
+const __dyn_testkit_multiValueOpt_options_exclude_args_items = () => [
+	"a",
+	"b",
+	"c"
+];
+const __dyn_testkit_dynamicPositional_args_items = async (ctx) => {
+	if (ctx.positionals.length === 0) return [
+		"origin",
+		"upstream",
+		"mine"
+	];
+	if (ctx.positionals.length === 1) return [`url-for:${ctx.positionals[0]}`, "https://github.com/x"];
+	return [];
+};
 //#endregion
-export { __dyn_sharedDynamic, __dyn_testkit_hybrid_args, __dyn_testkit_logdemo_args, __dyn_testkit_opts_options_d_args, __dyn_testkit_optsinfo_args };
+export { __dyn_sharedDynamic, __dyn_testkit_dynamicPositional_args_items, __dyn_testkit_hybrid_args, __dyn_testkit_logdemo_args, __dyn_testkit_multiValueOpt_options_exclude_args_items, __dyn_testkit_opts_options_d_args, __dyn_testkit_optsinfo_args };

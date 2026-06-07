@@ -13,6 +13,11 @@ expression: all
         "description": "Test display/value separation"
       },
       {
+        "value": "dynamicPositional ",
+        "display_override": "dynamicPositional",
+        "description": "Test ctx.positionals provides prior positional values"
+      },
+      {
         "value": "dynamicReuse ",
         "display_override": "dynamicReuse",
         "description": "Test reusing dynamic functions (subcommand args)"
@@ -33,6 +38,16 @@ expression: all
         "description": "Demonstrate log and throw output in the UI"
       },
       {
+        "value": "multiValueOpt ",
+        "display_override": "multiValueOpt",
+        "description": "Command with multi-value option (--exclude accepts 3 values)"
+      },
+      {
+        "value": "noPositional ",
+        "display_override": "noPositional",
+        "description": "Command that accepts 0 positional tokens"
+      },
+      {
         "value": "opts ",
         "display_override": "opts",
         "description": "Test option value completion"
@@ -41,6 +56,16 @@ expression: all
         "value": "optsinfo ",
         "display_override": "optsinfo",
         "description": "Test ctx.options passed to dynamic"
+      },
+      {
+        "value": "positionalCount ",
+        "display_override": "positionalCount",
+        "description": "Command that consumes 3 positional tokens"
+      },
+      {
+        "value": "staticUnlimited ",
+        "display_override": "staticUnlimited",
+        "description": "Static unlimited positional args"
       }
     ]
   },
@@ -54,6 +79,11 @@ expression: all
         "description": "Test display/value separation"
       },
       {
+        "value": "dynamicPositional ",
+        "display_override": "dynamicPositional",
+        "description": "Test ctx.positionals provides prior positional values"
+      },
+      {
         "value": "dynamicReuse ",
         "display_override": "dynamicReuse",
         "description": "Test reusing dynamic functions (subcommand args)"
@@ -74,6 +104,16 @@ expression: all
         "description": "Demonstrate log and throw output in the UI"
       },
       {
+        "value": "multiValueOpt ",
+        "display_override": "multiValueOpt",
+        "description": "Command with multi-value option (--exclude accepts 3 values)"
+      },
+      {
+        "value": "noPositional ",
+        "display_override": "noPositional",
+        "description": "Command that accepts 0 positional tokens"
+      },
+      {
         "value": "opts ",
         "display_override": "opts",
         "description": "Test option value completion"
@@ -82,6 +122,16 @@ expression: all
         "value": "optsinfo ",
         "display_override": "optsinfo",
         "description": "Test ctx.options passed to dynamic"
+      },
+      {
+        "value": "positionalCount ",
+        "display_override": "positionalCount",
+        "description": "Command that consumes 3 positional tokens"
+      },
+      {
+        "value": "staticUnlimited ",
+        "display_override": "staticUnlimited",
+        "description": "Static unlimited positional args"
       }
     ]
   },

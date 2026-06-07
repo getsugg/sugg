@@ -1,0 +1,80 @@
+---
+source: tests/integration.rs
+expression: all
+---
+[
+  {
+    "name": "single_value",
+    "input": "testkit multiValueOpt --exclude a ",
+    "result": [
+      {
+        "value": "a",
+        "display_override": "a"
+      },
+      {
+        "value": "b",
+        "display_override": "b"
+      },
+      {
+        "value": "c",
+        "display_override": "c"
+      }
+    ]
+  },
+  {
+    "name": "full_values",
+    "input": "testkit multiValueOpt --exclude a b c ",
+    "result": []
+  },
+  {
+    "name": "over_capacity",
+    "input": "testkit multiValueOpt --exclude a b c d ",
+    "result": []
+  },
+  {
+    "name": "bool_option",
+    "input": "testkit multiValueOpt --include ",
+    "result": []
+  },
+  {
+    "name": "repeated",
+    "input": "testkit multiValueOpt --exclude a --exclude b ",
+    "result": [
+      {
+        "value": "a",
+        "display_override": "a"
+      },
+      {
+        "value": "b",
+        "display_override": "b"
+      },
+      {
+        "value": "c",
+        "display_override": "c"
+      }
+    ]
+  },
+  {
+    "name": "repeated_thrice",
+    "input": "testkit multiValueOpt --exclude a --exclude b --exclude c ",
+    "result": [
+      {
+        "value": "a",
+        "display_override": "a"
+      },
+      {
+        "value": "b",
+        "display_override": "b"
+      },
+      {
+        "value": "c",
+        "display_override": "c"
+      }
+    ]
+  },
+  {
+    "name": "repeated_then_bool",
+    "input": "testkit multiValueOpt --exclude a --include ",
+    "result": []
+  }
+]

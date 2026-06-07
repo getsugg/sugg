@@ -41,6 +41,7 @@ The `CompletionContext` object received by `dynamic` callbacks also provides con
 | `ctx.os` | Current OS: `"windows" \| "linux" \| "macos"` |
 | `ctx.prefix` | The word currently being typed |
 | `ctx.options` | Parsed options already present on the command line |
+| `ctx.positionals` | Positional args already consumed on the **current** node (flat, reset on subcommand switch; excludes the in-progress `ctx.prefix`) |
 
 ---
 
@@ -127,6 +128,48 @@ export default createCompletion({
 - The engine filters by `ctx.prefix` automatically — **do not filter manually**.
 - A trailing space is appended to `display` by default. To suppress it, provide an explicit `value`.
 - Options that take a value but have no suggestions: use `args: []` — the engine will wait for free input.
+- To express "no suggestion for this position", return `[]`. The TS type does not allow `null | undefined`; doing so is a type error. The runtime does tolerate `null`/`undefined` silently (treated as `[]`) as a defensive measure, but the contract is `[]`.
+
+---
+
+## `args` Forms
+
+The `args` field on both `OptionNode` and `CommandNode` accepts multiple forms, all unified under an `args_count` model. **No implicit behavior** — every form has explicit `args_count` semantics:
+
+| Form | args_count | Use case |
+|---|---|---|
+| _omitted_ | `0` | Option is a bool flag, or command takes no positional args |
+| `args: []` | `1` | Needs a value, no suggestions |
+| `args: ["dev", "build"]` | `1` | Static suggestions (single value) |
+| `args: dynamic(...)` | `1` | Dynamic suggestions (single value) |
+| `args: { items: ["a", "b"] }` | `1` | Explicit single-value with static items |
+| `args: { count: 3, items: [...] }` | `3` | Multi-value option (e.g. `--exclude a b c`) |
+| `args: { count: Infinity, items: [...] }` | `u32::MAX` | **Unlimited** positional args (e.g. `npm install pkg1 pkg2 ...`, `git add f1 f2 ...`) |
+| `args: { count: 0 }` | `0` | Explicit "no positional args" |
+
+```ts
+// Single value (default)
+--mode: { items: ["dev", "build"] }
+
+// Multi-value (total capacity 3)
+--exclude: { count: 3, items: ["a", "b", "c"] }
+
+// Multi-value with dynamic items
+--exclude: { count: 3, items: dynamic(...) }
+
+// Unlimited positional args (e.g. npm install, git add)
+install: { count: Infinity, items: dynamic(async ctx => {
+  if (ctx.positionals.length === 0) return ["react", "vue", "svelte"];
+  return []; // subsequent positions: no per-position suggestion
+}) }
+
+// Command with 0 positional args
+noPositional: { count: 0, commands: { only: { ... } } }
+```
+
+**Rule of thumb**: all forms are **strict** by default — omitting `count: Infinity` means the state machine consumes exactly the declared `count` (default 1), no implicit "unlimited" for dynamic nodes. If your command needs `git remote add <name> <url>` style multi-position completion, declare `count: 2` (or `count: Infinity` if positions are unbounded) explicitly.
+
+The state machine consumes up to `count` tokens for options/commands. When the cap is reached, waiting auto-releases and subsequent tokens walk the normal path. With `count: Infinity` the cap is mathematically unreachable, so the node stays in "is_positional_mode" for the rest of input — dynamic functions should `return []` for positions beyond what they have suggestions for.
 
 ---
 
@@ -163,6 +206,132 @@ args: dynamic(async (ctx) => {
   return getInstalledPackages();
 })
 ```
+
+Different completions per positional position (e.g. `git remote add <name> <url>`). Note `count: 2` is **required** — without it, the state machine only consumes 1 positional and `ctx.positionals.length` never reaches 1:
+
+```ts
+add: {
+  args: {
+    count: 2,  // explicit: 2 positionals (name, url)
+    items: dynamic(async (ctx) => {
+      if (ctx.positionals.length === 0) return getRemotes();      // first position: name
+      if (ctx.positionals.length === 1) return getUrls(ctx.positionals[0]); // second: url, depends on prior
+      return [];
+    })
+  }
+}
+```
+
+---
+
+## Per-Position Completions with `ctx.positionals`
+
+`ctx.positionals` is the dedicated channel for "what was typed before the current word" on the **current** node. Use it when each positional position has a **different** completion source (e.g. `git remote add <name> <url>` — first position is a remote name, second depends on the name).
+
+### Semantics
+
+| Property | Behavior |
+|---|---|
+| Shape | `string[]`, flat (not nested) |
+| Content | Positional words that the user has **already submitted** (typed a space or Enter) |
+| Excluded | The in-progress `ctx.prefix` (the word the user is currently typing) |
+| Reset | Cleared on subcommand switch; parent subcommand names are **not** present |
+| Multi-value nodes | Repeated consumptions on a `count > 1` node are recorded in order |
+
+### Pattern: position dispatch
+
+```ts
+{
+  args: {
+    count: 2,
+    items: dynamic(async ctx => {
+      if (ctx.positionals.length === 0) return getRemotes();           // 1st: names
+      if (ctx.positionals.length === 1) return getUrls(ctx.positionals[0]); // 2nd: depends on 1st
+      return [];                                                      // 3rd+: stop
+    })
+  }
+}
+```
+
+### Pattern: build the next suggestion from the prior value
+
+```ts
+{
+  args: {
+    count: 2,
+    items: dynamic(async ctx => {
+      if (ctx.positionals.length === 0) return ["origin", "upstream", "mine"];
+      if (ctx.positionals.length === 1) {
+        const name = ctx.positionals[0];
+        return [
+          `git@github.com:me/${name}.git`,
+          `https://github.com/me/${name}.git`,
+        ];
+      }
+      return [];
+    })
+  }
+}
+```
+
+### Pattern: stop after a fixed arity
+
+A common shape: first N positions are interactive, anything after is free input. Returning `null` ends the dynamic completion and the shell falls back to whatever the user types. The runtime treats `null`/`undefined` as `[]` (silent, no `ERR` UI), and the TS type allows it.
+
+```ts
+{
+  args: {
+    count: 2,
+    items: dynamic(async ctx => {
+      if (ctx.positionals.length >= 2) return []; // no suggestion past 2 positions
+      return ctx.positionals.length === 0 ? getRemotes() : getUrls(ctx.positionals[0]);
+    })
+  }
+}
+```
+
+### Pattern: unlimited positionals with position-aware suggestions
+
+For commands like `git add f1 f2 f3 ...` or `npm install react vue lodash` that take any number of positionals, use `count: Infinity`. The dynamic returns position-specific suggestions for the first few positions and `[]` for the rest (since listing all 100 files wouldn't be useful anyway):
+
+```ts
+add: {
+  args: {
+    count: Infinity,  // unlimited positionals (state machine never "closes" this node)
+    items: dynamic(async ctx => {
+      if (ctx.positionals.length === 0) return ["."];  // 1st: hint at "add all"
+      return [];                                         // 2nd+: user types filenames directly
+    })
+  }
+}
+```
+
+### When to use `ctx.positionals` vs `ctx.options`
+
+| Need | Use |
+|---|---|
+| "I just need a flag/switch value" | `ctx.options["--my-opt"]` |
+| "The previous positional is the seed for the next suggestion" | `ctx.positionals[N - 1]` |
+| "I need the count of submitted positionals" | `ctx.positionals.length` |
+| "I need the full command line for parsing" | `ctx.words` |
+
+### Common mistake: trying to use `ctx.args`
+
+`ctx.args` does **not** exist. The field is `ctx.positionals` to avoid clashing with JavaScript's function `arguments`. Authors coming from generic JS may reflexively write `ctx.args[0]` — that will silently be `undefined` and the dynamic will throw on `.length`. Use `ctx.positionals` from the start.
+
+### `positionals` is empty for the in-progress word
+
+If the user has typed `git remote add or` (no trailing space) and is about to type the rest of the first positional:
+
+- `ctx.positionals` is `[]`
+- `ctx.prefix` is `"or"`
+
+The shell client (nushell/zsh/etc.) will filter the dynamic's return by `ctx.prefix`. So the right dynamic for that moment is still "return the first-position list" — the filter happens downstream.
+
+### See also
+
+- [CompletionContext table](#completioncontext) — full field reference
+- [Context-Aware Completions](#context-aware-completions) — other context fields (`ctx.options`, `ctx.prefix`)
 
 General template for merging multiple candidate types:
 

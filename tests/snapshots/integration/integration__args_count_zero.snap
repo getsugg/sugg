@@ -1,0 +1,28 @@
+---
+source: tests/integration.rs
+expression: all
+---
+[
+  {
+    "name": "zero_command",
+    "input": "testkit noPositional ",
+    "result": [
+      {
+        "value": "only ",
+        "display_override": "only",
+        "description": "Only subcommand"
+      }
+    ]
+  },
+  {
+    "name": "zero_overflow",
+    "input": "testkit noPositional xxx ",
+    "result": [
+      {
+        "value": "only ",
+        "display_override": "only",
+        "description": "Only subcommand"
+      }
+    ]
+  }
+]

@@ -1,0 +1,89 @@
+---
+source: tests/integration.rs
+expression: all
+---
+[
+  {
+    "name": "add_first",
+    "input": "git remote add ",
+    "result": [
+      {
+        "value": "origin",
+        "display_override": "origin"
+      }
+    ]
+  },
+  {
+    "name": "add_second",
+    "input": "git remote add origin ",
+    "result": [
+      {
+        "value": "git@github.com:user/origin.git",
+        "display_override": "git@github.com:user/origin.git"
+      },
+      {
+        "value": "https://github.com/user/origin.git",
+        "display_override": "https://github.com/user/origin.git"
+      }
+    ]
+  },
+  {
+    "name": "add_second_diff",
+    "input": "git remote add upstream ",
+    "result": [
+      {
+        "value": "git@github.com:user/upstream.git",
+        "display_override": "git@github.com:user/upstream.git"
+      },
+      {
+        "value": "https://github.com/user/upstream.git",
+        "display_override": "https://github.com/user/upstream.git"
+      }
+    ]
+  },
+  {
+    "name": "add_third",
+    "input": "git remote add origin git@github.com:x ",
+    "result": []
+  },
+  {
+    "name": "push_first",
+    "input": "git push ",
+    "result": [
+      {
+        "value": "origin",
+        "display_override": "origin"
+      }
+    ]
+  },
+  {
+    "name": "push_second",
+    "input": "git push origin ",
+    "result": [
+      {
+        "value": "main",
+        "display_override": "main"
+      }
+    ]
+  },
+  {
+    "name": "rename_first",
+    "input": "git remote rename ",
+    "result": [
+      {
+        "value": "origin",
+        "display_override": "origin"
+      }
+    ]
+  },
+  {
+    "name": "checkout_first",
+    "input": "git checkout ",
+    "result": [
+      {
+        "value": "main",
+        "display_override": "main"
+      }
+    ]
+  }
+]
