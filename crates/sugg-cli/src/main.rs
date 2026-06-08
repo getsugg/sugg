@@ -321,6 +321,11 @@ async fn main() {
 
     let mut parsed = parse_complete_args();
 
+    let cwd = std::env::current_dir()
+        .ok()
+        .map(|p| p.to_string_lossy().into_owned())
+        .unwrap_or_default();
+
     if let Some(first) = parsed.input_words.first_mut() {
         *first = std::path::Path::new(first.as_str())
             .file_stem()
@@ -427,6 +432,7 @@ async fn main() {
                         node.static_args.as_ref().map(|v| v.as_slice()),
                         archived,
                         &prefix,
+                        &cwd,
                         &words,
                         &parsed_options,
                         &parsed.shell,
@@ -444,6 +450,7 @@ async fn main() {
                     opt.static_args.as_ref().map(|v| v.as_slice()),
                     archived,
                     &prefix,
+                    &cwd,
                     &words,
                     &parsed_options,
                     &parsed.shell,
@@ -569,6 +576,7 @@ async fn resolve_completions<'a>(
     static_args: Option<&[ArchivedStaticSuggestion]>,
     archived: &ArchivedCompletionCache,
     prefix: &str,
+    path: &str,
     words: &[&str],
     parsed_options: &HashMap<&str, ParsedValue<'a>>,
     shell: &Shell,
@@ -583,7 +591,7 @@ async fn resolve_completions<'a>(
                         func_name,
                         &bytecode,
                         prefix,
-                        "",
+                        path,
                         words.to_vec(),
                         parsed_options.clone(),
                         shell,
