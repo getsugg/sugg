@@ -14,34 +14,12 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v6
-              with:
-                  fetch-depth: 0
-
-            - name: Generate changelog
-              run: |
-                  TAG="${{ github.ref_name }}"
-                  PREVIOUS_TAG=$(git describe --tags --abbrev=0 --exclude="$TAG" 2>/dev/null || echo "")
-                  {
-                      echo "# Release $TAG"
-                      echo ""
-                      if [ -z "$PREVIOUS_TAG" ]; then
-                          echo "## Full Changelog"
-                          echo ""
-                          git log --format="- \`%h\` %s" --no-merges
-                      else
-                          echo "## Changes since $PREVIOUS_TAG"
-                          echo ""
-                          git log --format="- \`%h\` %s" --no-merges "$PREVIOUS_TAG"..HEAD
-                      fi
-                  } > RELEASE_BODY.md
 
             - name: Create draft release
-              id: create
               uses: softprops/action-gh-release@v3
               with:
                   token: ${{ secrets.GITHUB_TOKEN }}
                   draft: true
-                  body_path: RELEASE_BODY.md
 
     build-and-upload:
         name: Build for ${{ matrix.target }}
@@ -140,7 +118,12 @@ jobs:
               with:
                   fetch-depth: 0
 
-            - run: |
-                  gh release edit ${{ github.ref_name }} --draft=false
+            - name: Update release notes
+              run: npx changelogithub
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Publish release
+              run: gh release edit ${{ github.ref_name }} --draft=false
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
