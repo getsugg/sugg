@@ -50,7 +50,7 @@ jobs:
         strategy:
             matrix:
                 include:
-                    - os: windows-latest
+                    - os: ubuntu-latest
                       target: x86_64-pc-windows-msvc
                       asset_name: sugg-x86_64-pc-windows-msvc.zip
                     - os: ubuntu-latest
@@ -70,28 +70,55 @@ jobs:
               uses: dtolnay/rust-toolchain@stable
               with:
                   targets: ${{ matrix.target }}
+                  components: llvm-tools
 
             - name: Install musl-tools (Linux musl)
               if: matrix.target == 'x86_64-unknown-linux-musl'
               run: sudo apt-get update && sudo apt-get install -y musl-tools
+
+            - name: Install cargo-xwin (Windows cross-compile)
+              if: contains(matrix.target, 'windows')
+              uses: taiki-e/install-action@v2
+              with:
+                  tool: cargo-xwin@0.22.0
+
+            - name: Cache MSVC CRT/SDK
+              if: contains(matrix.target, 'windows')
+              id: cache-xwin
+              uses: actions/cache@v4
+              with:
+                  path: ${{ github.workspace }}/.xwin-cache
+                  key: xwin-crt-sdk
+
+            - name: Pre-cache CRT/SDK
+              if: contains(matrix.target, 'windows') && steps.cache-xwin.outputs.cache-hit != 'true'
+              run: cargo xwin cache xwin
+              env:
+                  XWIN_CACHE_DIR: ${{ github.workspace }}/.xwin-cache
 
             - name: Rust Cache
               uses: swatinem/rust-cache@v2
               with:
                   key: ${{ matrix.target }}
 
-            - name: Build release binaries
+            - name: Build (Windows via xwin)
+              if: contains(matrix.target, 'windows')
+              run: cargo xwin build --release --target ${{ matrix.target }} --bin sugg --bin sugg-engine
+              env:
+                  XWIN_CACHE_DIR: ${{ github.workspace }}/.xwin-cache
+
+            - name: Build (native)
+              if: "!contains(matrix.target, 'windows')"
               run: cargo build --release --target ${{ matrix.target }} --bin sugg --bin sugg-engine
 
-            - name: Package Binaries (Windows)
-              if: matrix.os == 'windows-latest'
-              shell: bash
+            - name: Package (Windows)
+              if: contains(matrix.target, 'windows')
               run: |
                   cd target/${{ matrix.target }}/release
-                  7z a ../../../${{ matrix.asset_name }} sugg.exe sugg-engine.exe
+                  zip -r ../../../${{ matrix.asset_name }} sugg.exe sugg-engine.exe
 
-            - name: Package Binaries (Unix)
-              if: matrix.os != 'windows-latest'
+            - name: Package (Unix)
+              if: "!contains(matrix.target, 'windows')"
               run: |
                   cd target/${{ matrix.target }}/release
                   tar -czvf ../../../${{ matrix.asset_name }} sugg sugg-engine
