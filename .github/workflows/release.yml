@@ -109,6 +109,10 @@ jobs:
         runs-on: ubuntu-latest
 
         steps:
+            - uses: actions/checkout@v6
+              with:
+                  fetch-depth: 0
+
             - run: |
                   gh release edit ${{ github.ref_name }} --draft=false
               env:
