@@ -16,15 +16,15 @@ pub use locale::detect_locale;
 use std::collections::HashMap;
 use std::path::Path;
 
+use crate::bundler::codegen::{generate_env_code, generate_i18n_modules};
+use crate::bundler::{VIRTUAL_DYNAMIC_ENTRY, VIRTUAL_STATIC_ENTRY, bundle_virtual};
+use anyhow::Context;
+
 /// 扫描 `dir_path` 下的补全脚本，用指定 `lang` 打包，返回 `(bundle_static, bundle_dynamic)`。
 pub async fn build_bundles(
     dir_path: &Path,
     lang: &str,
 ) -> anyhow::Result<(String, Vec<(String, String, Vec<String>)>)> {
-    use crate::bundler::codegen::{generate_env_code, generate_i18n_modules};
-    use anyhow::Context;
-    use bundler::{VIRTUAL_DYNAMIC_ENTRY, VIRTUAL_STATIC_ENTRY, bundle_virtual};
-
     let load_json = |p: &Path| -> HashMap<String, String> {
         std::fs::read_to_string(p)
             .ok()
@@ -122,7 +122,7 @@ pub async fn build_bundles(
 
     static_entry.push_str(&format!("\nexport default [ {} ];\n", config_merges));
     virtual_statics.insert(VIRTUAL_STATIC_ENTRY.to_string(), static_entry);
-    let env_code = generate_env_code(lang);
+    let env_code = generate_env_code("");
     let i18n_modules = generate_i18n_modules(&translations_by_ns);
     let s = bundle_virtual(
         VIRTUAL_STATIC_ENTRY,
@@ -134,10 +134,11 @@ pub async fn build_bundles(
     .with_context(|| "Failed to bundle static entry")?;
     let mut dynamic_bundles = Vec::new();
     for (stem, modules, func_ids) in virtual_dynamics {
+        let dyn_env_code = generate_env_code(&stem);
         let d = bundle_virtual(
             VIRTUAL_DYNAMIC_ENTRY,
             modules,
-            env_code.clone(),
+            dyn_env_code,
             i18n_modules.clone(),
         )
         .await

@@ -9,6 +9,10 @@ expression: "normalize_items(&items, &sandbox.project_dirs[\"minimal\"])"
     "description": "Fast JavaScript runtime, package manager, bundler, and test runner."
   },
   {
+    "value": "cache_stem ",
+    "display_override": "cache_stem"
+  },
+  {
     "value": "docker ",
     "display_override": "docker"
   },

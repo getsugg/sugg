@@ -3,10 +3,16 @@ pub fn generate_import_stmt() -> String {
     "import { createCompletion, __parseConfig } from 'virtual:env';\n".to_string()
 }
 
-/// 生成 virtual:env 模块内容（不含翻译，不含 globalThis）。
-pub fn generate_env_code(lang: &str) -> String {
-    let lang_json = serde_json::to_string(lang).unwrap();
-    format!("const __LANG = {};\n{}", lang_json, include_str!("env.js"))
+/// 生成 virtual:env 模块内容。
+/// 注入 `__SCRIPT_STEM` 常量，用于 `cache` API 按脚本隔离缓存命名空间。
+/// 静态 bundle 传 `""`（空 stem 不前置命名空间），dynamic bundle 传对应脚本 stem。
+pub fn generate_env_code(stem: &str) -> String {
+    let stem_json = serde_json::to_string(stem).unwrap();
+    format!(
+        "const __SCRIPT_STEM = {};\n{}",
+        stem_json,
+        include_str!("env.js")
+    )
 }
 
 /// 生成 i18n 虚拟模块代码。
@@ -56,13 +62,16 @@ mod tests {
 
     #[test]
     fn test_generate_env_code() {
-        let code = generate_env_code("en");
-        assert!(code.contains("const __LANG = \"en\""));
+        let code = generate_env_code("test_stem");
+        assert!(code.contains("const __SCRIPT_STEM = \"test_stem\""));
         assert!(code.contains("export const createCompletion"));
         assert!(code.contains("export const readJson"));
         assert!(code.contains("export const __parseConfig"));
         assert!(!code.contains("export const placeholder"));
         assert!(!code.contains("globalThis.__TRANSLATIONS"));
+
+        let code_empty = generate_env_code("");
+        assert!(code_empty.contains("const __SCRIPT_STEM = \"\""));
     }
 
     #[test]

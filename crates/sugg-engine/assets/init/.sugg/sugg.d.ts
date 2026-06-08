@@ -184,8 +184,11 @@ declare module "sugg" {
 
   interface CacheHelper {
     /**
-     * Read-through cache. `key` accepts:
-     * - `string` — used as-is
+     * Read-through cache. Keys are isolated per script file — two scripts
+     * using the same key string will not collide.
+     *
+     * `key` accepts:
+     * - `string` — used as-is (automatically namespaced per script — no manual prefix needed)
      * - `string[]` — joined as the cache key
      * - `CompletionContext` — auto-keyed from `ctx.words` (minus the in-progress prefix) + `ctx.path`,
      *   ideal for sharing data across multiple completions in the same command context.

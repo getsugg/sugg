@@ -1286,6 +1286,12 @@ var __v_stat_bun_default = createCompletion({ bun: {
 	}
 } });
 //#endregion
+//#region tests/fixtures/completions/cache_stem/__v_stat_cache_stem.ts
+var __v_stat_cache_stem_default = createCompletion({ cache_stem: { args: {
+	__is_dynamic: true,
+	id: "__dyn_cache_stem_args"
+} } });
+//#endregion
 //#region tests/fixtures/completions/docker/__v_stat_docker.ts
 var __v_stat_docker_default = createCompletion({ docker: { commands: {
 	run: { description: "Run a container" },
@@ -1616,6 +1622,7 @@ var __v_stat_testkit_default = createCompletion({ testkit: {
 //#region virtual:static_entry
 var virtual_static_entry_default = [
 	["bun", __v_stat_bun_default],
+	["cache_stem", __v_stat_cache_stem_default],
 	["docker", __v_stat_docker_default],
 	["git", __v_stat_git_default],
 	["greet", __v_stat_greet_default],

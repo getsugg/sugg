@@ -198,14 +198,16 @@ export const __parseConfig = (modules) => {
 };
 
 const resolveKey = (key) => {
-  if (Array.isArray(key)) return key.join("\0");
-  if (key && typeof key === "object") {
+  let result;
+  if (Array.isArray(key)) result = key.join("\0");
+  else if (key && typeof key === "object") {
     if (key.words != null && key.path != null)
-      return [...key.words].slice(0, -1).concat(key.path).join("\0");
-    // 普通对象数组（非标准 Array）
-    if (typeof key.join === "function") return key.join("\0");
+      result = [...key.words].slice(0, -1).concat(key.path).join("\0");
+    else if (typeof key.join === "function") result = key.join("\0");
+    else result = String(key);
   }
-  return key;
+  else result = key;
+  return __SCRIPT_STEM ? __SCRIPT_STEM + "\0" + result : result;
 };
 
 export const cache = {
