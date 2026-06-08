@@ -9,8 +9,43 @@ permissions:
     contents: write
 
 jobs:
+    create-release:
+        name: Create Release
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v6
+              with:
+                  fetch-depth: 0
+
+            - name: Generate changelog
+              run: |
+                  TAG="${{ github.ref_name }}"
+                  PREVIOUS_TAG=$(git describe --tags --abbrev=0 --exclude="$TAG" 2>/dev/null || echo "")
+                  {
+                      echo "# Release $TAG"
+                      echo ""
+                      if [ -z "$PREVIOUS_TAG" ]; then
+                          echo "## Full Changelog"
+                          echo ""
+                          git log --format="- \`%h\` %s" --no-merges
+                      else
+                          echo "## Changes since $PREVIOUS_TAG"
+                          echo ""
+                          git log --format="- \`%h\` %s" --no-merges "$PREVIOUS_TAG"..HEAD
+                      fi
+                  } > RELEASE_BODY.md
+
+            - name: Create draft release
+              id: create
+              uses: softprops/action-gh-release@v3
+              with:
+                  token: ${{ secrets.GITHUB_TOKEN }}
+                  draft: true
+                  body_path: RELEASE_BODY.md
+
     build-and-upload:
         name: Build for ${{ matrix.target }}
+        needs: create-release
         runs-on: ${{ matrix.os }}
         strategy:
             matrix:
@@ -29,8 +64,7 @@ jobs:
                       asset_name: sugg-x86_64-apple-darwin.tar.gz
 
         steps:
-            - name: Checkout code
-              uses: actions/checkout@v6
+            - uses: actions/checkout@v6
 
             - name: Install Rust toolchain
               uses: dtolnay/rust-toolchain@stable
@@ -67,5 +101,15 @@ jobs:
               with:
                   token: ${{ secrets.GITHUB_TOKEN }}
                   files: ${{ matrix.asset_name }}
-                  draft: false
-                  prerelease: false
+                  draft: true
+
+    publish:
+        name: Publish Release
+        needs: build-and-upload
+        runs-on: ubuntu-latest
+
+        steps:
+            - run: |
+                  gh release edit ${{ github.ref_name }} --draft=false
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
