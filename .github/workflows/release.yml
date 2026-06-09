@@ -9,21 +9,8 @@ permissions:
     contents: write
 
 jobs:
-    create-release:
-        name: Create Release
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v6
-
-            - name: Create draft release
-              uses: softprops/action-gh-release@v3
-              with:
-                  token: ${{ secrets.GITHUB_TOKEN }}
-                  draft: true
-
-    build-and-upload:
+    build:
         name: Build for ${{ matrix.target }}
-        needs: create-release
         runs-on: ${{ matrix.os }}
         strategy:
             matrix:
@@ -63,7 +50,7 @@ jobs:
             - name: Cache MSVC CRT/SDK
               if: contains(matrix.target, 'windows')
               id: cache-xwin
-              uses: actions/cache@v4
+              uses: actions/cache@v5
               with:
                   path: ${{ github.workspace }}/.xwin-cache
                   key: xwin-crt-sdk
@@ -101,29 +88,26 @@ jobs:
                   cd target/${{ matrix.target }}/release
                   tar -czvf ../../../${{ matrix.asset_name }} sugg sugg-engine
 
-            - name: Upload Release Asset
-              uses: softprops/action-gh-release@v3
+            - uses: actions/upload-artifact@v7
               with:
-                  token: ${{ secrets.GITHUB_TOKEN }}
-                  files: ${{ matrix.asset_name }}
-                  draft: true
+                  name: ${{ matrix.asset_name }}
+                  path: ${{ matrix.asset_name }}
 
     publish:
         name: Publish Release
-        needs: build-and-upload
+        needs: build
         runs-on: ubuntu-latest
-
         steps:
             - uses: actions/checkout@v6
               with:
                   fetch-depth: 0
 
-            - name: Update release notes
-              run: npx changelogithub
+            - uses: actions/download-artifact@v8
+              with:
+                  pattern: sugg-*
+                  merge-multiple: true
+                  path: artifacts
+
+            - run: npx changelogithub --assets 'artifacts/*'
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-            - name: Publish release
-              run: gh release edit ${{ github.ref_name }} --draft=false
-              env:
-                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
