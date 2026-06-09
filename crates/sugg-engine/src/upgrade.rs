@@ -11,23 +11,24 @@ pub async fn run_upgrade() -> Result<(), Box<dyn std::error::Error>> {
         .user_agent(concat!("sugg-updater/", env!("CARGO_PKG_VERSION")))
         .build()?;
 
-    let api_response = client
-        .get("https://api.github.com/repos/axuj/sugg/releases/latest")
+    let release_response = client
+        .head("https://github.com/axuj/sugg/releases/latest")
         .send()
         .await?;
-    if !api_response.status().is_success() {
+    if !release_response.status().is_success() {
         return Err(format!(
             "Failed to fetch release info: HTTP {}",
-            api_response.status()
+            release_response.status()
         )
         .into());
     }
+    let latest_tag = release_response
+        .url()
+        .path_segments()
+        .and_then(|mut s| s.next_back())
+        .and_then(|t| t.strip_prefix("v"))
+        .ok_or("Could not determine latest version from GitHub redirect.")?;
 
-    let api_json: serde_json::Value = api_response.json().await?;
-    let latest_tag = api_json["tag_name"]
-        .as_str()
-        .ok_or("Missing tag_name in GitHub API response.")?
-        .trim_start_matches('v');
     let current = env!("CARGO_PKG_VERSION");
 
     if !is_newer_version(latest_tag, current) {
@@ -60,10 +61,14 @@ pub async fn run_upgrade() -> Result<(), Box<dyn std::error::Error>> {
         asset_name
     );
 
-    let total_size = api_json["assets"]
-        .as_array()
-        .and_then(|assets| assets.iter().find(|a| a["name"] == asset_name))
-        .and_then(|a| a["size"].as_u64())
+    let total_size = client
+        .head(&download_url)
+        .send()
+        .await?
+        .headers()
+        .get("content-length")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.parse::<u64>().ok())
         .unwrap_or(0);
 
     let tmp_dir = tempfile::tempdir()?;
