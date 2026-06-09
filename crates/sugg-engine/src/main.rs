@@ -9,7 +9,7 @@ mod init;
 mod upgrade;
 
 #[derive(Parser)]
-#[command(version, about = "sugg - Shell completion engine", bin_name = "sugg")]
+#[command(name = "sugg", version, about = "sugg - Shell completion engine")]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
