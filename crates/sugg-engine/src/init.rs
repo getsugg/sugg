@@ -206,14 +206,21 @@ pub fn run_init(shell_name: &str) -> Result<(), Box<dyn std::error::Error>> {
                     )
                     .line(
                         style(
-                            r#"  # Then add to your $PROFILE:"#,
+                            r#"  # Then add these two lines to your $PROFILE:"#,
                         )
                         .green()
                         .to_string(),
                     )
                     .line(
                         style(
-                            r#"  . (Join-Path (if ($env:SUGG_HOME) { $env:SUGG_HOME } else { "$env:USERPROFILE\.sugg" }) "shells\powershell.ps1")"#,
+                            r#"  $suggDir = if ($env:SUGG_HOME) { $env:SUGG_HOME } else { "$env:USERPROFILE\.sugg" }"#,
+                        )
+                        .yellow()
+                        .to_string(),
+                    )
+                    .line(
+                        style(
+                            r#"  . (Join-Path $suggDir "shells\powershell.ps1")"#,
                         )
                         .yellow()
                         .to_string(),

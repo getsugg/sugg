@@ -171,11 +171,6 @@ impl TerminalBox {
             .max()
             .unwrap_or(0);
 
-        let left_padding = 2;
-        let right_padding = 2;
-        let total_padding = left_padding + right_padding;
-
-        // 动态适配终端宽度：获取 stderr 的物理列宽，防止窄终端溢出
         let terminal_width = console::Term::stderr().size().1 as usize;
         let effective_width = if terminal_width > 20 {
             max_width.min(terminal_width.saturating_sub(12))
@@ -183,24 +178,15 @@ impl TerminalBox {
             max_width
         };
 
-        // 使用 for_stderr() 确保颜色检测使用 stderr 而非 stdout
         let border = self.border_style.clone().for_stderr();
+        let horizontal = "─".repeat(effective_width + 4); // 左右各留 2 格内边距
 
-        let horizontal = "─".repeat(effective_width + total_padding);
-
-        // 整个边框行作为一个样式化整体包裹
         eprintln!();
         eprintln!("{}", border.apply_to(format!("  ╭{}╮", horizontal)));
 
         for line in &self.lines {
             let padded = console::pad_str(line, effective_width, console::Alignment::Left, None);
-
-            eprintln!(
-                "  {}  {}  {}",
-                border.apply_to("│"),
-                padded,
-                border.apply_to("│"),
-            );
+            eprintln!("    {}", padded); // 2 框缩进 + 2 内边距
         }
 
         eprintln!("{}", border.apply_to(format!("  ╰{}╯", horizontal)));
