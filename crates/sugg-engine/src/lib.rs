@@ -5,7 +5,7 @@
 //! - `bundler`: 虚拟模块插件与打包
 //! - `icu_utils`: ICU 语言回退链生成
 
-pub mod ast;
+pub use sugg_ast as ast;
 pub mod bundler;
 pub mod icu_utils;
 pub mod locale;

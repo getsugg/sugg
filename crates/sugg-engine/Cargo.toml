@@ -9,6 +9,7 @@ path = "src/main.rs"
 
 [dependencies]
 sugg-core.workspace = true
+sugg-ast.workspace = true
 anyhow.workspace = true
 tokio.workspace = true
 rquickjs.workspace = true
@@ -17,9 +18,7 @@ serde_json.workspace = true
 serde.workspace = true
 
 # 重型依赖
-oxc = { version = "0.134", default-features = false, features = [
-    "ast_visit",
-] }
+oxc.workspace = true
 rolldown = { version = "1.1" }
 rolldown_common = { version = "1.1" }
 icu = { version = "2.2.0", features = ["compiled_data"] }

@@ -3682,6 +3682,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde-wasm-bindgen"
+version = "0.6.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8302e169f0eddcc139c70f139d19d6467353af16f9fce27e8c30158036a1e16b"
+dependencies = [
+ "js-sys",
+ "serde",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "serde_core"
 version = "1.0.228"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3886,6 +3897,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "sugg-ast"
+version = "0.3.4"
+dependencies = [
+ "oxc",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "sugg-core"
 version = "0.3.4"
 dependencies = [
@@ -3926,6 +3946,7 @@ dependencies = [
  "rquickjs",
  "serde",
  "serde_json",
+ "sugg-ast",
  "sugg-core",
  "sys-locale",
  "tempfile",
@@ -3943,6 +3964,16 @@ dependencies = [
  "sugg-engine",
  "tempfile",
  "tokio",
+]
+
+[[package]]
+name = "sugg-wasm"
+version = "0.3.4"
+dependencies = [
+ "serde",
+ "serde-wasm-bindgen",
+ "sugg-ast",
+ "wasm-bindgen",
 ]
 
 [[package]]

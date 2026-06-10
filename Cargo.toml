@@ -1,13 +1,16 @@
 [workspace]
 members = [
     "crates/sugg-core",
+    "crates/sugg-ast",
     "crates/sugg-engine",
+    "crates/sugg-wasm",
     "crates/sugg-cli",
     "crates/sugg-deploy",
 ]
 # 添加此行：指定默认编译和测试成员
 default-members = [
     "crates/sugg-core",
+    "crates/sugg-ast",
     "crates/sugg-engine",
     "crates/sugg-cli",
     "crates/sugg-deploy",
@@ -23,7 +26,9 @@ authors = ["Your Name <your.email@example.com>"]
 [workspace.dependencies]
 # 共享依赖
 sugg-core = { path = "crates/sugg-core" }
+sugg-ast = { path = "crates/sugg-ast" }
 sugg-engine = { path = "crates/sugg-engine" }
+sugg-wasm = { path = "crates/sugg-wasm" }
 anyhow = "1.0.102"
 tokio = { version = "1.52.3", features = ["rt", "macros", "fs", "process", "net"] }
 reqwest = { version = "0.13", default-features = false, features = ["rustls", "rustls-native-certs", "json", "stream"] }
@@ -34,6 +39,8 @@ serde_json = "1.0.150"
 console = "0.16.3"
 dirs-next = "2.0.0"
 tempfile = "3.27.0"
+oxc = { version = "0.134", default-features = false, features = ["ast_visit"] }
+
 
 [workspace.dependencies.insta]
 version = "1.39"

@@ -1,0 +1,13 @@
+[package]
+name = "sugg-wasm"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+sugg-ast = { path = "../sugg-ast", features = ["wasm"] }
+wasm-bindgen = "0.2"
+serde.workspace = true
+serde-wasm-bindgen = "0.6"

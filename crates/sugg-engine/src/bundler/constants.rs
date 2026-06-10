@@ -15,11 +15,6 @@ pub const VIRTUAL_STATIC_ENTRY: &str = "virtual:static_entry";
 /// 动态入口虚拟模块标识符
 pub const VIRTUAL_DYNAMIC_ENTRY: &str = "virtual:dynamic_entry";
 
-/// 用于生成动态函数名的前缀
-pub const DYNAMIC_FUNC_PREFIX: &str = "__dyn_";
+// 动态函数相关常量已移至 sugg-ast
 
-/// 用于标记动态节点的特殊属性名
-pub const IS_DYNAMIC_MARKER: &str = "__is_dynamic";
-
-/// 动态函数在 JS 模块中的 ID 字段名
-pub const DYNAMIC_ID_FIELD: &str = "id";
+pub use sugg_ast::{DYNAMIC_FUNC_PREFIX, IS_DYNAMIC_MARKER, DYNAMIC_ID_FIELD};

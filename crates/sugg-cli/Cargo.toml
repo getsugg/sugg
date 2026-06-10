@@ -6,7 +6,7 @@ edition.workspace = true
 [dependencies]
 sugg-core.workspace = true
 anyhow.workspace = true
-tokio = { workspace = true, features = ["rt"] }
+tokio = { workspace = true, features = ["rt", "macros", "fs", "process", "net"] }
 rquickjs.workspace = true
 rkyv.workspace = true
 
