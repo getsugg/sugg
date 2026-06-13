@@ -72,7 +72,7 @@ interface Suggestion {
   style?: SuggestionStyle;
 }
 
-const DynamicBrand: unique symbol;
+declare const DynamicBrand: unique symbol;
 type DynamicCommand = { [DynamicBrand]: never };
 
 type SuggestionResult = string[] | Suggestion[] | Promise<string[] | Suggestion[]>;
@@ -111,13 +111,13 @@ interface CommandNode {
   args?: string[] | Suggestion[] | DynamicCommand | ArgsSpec;
 }
 
-function createCompletion(config: Record<string, CommandNode>): Record<string, CommandNode>;
+declare function createCompletion(config: Record<string, CommandNode>): Record<string, CommandNode>;
 
 /**
  * Mark a dynamic completion callback. May return `string[]`, `Suggestion[]`, or a Promise thereof.
  * Returning `[]` means "no suggestions" (silent, no error UI).
  */
-function dynamic(callback: (ctx: CompletionContext) => SuggestionResult): DynamicCommand;
+declare function dynamic(callback: (ctx: CompletionContext) => SuggestionResult): DynamicCommand;
 
 declare module "sugg" {
   export interface FetchOptions {

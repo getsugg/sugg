@@ -5,7 +5,6 @@
     "moduleResolution": "Bundler",
     "lib": ["ESNext"],
     "strict": true,
-    "skipLibCheck": true,
     "isolatedModules": true,
     "esModuleInterop": true,
     "allowImportingTsExtensions": true,
@@ -13,6 +12,11 @@
     "types": [],
     "paths": {}
   },
-  "include": ["**/*.ts", "**/*.js", ".sugg/i18n.d.ts", "../../../crates/sugg-engine/assets/init/.sugg/sugg.d.ts"],
+  "include": [
+    "**/*.ts",
+    "**/*.js",
+    ".sugg/i18n.d.ts",
+    "../../../crates/sugg-engine/assets/init/.sugg/sugg.d.ts"
+  ],
   "exclude": ["node_modules"]
 }

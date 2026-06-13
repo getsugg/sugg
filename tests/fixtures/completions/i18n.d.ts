@@ -1,4 +1,4 @@
-declare module "i18n/docker" {
+declare module "virtual:i18n/docker" {
   /**
    * - 🚩 **en**: Running container
    * - **zh**: 运行中的容器
@@ -21,7 +21,12 @@ declare module "i18n/docker" {
   export const stop_desc: string;
 }
 
-declare module "i18n/greet" {
+declare module "virtual:i18n/greet" {
+  /**
+   * - 🚩 **en**: Greet command description
+   * - **zh**: 问候命令描述
+   */
+  export const description: string;
   /**
    * - 🚩 **en**: Install dependencies
    * - **zh**: 安装依赖
@@ -34,7 +39,7 @@ declare module "i18n/greet" {
   export const run: string;
 }
 
-declare module "i18n/greet_dynamic" {
+declare module "virtual:i18n/greet_dynamic" {
   /**
    * - 🚩 **en**: Bye description
    * - **zh**: 再见描述
