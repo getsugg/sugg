@@ -1,0 +1,10 @@
+<svg viewBox="0 0 340 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <text x="10" y="80" font-family="'Courier New',monospace" font-size="76" font-weight="bold" fill="#f59e0b">$</text>
+  <rect x="78" y="22" width="10" height="58" rx="2" fill="#f59e0b" opacity="0.9">
+    <animate attributeName="opacity" values="0.9;0.1;0.9" dur="1.2s" repeatCount="indefinite"/>
+  </rect>
+  <line x1="10" y1="104" x2="118" y2="104" stroke="#f59e0b" stroke-width="3" stroke-linecap="round" opacity="0.55"/>
+  <line x1="10" y1="118" x2="96" y2="118" stroke="#f59e0b" stroke-width="3" stroke-linecap="round" opacity="0.3"/>
+  <line x1="10" y1="132" x2="74" y2="132" stroke="#f59e0b" stroke-width="3" stroke-linecap="round" opacity="0.15"/>
+  <text x="148" y="86" font-family="'Courier New',monospace" font-size="60" font-weight="bold" fill="#ffffff" letter-spacing="2">sugg</text>
+</svg>
