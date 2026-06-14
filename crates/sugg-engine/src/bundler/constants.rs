@@ -17,4 +17,4 @@ pub const VIRTUAL_DYNAMIC_ENTRY: &str = "virtual:dynamic_entry";
 
 // 动态函数相关常量已移至 sugg-ast
 
-pub use sugg_ast::{DYNAMIC_FUNC_PREFIX, IS_DYNAMIC_MARKER, DYNAMIC_ID_FIELD};
+pub use sugg_ast::{DYNAMIC_FUNC_PREFIX, DYNAMIC_ID_FIELD, IS_DYNAMIC_MARKER};

@@ -39,7 +39,7 @@ serde_json = "1.0.150"
 console = "0.16.3"
 dirs-next = "2.0.0"
 tempfile = "3.27.0"
-oxc = { version = "0.134", default-features = false, features = ["ast_visit"] }
+oxc = { version = "0.134", default-features = false, features = ["ast_visit", "semantic"] }
 
 
 [workspace.dependencies.insta]

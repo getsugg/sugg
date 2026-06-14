@@ -5,6 +5,7 @@ use oxc::ast_visit::walk::{
     walk_call_expression, walk_object_expression, walk_object_property, walk_variable_declarator,
 };
 use oxc::parser::Parser;
+use oxc::semantic::{ScopeFlags, Semantic, SemanticBuilder, SymbolId};
 use oxc::span::GetSpan;
 use oxc::span::{SourceType, Span};
 use std::collections::HashMap;
@@ -138,68 +139,107 @@ impl<'a> Visit<'a> for DynamicExtractor {
     }
 }
 
-struct RefCollector<'a> {
-    scope: Span,
-    refs: Vec<&'a str>,
+/// 通过 AST 剪枝收集顶层语句声明的所有 SymbolId
+/// 在遇到函数/箭头函数/块级作用域时停止深入，保护局部变量不被收集
+struct TopLevelBindingCollector {
+    symbols: Vec<SymbolId>,
 }
 
-impl<'a> Visit<'a> for RefCollector<'a> {
-    fn visit_identifier_reference(&mut self, ident: &IdentifierReference<'a>) {
-        if self.scope.start <= ident.span.start && ident.span.end <= self.scope.end {
-            self.refs.push(ident.name.as_str());
+impl<'a> Visit<'a> for TopLevelBindingCollector {
+    fn visit_binding_identifier(&mut self, ident: &BindingIdentifier<'a>) {
+        if let Some(sym) = ident.symbol_id.get() {
+            self.symbols.push(sym);
+        }
+    }
+
+    fn visit_function(&mut self, func: &Function<'a>, _flags: ScopeFlags) {
+        if let Some(id) = &func.id {
+            self.visit_binding_identifier(id);
+        }
+    }
+
+    fn visit_class(&mut self, class: &Class<'a>) {
+        if let Some(id) = &class.id {
+            self.visit_binding_identifier(id);
+        }
+    }
+
+    fn visit_arrow_function_expression(&mut self, _expr: &ArrowFunctionExpression<'a>) {}
+
+    fn visit_block_statement(&mut self, _stmt: &BlockStatement<'a>) {}
+}
+
+struct RefCollector<'a, 'b> {
+    scope: Span,
+    referenced_symbols: std::collections::HashSet<SymbolId>,
+    semantic: &'b Semantic<'a>,
+}
+
+impl<'a, 'b> RefCollector<'a, 'b> {
+    fn new(scope: Span, semantic: &'b Semantic<'a>) -> Self {
+        Self {
+            scope,
+            referenced_symbols: std::collections::HashSet::new(),
+            semantic,
         }
     }
 }
 
-/// 生成最小动态模块：只保留 import 语句 + 动态函数依赖链所需的顶层声明 + 导出
-pub fn generate_minimal_dynamic_module(
+impl<'a, 'b> Visit<'a> for RefCollector<'a, 'b> {
+    fn visit_identifier_reference(&mut self, ident: &IdentifierReference<'a>) {
+        if self.scope.start <= ident.span.start
+            && ident.span.end <= self.scope.end
+            && let Some(ref_id) = ident.reference_id.get()
+        {
+            let reference = self.semantic.scoping().get_reference(ref_id);
+            if let Some(symbol_id) = reference.symbol_id() {
+                self.referenced_symbols.insert(symbol_id);
+            }
+        }
+    }
+}
+
+fn generate_minimal_dynamic_module_impl(
     source: &str,
-    path: &str,
+    program: &Program<'_>,
+    semantic: &Semantic<'_>,
     dynamics: &[DynamicInfo],
     id_map: &HashMap<u32, String>,
 ) -> String {
-    let allocator = Allocator::default();
-    let source_type = SourceType::from_path(path).unwrap_or_default();
-    let program = Parser::new(&allocator, source, source_type).parse().program;
+    let mut symbol_to_stmt_idx: HashMap<SymbolId, usize> = HashMap::new();
 
-    let mut name_to_idx: HashMap<&str, usize> = HashMap::new();
-    let mut stmt_refs: Vec<Vec<&str>> = vec![vec![]; program.body.len()];
-
+    // 1. 收集每个顶层语句声明的符号
     for (i, stmt) in program.body.iter().enumerate() {
-        match stmt {
-            Statement::VariableDeclaration(decl) => {
-                for d in &decl.declarations {
-                    if let BindingPattern::BindingIdentifier(id) = &d.id {
-                        name_to_idx.insert(id.name.as_str(), i);
-                    }
-                }
-            }
-            Statement::FunctionDeclaration(f) => {
-                if let Some(id) = &f.id {
-                    name_to_idx.insert(id.name.as_str(), i);
-                }
-            }
-            _ => {}
-        }
-        let mut collector = RefCollector {
-            scope: stmt.span(),
-            refs: vec![],
+        let mut collector = TopLevelBindingCollector {
+            symbols: Vec::new(),
         };
-        collector.visit_program(&program);
-        stmt_refs[i] = collector.refs;
+        collector.visit_statement(stmt);
+        for sym in collector.symbols {
+            symbol_to_stmt_idx.insert(sym, i);
+        }
+    }
+
+    let mut stmt_deps: Vec<Vec<usize>> = vec![vec![]; program.body.len()];
+    for (i, stmt) in program.body.iter().enumerate() {
+        let mut collector = RefCollector::new(stmt.span(), semantic);
+        collector.visit_statement(stmt);
+        for sym in collector.referenced_symbols {
+            if let Some(&dep_idx) = symbol_to_stmt_idx.get(&sym)
+                && dep_idx != i
+            {
+                stmt_deps[i].push(dep_idx);
+            }
+        }
     }
 
     let mut needed: std::collections::HashSet<usize> = std::collections::HashSet::new();
     let mut queue: std::collections::VecDeque<usize> = std::collections::VecDeque::new();
 
     for info in dynamics {
-        let mut collector = RefCollector {
-            scope: info.arg_span,
-            refs: vec![],
-        };
-        collector.visit_program(&program);
-        for name in collector.refs {
-            if let Some(&idx) = name_to_idx.get(name)
+        let mut collector = RefCollector::new(info.arg_span, semantic);
+        collector.visit_program(program);
+        for sym in collector.referenced_symbols {
+            if let Some(&idx) = symbol_to_stmt_idx.get(&sym)
                 && needed.insert(idx)
             {
                 queue.push_back(idx);
@@ -208,10 +248,8 @@ pub fn generate_minimal_dynamic_module(
     }
 
     while let Some(idx) = queue.pop_front() {
-        for &name in &stmt_refs[idx] {
-            if let Some(&dep_idx) = name_to_idx.get(name)
-                && needed.insert(dep_idx)
-            {
+        for &dep_idx in &stmt_deps[idx] {
+            if needed.insert(dep_idx) {
                 queue.push_back(dep_idx);
             }
         }
@@ -235,13 +273,31 @@ pub fn generate_minimal_dynamic_module(
     out
 }
 
+/// 生成最小动态模块：只保留 import 语句 + 动态函数依赖链所需的顶层声明 + 导出
+pub fn generate_minimal_dynamic_module(
+    source: &str,
+    path: &str,
+    dynamics: &[DynamicInfo],
+    id_map: &HashMap<u32, String>,
+) -> String {
+    let allocator = Allocator::default();
+    let source_type = SourceType::from_path(path).unwrap_or_default();
+    let program = Parser::new(&allocator, source, source_type).parse().program;
+    let semantic = SemanticBuilder::new().build(&program).semantic;
+    generate_minimal_dynamic_module_impl(source, &program, &semantic, dynamics, id_map)
+}
+
 /// 提取源码中的 dynamic() 调用和 createCompletion 调用，返回 (modified_source, pure_dynamic_js, func_ids)
 pub fn extract_dynamics(source: &str, path: &str) -> (String, String, Vec<String>) {
     let allocator = Allocator::default();
     let source_type = SourceType::from_path(path).unwrap_or_default();
     let parsed = Parser::new(&allocator, source, source_type).parse();
+    let program = &parsed.program;
+
     let mut extractor = DynamicExtractor::default();
-    extractor.visit_program(&parsed.program);
+    extractor.visit_program(program);
+
+    let semantic = SemanticBuilder::new().build(program).semantic;
 
     let mut id_map: HashMap<u32, String> = HashMap::new();
     let mut name_counts: HashMap<String, usize> = HashMap::new();
@@ -273,8 +329,13 @@ pub fn extract_dynamics(source: &str, path: &str) -> (String, String, Vec<String
         );
     }
 
-    let pure_dynamic_js =
-        generate_minimal_dynamic_module(source, path, &extractor.dynamics, &id_map);
+    let pure_dynamic_js = generate_minimal_dynamic_module_impl(
+        source,
+        program,
+        &semantic,
+        &extractor.dynamics,
+        &id_map,
+    );
 
     let func_ids: Vec<String> = extractor
         .dynamics
@@ -296,28 +357,32 @@ pub fn analyze_dynamic_apis(dynamic_js: &str) -> Vec<ApiUsage> {
 
     impl<'a> Visit<'a> for ApiCollector {
         fn visit_export_named_declaration(&mut self, decl: &ExportNamedDeclaration<'a>) {
-            if let Some(decl) = &decl.declaration {
-                if let Declaration::VariableDeclaration(var_decl) = decl {
-                    for d in &var_decl.declarations {
-                        if let BindingPattern::BindingIdentifier(ident) = &d.id {
-                            let name = ident.name.to_string();
-                            if name.starts_with(DYNAMIC_FUNC_PREFIX) {
-                                self.current_name = Some(name);
-                                self.apis.clear();
-                                if let Some(init) = &d.init {
-                                    self.visit_expression(init);
-                                }
-                                if let Some(current_name) = self.current_name.take() {
-                                    if !self.apis.is_empty() || true {
-                                        self.results.push(ApiUsage {
-                                            name: current_name,
-                                            apis: std::mem::take(&mut self.apis),
-                                        });
-                                    }
-                                }
-                            }
-                        }
-                    }
+            let Some(Declaration::VariableDeclaration(var_decl)) = &decl.declaration else {
+                return;
+            };
+
+            for d in &var_decl.declarations {
+                let BindingPattern::BindingIdentifier(ident) = &d.id else {
+                    continue;
+                };
+                let name = ident.name.to_string();
+
+                if !name.starts_with(DYNAMIC_FUNC_PREFIX) {
+                    continue;
+                }
+
+                self.current_name = Some(name);
+                self.apis.clear();
+
+                if let Some(init) = &d.init {
+                    self.visit_expression(init);
+                }
+
+                if let Some(current_name) = self.current_name.take() {
+                    self.results.push(ApiUsage {
+                        name: current_name,
+                        apis: std::mem::take(&mut self.apis),
+                    });
                 }
             }
         }
@@ -480,6 +545,88 @@ export const __dyn_download = async (ctx) => {
         assert_eq!(results[1].apis, vec!["readJson"]);
         assert_eq!(results[2].name, "__dyn_download");
         assert_eq!(results[2].apis, vec!["fetch"]);
+    }
+
+    // 验证变量遮蔽不会被误追踪为顶层引用
+    // 用户在 dynamic 箭头函数体内 const [branches, files] = ...，
+    // ...branches 中的 branches 是局部变量，不应把顶层 const branches = dynamic(getBranches) 拉进来
+    #[test]
+    fn test_shadowed_variable_not_included() {
+        let source = r#"
+async function getBranches() {
+    return ["branch1", "branch2"];
+}
+
+const branches = dynamic(getBranches);
+
+const cmd = {
+    args: dynamic(async (ctx) => {
+        const [branches, files] = await Promise.all([getBranches(), ["f1"]]);
+        return [...branches, ...files];
+    })
+};
+
+export default createCompletion({
+    cmd: { description: "test", args: branches },
+});
+        "#;
+
+        let (_, pure_dynamic_js, _) = extract_dynamics(source, "test.ts");
+
+        // 顶层的 const branches = dynamic(getBranches) 不应该出现在动态 JS 中
+        assert!(
+            !pure_dynamic_js.contains("const branches = dynamic("),
+            "shadowed branches declaration should not appear in dynamic JS"
+        );
+        // getBranches 函数应该存在（被 dynamic(getBranches) 引用）
+        assert!(
+            pure_dynamic_js.contains("function getBranches"),
+            "getBranches function should be included"
+        );
+        // __dyn_branches 应该作为 export 存在
+        assert!(
+            pure_dynamic_js.contains("export const __dyn_branches = getBranches"),
+            "__dyn_branches export should exist"
+        );
+    }
+
+    #[test]
+    fn test_shadowed_variable_in_pattern() {
+        let source = r#"
+async function getBranches() {
+    return ["branch1", "branch2"];
+}
+async function getTags() {
+    return ["tag1", "tag2"];
+}
+
+const branches = dynamic(getBranches);
+const tags = dynamic(getTags);
+
+const cmd = {
+    args: dynamic(async (ctx) => {
+        const [branches, tags] = await Promise.all([getBranches(), getTags()]);
+        return [...branches, ...tags];
+    })
+};
+
+export default createCompletion({
+    cmd: { description: "test", args: [branches, tags] },
+});
+        "#;
+
+        let (_, pure_dynamic_js, _) = extract_dynamics(source, "test.ts");
+
+        assert!(
+            !pure_dynamic_js.contains("const branches = dynamic("),
+            "shadowed branches should not appear"
+        );
+        assert!(
+            !pure_dynamic_js.contains("const tags = dynamic("),
+            "shadowed tags should not appear"
+        );
+        assert!(pure_dynamic_js.contains("export const __dyn_branches = getBranches"));
+        assert!(pure_dynamic_js.contains("export const __dyn_tags = getTags"));
     }
 
     #[test]
