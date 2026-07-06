@@ -6,6 +6,7 @@ use std::path::PathBuf;
 mod build;
 mod i18n;
 mod init;
+mod install;
 mod upgrade;
 
 #[derive(Parser)]
@@ -64,6 +65,23 @@ enum Commands {
     Init {
         /// Shell name (bash, zsh, fish, nushell, powershell)
         shell: Option<String>,
+    },
+    /// Install completion scripts from registry
+    Install {
+        /// Script names to install (e.g. git npm bun)
+        scripts: Vec<String>,
+        /// List all available scripts
+        #[arg(long)]
+        list: bool,
+        /// Install all available scripts
+        #[arg(long)]
+        all: bool,
+        /// Preferred language(s) for i18n (e.g. --lang en --lang zh-CN)
+        #[arg(long = "lang")]
+        langs: Vec<String>,
+        /// Path to completions directory
+        #[arg(long)]
+        completions_dir: Option<PathBuf>,
     },
 }
 
@@ -172,6 +190,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             if let Err(e) = init::run_init(&shell_name) {
                 eprintln!("{} Init failed: {}", sugg_core::ICON_ERROR, e);
+                std::process::exit(1);
+            }
+            Ok(())
+        }
+        Commands::Install {
+            scripts,
+            list,
+            all,
+            langs,
+            completions_dir,
+        } => {
+            let dir = completions_dir
+                .or_else(|| {
+                    std::env::var("SUGG_COMPLETIONS_DIR")
+                        .ok()
+                        .map(PathBuf::from)
+                })
+                .unwrap_or_else(sugg_core::default_completions_dir);
+            if let Err(e) = install::run_install(scripts, list, all, &langs, &dir).await {
+                eprintln!("{} Install failed: {}", sugg_core::ICON_ERROR, e);
                 std::process::exit(1);
             }
             Ok(())
