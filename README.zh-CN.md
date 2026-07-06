@@ -1,5 +1,12 @@
 # Sugg
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-horizontal.svg">
+    <img src="assets/logo-horizontal.svg" width="420" alt="Sugg">
+  </picture>
+</p>
+
 [English](./README.md) | **简体中文**
 
 Sugg 是一个基于 Rust 编写的 Shell 补全引擎。它允许开发者使用 TypeScript/JavaScript 来编写复杂的补全逻辑，并通过预编译字节码和内存零拷贝（Zero-copy）技术，提供低延迟的终端交互体验。
@@ -98,13 +105,13 @@ Sugg 提供了安装脚本，自动拉取对应平台的最新二进制文件。
 ### Linux & macOS
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/axuj/sugg/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/getsugg/sugg/main/scripts/install.sh | bash
 ```
 
 ### Windows (PowerShell / Nushell)
 
 ```powershell
-irm https://raw.githubusercontent.com/axuj/sugg/main/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/getsugg/sugg/main/scripts/install.ps1 | iex
 ```
 
 ### 从源码编译安装

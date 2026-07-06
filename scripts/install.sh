@@ -3,14 +3,14 @@
 # Sugg Unix Installation Script (Linux & macOS)
 #
 # Usage:
-#   curl -fsSL "https://raw.githubusercontent.com/axuj/sugg/main/scripts/install.sh" | bash
+#   curl -fsSL "https://raw.githubusercontent.com/getsugg/sugg/main/scripts/install.sh" | bash
 
 set -euo pipefail
 
 # ==========================================
 # Configuration (Modify for your repository)
 # ==========================================
-GITHUB_REPO="axuj/sugg"
+GITHUB_REPO="getsugg/sugg"
 
 # Colors for terminal output
 CYAN='\033[0;36m'
@@ -54,27 +54,8 @@ else
 fi
 BIN_DIR="$INSTALL_DIR/bin"
 
-# 2. Fetch latest Release info
-echo -e "Connecting to GitHub to fetch version info..."
-RELEASE_API_URL="https://api.github.com/repos/$GITHUB_REPO/releases/latest"
-
-if command -v curl >/dev/null 2>&1; then
-    VERSION=$(curl -fsSL "$RELEASE_API_URL" | grep '"tag_name":' | head -n 1 | awk -F '"' '{print $4}')
-elif command -v wget >/dev/null 2>&1; then
-    VERSION=$(wget -qO- "$RELEASE_API_URL" | grep '"tag_name":' | head -n 1 | awk -F '"' '{print $4}')
-else
-    echo -e "${RED}Neither curl nor wget was found. Please install one to proceed.${NC}"
-    exit 1
-fi
-
-if [ -z "$VERSION" ]; then
-    echo -e "${RED}Failed to fetch version info. Please check your internet connection or repository name ($GITHUB_REPO).${NC}"
-    exit 1
-fi
-echo -e "Found latest version: ${GREEN}$VERSION${NC}"
-
-# 3. Download and Extract
-DOWNLOAD_URL="https://github.com/$GITHUB_REPO/releases/download/$VERSION/$ASSET_NAME"
+# 2. Download latest
+DOWNLOAD_URL="https://github.com/$GITHUB_REPO/releases/latest/download/$ASSET_NAME"
 TEMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TEMP_DIR"' EXIT
 TEMP_TAR="$TEMP_DIR/$ASSET_NAME"
@@ -105,45 +86,13 @@ else
     exit 1
 fi
 
-# 4. Configure PATH environment variable
-echo -e "Configuring environment variables..."
-CURRENT_SHELL=$(basename "$SHELL")
-
-if [ "$CURRENT_SHELL" = "fish" ]; then
-    echo -e "${YELLOW}Please run the following to add sugg to your PATH and enable shell integration:${NC}"
-    echo -e "  ${CYAN}sugg init fish | source${NC}"
-    echo -e "${YELLOW}Then add 'sugg init fish | source' to your config.fish to persist.${NC}"
-else
-    if [ "$CURRENT_SHELL" = "zsh" ]; then
-        DETECTED_PROFILE="$HOME/.zshrc"
-    elif [ "$CURRENT_SHELL" = "bash" ]; then
-        if [ -f "$HOME/.bashrc" ]; then
-            DETECTED_PROFILE="$HOME/.bashrc"
-        elif [ -f "$HOME/.bash_profile" ]; then
-            DETECTED_PROFILE="$HOME/.bash_profile"
-        else
-            DETECTED_PROFILE="$HOME/.profile"
-        fi
-    else
-        DETECTED_PROFILE="$HOME/.profile"
-    fi
-
-    if [ ! -f "$DETECTED_PROFILE" ]; then
-        touch "$DETECTED_PROFILE"
-    fi
-
-    if grep -q "$BIN_DIR" "$DETECTED_PROFILE"; then
-        echo -e "${GREEN}PATH config already exists in $DETECTED_PROFILE, skipping.${NC}"
-    else
-        echo -e "\n# added by sugg install\nexport PATH=\"$BIN_DIR:\$PATH\"" >> "$DETECTED_PROFILE"
-        echo -e "${GREEN}Added $BIN_DIR to $DETECTED_PROFILE.${NC}"
-        echo -e "${YELLOW}Note: Please restart your terminal or run 'source $DETECTED_PROFILE' for PATH changes to take effect.${NC}"
-        echo -e "${YELLOW}Then run 'sugg init $CURRENT_SHELL' to enable shell integration.${NC}"
-    fi
-fi
+# 3. PATH 提示
+echo -e "${YELLOW}Please add the following to your shell profile:${NC}"
+echo -e "  ${CYAN}export PATH=\"$BIN_DIR:\$PATH\"${NC}"
+echo -e "${YELLOW}Then run 'sugg init <shell>' to enable shell integration.${NC}"
 
 echo ""
-echo -e "${GREEN}Sugg ($VERSION) installed successfully!${NC}"
+echo -e "${GREEN}Sugg installed successfully!${NC}"
 echo "   sugg          -> $BIN_DIR/sugg"
 echo "   sugg-engine   -> $INSTALL_DIR/sugg-engine"
 echo ""

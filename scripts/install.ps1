@@ -15,7 +15,7 @@ $ErrorActionPreference = "Stop"
 # ==========================================
 # Configuration (Modify for your repository)
 # ==========================================
-$GithubRepo = "axuj/sugg" # TODO: Change to your actual GitHub repo
+$GithubRepo = "getsugg/sugg"
 $AssetName  = "sugg-x86_64-pc-windows-msvc.zip" # TODO: Ensure this matches your release filename
 
 # Installation paths
@@ -24,31 +24,12 @@ $BinDir     = "$InstallDir\bin"
 
 Write-Host "🚀 Starting Sugg installation..." -ForegroundColor Cyan
 
-# 1. Fetch latest Release info
-Write-Host "🔍 Connecting to GitHub to fetch version info..."
-$ReleaseApiUrl = "https://api.github.com/repos/$GithubRepo/releases/latest"
+# 1. Download latest
+$DownloadUrl = "https://github.com/$GithubRepo/releases/latest/download/$AssetName"
 
-try {
-    # Force TLS 1.2 for security and compatibility
-    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-    $ReleaseInfo = Invoke-RestMethod -Uri $ReleaseApiUrl -UseBasicParsing
-    $Version = $ReleaseInfo.tag_name
-    Write-Host "🔖 Found latest version: $Version"
-} catch {
-    Write-Host "❌ Failed to fetch version info. Please check your internet connection or repository name ($GithubRepo)." -ForegroundColor Red
-    exit 1
-}
-
-# 2. Parse download URL
-$DownloadUrl = ($ReleaseInfo.assets | Where-Object { $_.name -eq $AssetName }).browser_download_url
-if (-not $DownloadUrl) {
-    Write-Host "❌ Could not find asset named $AssetName in release $Version." -ForegroundColor Red
-    exit 1
-}
-
-# 3. Download and Extract
-$TempZip = "$env:TEMP\sugg-$Version.zip"
-$TempExtractPath = "$env:TEMP\sugg-extract-$Version"
+# 2. Download and Extract
+$TempZip = "$env:TEMP\sugg.zip"
+$TempExtractPath = "$env:TEMP\sugg-extract"
 
 Write-Host "📥 Downloading binaries..."
 Invoke-WebRequest -Uri $DownloadUrl -OutFile $TempZip -UseBasicParsing
@@ -61,7 +42,7 @@ if (-not (Test-Path $BinDir))     { New-Item -ItemType Directory -Path $BinDir |
 if (Test-Path $TempExtractPath) { Remove-Item -Path $TempExtractPath -Recurse -Force }
 Expand-Archive -Path $TempZip -DestinationPath $TempExtractPath -Force
 
-# 4. Deploy files according to Sugg architecture
+# 3. Deploy files according to Sugg architecture
 # Search recursively for executables in case of nested folders in the zip
 $ExtractedSugg = Get-ChildItem -Path $TempExtractPath -Recurse -Filter "sugg.exe" | Select-Object -First 1
 $ExtractedEngine = Get-ChildItem -Path $TempExtractPath -Recurse -Filter "sugg-engine.exe" | Select-Object -First 1
@@ -80,7 +61,7 @@ if ($ExtractedSugg -and $ExtractedEngine) {
 Remove-Item -Path $TempExtractPath -Recurse -Force
 Remove-Item -Path $TempZip -Force
 
-# 5. Configure PATH environment variable
+# 4. Configure PATH environment variable
 Write-Host "🔧 Configuring environment variables..."
 $UserPath = [Environment]::GetEnvironmentVariable('Path', 'User')
 
@@ -94,7 +75,7 @@ if ($UserPath -split ';' -notcontains $BinDir) {
 }
 
 Write-Host ""
-Write-Host "🎉 Sugg ($Version) installed successfully!" -ForegroundColor Green
+Write-Host "🎉 Sugg installed successfully!" -ForegroundColor Green
 Write-Host "   sugg          -> $BinDir\sugg.exe"
 Write-Host "   sugg-engine   -> $InstallDir\sugg-engine.exe"
 Write-Host ""

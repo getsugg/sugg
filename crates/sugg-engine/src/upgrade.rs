@@ -12,7 +12,7 @@ pub async fn run_upgrade() -> Result<(), Box<dyn std::error::Error>> {
         .build()?;
 
     let release_response = client
-        .head("https://github.com/axuj/sugg/releases/latest")
+        .head("https://github.com/getsugg/sugg/releases/latest")
         .send()
         .await?;
     if !release_response.status().is_success() {
@@ -57,7 +57,7 @@ pub async fn run_upgrade() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let download_url = format!(
-        "https://github.com/axuj/sugg/releases/latest/download/{}",
+        "https://github.com/getsugg/sugg/releases/latest/download/{}",
         asset_name
     );
 

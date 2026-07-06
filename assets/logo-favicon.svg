@@ -1,0 +1,5 @@
+<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="16" height="16" rx="3" fill="#4d1a38"/>
+  <text x="2" y="8" dominant-baseline="central" font-family="'Courier New',monospace" font-size="12" font-weight="bold" fill="#f59e0b">$</text>
+  <rect x="11" y="3.5" width="1.5" height="9" rx="0.5" fill="#f59e0b" opacity="0.85"/>
+</svg>

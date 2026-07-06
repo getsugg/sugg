@@ -331,7 +331,7 @@ pub fn inject_globals(ctx: Ctx<'_>) {
     // =========================================================================
     // 注入底层磁盘缓存 API：__cache 对象（get / set / delete / take）
     // =========================================================================
-    let cache_dir = crate::sugg_root().join("cmd_cache");
+    let cache_dir = crate::sugg_root().join("cache").join("cmd_cache");
     let disk_cache = std::sync::Arc::new(crate::cache::DiskCache::new(cache_dir));
 
     if let Ok(cache_obj) = Object::new(ctx.clone()) {

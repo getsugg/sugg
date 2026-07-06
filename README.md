@@ -1,4 +1,9 @@
-# Sugg
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-horizontal.svg">
+    <img src="assets/logo-horizontal.svg" width="420" alt="Sugg">
+  </picture>
+</p>
 
 **English** | [简体中文](./README.zh-CN.md)
 
@@ -99,13 +104,13 @@ Run the install script, which automatically downloads the prebuilt binary matchi
 ### Linux & macOS
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/axuj/sugg/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/getsugg/sugg/main/scripts/install.sh | bash
 ```
 
 ### Windows (PowerShell / Nushell)
 
 ```powershell
-irm https://raw.githubusercontent.com/axuj/sugg/main/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/getsugg/sugg/main/scripts/install.ps1 | iex
 ```
 
 ### Build from Source

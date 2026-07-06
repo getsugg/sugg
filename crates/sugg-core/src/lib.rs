@@ -61,7 +61,7 @@ pub fn sugg_root() -> std::path::PathBuf {
 
 /// 缓存文件路径
 pub fn get_cache_path() -> std::path::PathBuf {
-    let dir = sugg_root();
+    let dir = sugg_root().join("cache");
     std::fs::create_dir_all(&dir).ok();
     dir.join(".completion_cache.bin")
 }
