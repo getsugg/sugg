@@ -10,13 +10,13 @@ pub fn run_i18n_gen(completions_dir: &Path, lang: &str) {
 
     let preferred_lang = lang;
 
-    let fallbacks = sugg_engine::get_fallback_chain(preferred_lang);
+    let fallbacks = crate::get_fallback_chain(preferred_lang);
 
     // keys_map: namespace -> key -> lang -> translation
     let mut keys_map: BTreeMap<String, BTreeMap<String, BTreeMap<String, String>>> =
         BTreeMap::new();
 
-    for (ns, i18n_dir) in sugg_engine::scan_i18n_dirs(completions_dir) {
+    for (ns, i18n_dir) in crate::scan_i18n_dirs(completions_dir) {
         let Ok(dir_entries) = fs::read_dir(&i18n_dir) else {
             continue;
         };

@@ -6,8 +6,11 @@
 //! - `icu_utils`: ICU 语言回退链生成
 
 pub use sugg_ast as ast;
+pub mod build;
 pub mod bundler;
+pub mod i18n;
 pub mod icu_utils;
+pub mod install;
 pub mod locale;
 
 pub use icu_utils::get_fallback_chain;

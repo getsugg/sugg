@@ -1,6 +1,9 @@
+import { cache, fetch } from "sugg";
 import * as t from "virtual:i18n/sugg";
 
 const SHELLS = ["bash", "zsh", "fish", "nushell", "powershell"];
+
+const REGISTRY_URL = "https://getsugg.github.io/sugg-completions/registry.json";
 
 const helpOpt: OptionNode = { labels: ["-h", "--help"], description: t.opt_help };
 
@@ -70,6 +73,34 @@ export default createCompletion({
         description: t.init_desc,
         options: [helpOpt],
         args: SHELLS,
+      },
+      install: {
+        description: t.install_desc,
+        options: [
+          helpOpt,
+          { labels: ["--list"], description: t.opt_list },
+          { labels: ["--all"], description: t.opt_all },
+          { labels: ["--force"], description: t.opt_force },
+          { labels: ["--lang"], description: t.opt_lang, args: { count: Infinity } },
+          completionsDirOpt,
+        ],
+        args: {
+          count: Infinity,
+          items: dynamic(async () => {
+            return cache.get("sugg-install-scripts", 3600000, async () => {
+              try {
+                const res = await fetch(REGISTRY_URL);
+                const registry = await res.json();
+                return registry.scripts.map((s: any) => ({
+                  display: s.name,
+                  description: s.description,
+                }));
+              } catch {
+                return [];
+              }
+            });
+          }),
+        },
       },
       help: {
         description: t.help_desc,

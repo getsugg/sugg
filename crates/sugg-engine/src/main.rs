@@ -3,10 +3,7 @@ use rkyv::access;
 use rkyv::rancor::Error;
 use std::path::PathBuf;
 
-mod build;
-mod i18n;
 mod init;
-mod install;
 mod upgrade;
 
 #[derive(Parser)]
@@ -76,6 +73,9 @@ enum Commands {
         /// Install all available scripts
         #[arg(long)]
         all: bool,
+        /// Force overwrite existing files
+        #[arg(long)]
+        force: bool,
         /// Preferred language(s) for i18n (e.g. --lang en --lang zh-CN)
         #[arg(long = "lang")]
         langs: Vec<String>,
@@ -149,7 +149,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     })
                     .unwrap_or_else(sugg_core::default_completions_dir);
                 let lang = l.or(lang).unwrap_or_else(sugg_engine::detect_locale);
-                i18n::run_i18n_gen(&dir, &lang);
+                sugg_engine::i18n::run_i18n_gen(&dir, &lang);
                 Ok(())
             }
         },
@@ -170,7 +170,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             lang,
             cache_dir,
             dump_dynamic,
-        } => build::run_build(completions_dir, lang, cache_dir, dump_dynamic).await,
+        } => sugg_engine::build::run_build(completions_dir, lang, cache_dir, dump_dynamic).await,
         Commands::Upgrade => {
             if let Err(e) = upgrade::run_upgrade().await {
                 eprintln!("{} Upgrade failed: {}", sugg_core::ICON_ERROR, e);
@@ -198,6 +198,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             scripts,
             list,
             all,
+            force,
             langs,
             completions_dir,
         } => {
@@ -208,7 +209,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         .map(PathBuf::from)
                 })
                 .unwrap_or_else(sugg_core::default_completions_dir);
-            if let Err(e) = install::run_install(scripts, list, all, &langs, &dir).await {
+            if let Err(e) = sugg_engine::install::run_install(
+                scripts,
+                list,
+                all,
+                force,
+                &langs,
+                &dir,
+                sugg_engine::install::REGISTRY_URL,
+                sugg_engine::install::RAW_BASE,
+            )
+            .await
+            {
                 eprintln!("{} Install failed: {}", sugg_core::ICON_ERROR, e);
                 std::process::exit(1);
             }

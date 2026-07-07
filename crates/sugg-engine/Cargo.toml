@@ -3,6 +3,10 @@ name = "sugg-engine"
 version.workspace = true
 edition.workspace = true
 
+[lib]
+name = "sugg_engine"
+path = "src/lib.rs"
+
 [[bin]]
 name = "sugg-engine"
 path = "src/main.rs"

@@ -30,7 +30,7 @@ sugg-ast = { path = "crates/sugg-ast" }
 sugg-engine = { path = "crates/sugg-engine" }
 sugg-wasm = { path = "crates/sugg-wasm" }
 anyhow = "1.0.102"
-tokio = { version = "1.52.3", features = ["rt", "macros", "fs", "process", "net"] }
+tokio = { version = "1.52.3", features = ["rt", "macros", "fs", "process", "net", "time"] }
 reqwest = { version = "0.13", default-features = false, features = ["rustls", "rustls-native-certs", "json", "stream"] }
 rquickjs = { version = "0.11.0", features = ["futures"] }
 rkyv = { version = "0.8.16" }
@@ -59,6 +59,9 @@ name = "sugg-tests"
 version.workspace = true
 edition.workspace = true
 publish = false
+
+[features]
+install-tests = []
 
 [dev-dependencies]
 sugg-core.workspace = true

@@ -40,9 +40,8 @@ pub async fn run_build(
         sugg_core::path_to_slash(&dir_path)
     );
 
-    let lang = lang.clone().unwrap_or_else(sugg_engine::detect_locale);
-    let (bundled_static, dynamic_bundles) = match sugg_engine::build_bundles(&dir_path, &lang).await
-    {
+    let lang = lang.clone().unwrap_or_else(crate::detect_locale);
+    let (bundled_static, dynamic_bundles) = match crate::build_bundles(&dir_path, &lang).await {
         Ok(res) => res,
         Err(e) => {
             log_error!("Script Error: {:#}", e);
