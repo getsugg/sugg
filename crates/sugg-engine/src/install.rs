@@ -54,7 +54,11 @@ pub async fn run_install(
     let base = base.as_str();
     println!("{} Fetching registry from {}...", sugg_core::ICON_SCAN, url);
 
-    let registry = fetch_registry(url).await?;
+    let client = reqwest::Client::builder()
+        .user_agent(concat!("sugg-installer/", env!("CARGO_PKG_VERSION")))
+        .build()?;
+
+    let registry = fetch_registry(&client, url).await?;
 
     if list {
         list_scripts(&registry);
@@ -90,22 +94,21 @@ pub async fn run_install(
 
     // Collect all files to download
     let mut downloads = Vec::new();
-    let mut downloaded_deps = HashSet::new();
-    let mut i18n_downloaded = HashSet::new();
+    let mut seen = HashSet::new();
 
     for name in &target_scripts {
         let entry = registry.scripts.iter().find(|s| s.name == *name).unwrap();
 
         // Main script file
-        downloads.push(entry.source.clone());
+        if seen.insert(entry.source.clone()) {
+            downloads.push(entry.source.clone());
+        }
 
         // Shared module dependencies
         for dep in &entry.deps {
-            if downloaded_deps.contains(dep) {
-                continue;
+            if seen.insert(dep.clone()) {
+                downloads.push(dep.clone());
             }
-            downloads.push(dep.clone());
-            downloaded_deps.insert(dep.clone());
         }
 
         // Matching i18n files
@@ -115,7 +118,7 @@ pub async fn run_install(
                 for fb in chain.iter().rev() {
                     if langs_available.iter().any(|l| l.eq_ignore_ascii_case(fb)) {
                         let path = format!("{}/i18n/{}.json", ns, fb);
-                        if i18n_downloaded.insert(path.clone()) {
+                        if seen.insert(path.clone()) {
                             downloads.push(path);
                         }
                         break;
@@ -148,22 +151,27 @@ pub async fn run_install(
         let dir = completions_dir.to_path_buf();
         let base = base.to_owned();
         let pb = pb.clone();
+        let cl = client.clone();
 
         set.spawn(async move {
             let _permit = sem.acquire().await.unwrap();
-            let result = download_with_retry(&file, &dir, &base, force, &pb).await;
+            let result = download_with_retry(&cl, &file, &dir, &base, force).await;
             pb.inc(1);
-            match result {
-                Ok(()) => Ok(file),
-                Err(e) => Err(e),
-            }
+            result.map(|downloaded| (file, downloaded))
         });
     }
 
     while let Some(result) = set.join_next().await {
         match result {
-            Ok(Ok(file)) => {
+            Ok(Ok((file, true))) => {
                 pb.println(format!("  {} {}", sugg_core::ICON_SUCCESS, file));
+            }
+            Ok(Ok((file, false))) => {
+                pb.println(format!(
+                    "  {} {} (already exists, skipping)",
+                    sugg_core::ICON_INFO,
+                    file
+                ));
             }
             Ok(Err(e)) => {
                 pb.finish_and_clear();
@@ -193,11 +201,7 @@ pub async fn run_install(
     Ok(())
 }
 
-async fn fetch_registry(url: &str) -> anyhow::Result<Registry> {
-    let client = reqwest::Client::builder()
-        .user_agent(concat!("sugg-installer/", env!("CARGO_PKG_VERSION")))
-        .build()?;
-
+async fn fetch_registry(client: &reqwest::Client, url: &str) -> anyhow::Result<Registry> {
     let response = client.get(url).send().await?;
     if !response.status().is_success() {
         return Err(anyhow::anyhow!(
@@ -206,8 +210,7 @@ async fn fetch_registry(url: &str) -> anyhow::Result<Registry> {
         ));
     }
 
-    let text = response.text().await?;
-    let registry: Registry = serde_json::from_str(&text)?;
+    let registry: Registry = response.json().await?;
     Ok(registry)
 }
 
@@ -253,20 +256,36 @@ fn list_scripts(registry: &Registry) {
 }
 
 async fn download_with_retry(
+    client: &reqwest::Client,
     relative_path: &str,
     completions_dir: &Path,
     base_url: &str,
     force: bool,
-    pb: &ProgressBar,
-) -> anyhow::Result<()> {
+) -> anyhow::Result<bool> {
+    let rel = Path::new(relative_path);
+    if rel.is_absolute()
+        || rel
+            .components()
+            .any(|c| matches!(c, std::path::Component::ParentDir))
+    {
+        return Err(anyhow::anyhow!(
+            "Invalid path from registry: {}",
+            relative_path
+        ));
+    }
+
     let mut last_error = None;
 
     for attempt in 0..=MAX_RETRIES {
-        match download_file(relative_path, completions_dir, base_url, force, pb).await {
-            Ok(()) => return Ok(()),
+        match download_file(client, relative_path, completions_dir, base_url, force).await {
+            Ok(downloaded) => return Ok(downloaded),
             Err(e) => {
                 last_error = Some(e);
                 if attempt < MAX_RETRIES {
+                    let temp_dest = completions_dir
+                        .join(relative_path)
+                        .with_extension("tmp_download");
+                    let _ = tokio::fs::remove_file(&temp_dest).await;
                     let delay = BASE_DELAY_MS * 2u64.pow(attempt);
                     tokio::time::sleep(Duration::from_millis(delay)).await;
                 }
@@ -278,34 +297,25 @@ async fn download_with_retry(
 }
 
 async fn download_file(
+    client: &reqwest::Client,
     relative_path: &str,
     completions_dir: &Path,
     base_url: &str,
     force: bool,
-    pb: &ProgressBar,
-) -> anyhow::Result<()> {
+) -> anyhow::Result<bool> {
     let dest = completions_dir.join(relative_path);
 
     // Create parent directory if needed
     if let Some(parent) = dest.parent() {
-        std::fs::create_dir_all(parent)?;
+        tokio::fs::create_dir_all(parent).await?;
     }
 
     // Skip if already exists (unless --force)
     if dest.exists() && !force {
-        pb.println(format!(
-            "  {} '{}' already exists, skipping.",
-            sugg_core::ICON_INFO,
-            relative_path
-        ));
-        return Ok(());
+        return Ok(false);
     }
 
-    let url = format!("{}/{}", base_url, relative_path);
-
-    let client = reqwest::Client::builder()
-        .user_agent(concat!("sugg-installer/", env!("CARGO_PKG_VERSION")))
-        .build()?;
+    let url = format!("{}/{}", base_url.trim_end_matches('/'), relative_path);
 
     let response = client.get(&url).send().await?;
     if !response.status().is_success() {
@@ -316,12 +326,16 @@ async fn download_file(
         ));
     }
 
-    let mut file = std::fs::File::create(&dest)?;
+    let temp_dest = dest.with_extension("tmp_download");
+    let mut file = tokio::fs::File::create(&temp_dest).await?;
     let mut response = response;
     while let Some(chunk) = response.chunk().await? {
-        use std::io::Write;
-        file.write_all(&chunk)?;
+        use tokio::io::AsyncWriteExt;
+        file.write_all(&chunk).await?;
     }
+    file.sync_all().await?;
+    drop(file);
+    tokio::fs::rename(&temp_dest, &dest).await?;
 
-    Ok(())
+    Ok(true)
 }
