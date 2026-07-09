@@ -1,13 +1,13 @@
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use serde::Deserialize;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Semaphore;
 use tokio::task::JoinSet;
 
-pub const REGISTRY_URL: &str = "https://getsugg.github.io/sugg-completions/registry.json";
+pub const REGISTRY_URL: &str = "https://getsugg.github.io/sugg-completions/generated/registry.json";
 pub const RAW_BASE: &str =
     "https://raw.githubusercontent.com/getsugg/sugg-completions/master/completions";
 
@@ -28,7 +28,7 @@ struct ScriptEntry {
     #[serde(default)]
     deps: Vec<String>,
     #[serde(default)]
-    i18n: Vec<String>,
+    i18n: HashMap<String, Vec<String>>,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -42,8 +42,16 @@ pub async fn run_install(
     registry_url: &str,
     raw_base: &str,
 ) -> anyhow::Result<()> {
-    let url = registry_url;
-    let base = raw_base;
+    let (url, base) = if let Ok(dev_server) = std::env::var("SUGG_DEV_SERVER") {
+        (
+            format!("{}/generated/registry.json", dev_server),
+            format!("{}/completions", dev_server),
+        )
+    } else {
+        (registry_url.to_string(), raw_base.to_string())
+    };
+    let url = url.as_str();
+    let base = base.as_str();
     println!("{} Fetching registry from {}...", sugg_core::ICON_SCAN, url);
 
     let registry = fetch_registry(url).await?;
@@ -80,17 +88,10 @@ pub async fn run_install(
         langs.to_vec()
     };
 
-    // Collect all fallback chains and deduplicate
-    let mut all_fallbacks: Vec<String> = preferred_langs
-        .iter()
-        .flat_map(|lang| crate::get_fallback_chain(lang))
-        .collect();
-    all_fallbacks.sort();
-    all_fallbacks.dedup();
-
     // Collect all files to download
     let mut downloads = Vec::new();
     let mut downloaded_deps = HashSet::new();
+    let mut i18n_downloaded = HashSet::new();
 
     for name in &target_scripts {
         let entry = registry.scripts.iter().find(|s| s.name == *name).unwrap();
@@ -108,9 +109,18 @@ pub async fn run_install(
         }
 
         // Matching i18n files
-        for lang_code in &entry.i18n {
-            if all_fallbacks.iter().any(|fb| fb == lang_code) {
-                downloads.push(format!("{}/i18n/{}.json", entry.name, lang_code));
+        for preferred in &preferred_langs {
+            let chain = crate::get_fallback_chain(preferred);
+            for (ns, langs_available) in &entry.i18n {
+                for fb in chain.iter().rev() {
+                    if langs_available.iter().any(|l| l.eq_ignore_ascii_case(fb)) {
+                        let path = format!("{}/i18n/{}.json", ns, fb);
+                        if i18n_downloaded.insert(path.clone()) {
+                            downloads.push(path);
+                        }
+                        break;
+                    }
+                }
             }
         }
     }
@@ -141,7 +151,7 @@ pub async fn run_install(
 
         set.spawn(async move {
             let _permit = sem.acquire().await.unwrap();
-            let result = download_with_retry(&file, &dir, &base, force).await;
+            let result = download_with_retry(&file, &dir, &base, force, &pb).await;
             pb.inc(1);
             match result {
                 Ok(()) => Ok(file),
@@ -220,7 +230,12 @@ fn list_scripts(registry: &Registry) {
         let i18n_info = if script.i18n.is_empty() {
             String::new()
         } else {
-            format!(" [{}]", script.i18n.join(", "))
+            let parts: Vec<String> = script
+                .i18n
+                .iter()
+                .map(|(ns, langs)| format!("{}: {}", ns, langs.join(",")))
+                .collect();
+            format!(" [{}]", parts.join("] ["))
         };
         println!(
             "  {:width$}  {}{}",
@@ -242,11 +257,12 @@ async fn download_with_retry(
     completions_dir: &Path,
     base_url: &str,
     force: bool,
+    pb: &ProgressBar,
 ) -> anyhow::Result<()> {
     let mut last_error = None;
 
     for attempt in 0..=MAX_RETRIES {
-        match download_file(relative_path, completions_dir, base_url, force).await {
+        match download_file(relative_path, completions_dir, base_url, force, pb).await {
             Ok(()) => return Ok(()),
             Err(e) => {
                 last_error = Some(e);
@@ -266,6 +282,7 @@ async fn download_file(
     completions_dir: &Path,
     base_url: &str,
     force: bool,
+    pb: &ProgressBar,
 ) -> anyhow::Result<()> {
     let dest = completions_dir.join(relative_path);
 
@@ -276,11 +293,11 @@ async fn download_file(
 
     // Skip if already exists (unless --force)
     if dest.exists() && !force {
-        println!(
+        pb.println(format!(
             "  {} '{}' already exists, skipping.",
             sugg_core::ICON_INFO,
             relative_path
-        );
+        ));
         return Ok(());
     }
 

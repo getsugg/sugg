@@ -71,32 +71,45 @@ impl MockServer {
     }
 }
 
-fn registry(name: &str, source: &str, deps: &[&str], i18n: &[&str]) -> String {
+fn registry(name: &str, source: &str, deps: &[&str], i18n: &[(&str, &[&str])]) -> String {
     let deps_json: Vec<String> = deps.iter().map(|d| format!("\"{}\"", d)).collect();
-    let i18n_json: Vec<String> = i18n.iter().map(|l| format!("\"{}\"", l)).collect();
+    let i18n_entries: Vec<String> = i18n
+        .iter()
+        .map(|(ns, langs)| {
+            let langs_json: Vec<String> = langs.iter().map(|l| format!("\"{}\"", l)).collect();
+            format!("\"{}\": [{}]", ns, langs_json.join(","))
+        })
+        .collect();
     format!(
-        r#"{{"scripts":[{{"name":"{}","description":"{}","source":"{}","deps":[{}],"i18n":[{}]}}]}}"#,
+        r#"{{"scripts":[{{"name":"{}","description":"{}","source":"{}","deps":[{}],"i18n":{{{}}}}}]}}"#,
         name,
         name,
         source,
         deps_json.join(","),
-        i18n_json.join(",")
+        i18n_entries.join(",")
     )
 }
 
-fn multi_registry(entries: &[(&str, &str, Vec<&str>, Vec<&str>)]) -> String {
+fn multi_registry(entries: &[(&str, &str, Vec<&str>, Vec<(&str, Vec<&str>)>)]) -> String {
     let scripts: Vec<String> = entries
         .iter()
         .map(|(name, source, deps, i18n)| {
             let deps_json: Vec<String> = deps.iter().map(|d| format!("\"{}\"", d)).collect();
-            let i18n_json: Vec<String> = i18n.iter().map(|l| format!("\"{}\"", l)).collect();
+            let i18n_entries: Vec<String> = i18n
+                .iter()
+                .map(|(ns, langs)| {
+                    let langs_json: Vec<String> =
+                        langs.iter().map(|l| format!("\"{}\"", l)).collect();
+                    format!("\"{}\": [{}]", ns, langs_json.join(","))
+                })
+                .collect();
             format!(
-                r#"{{"name":"{}","description":"{}","source":"{}","deps":[{}],"i18n":[{}]}}"#,
+                r#"{{"name":"{}","description":"{}","source":"{}","deps":[{}],"i18n":{{{}}}}}"#,
                 name,
                 name,
                 source,
                 deps_json.join(","),
-                i18n_json.join(",")
+                i18n_entries.join(",")
             )
         })
         .collect();
@@ -133,7 +146,7 @@ async fn test_install_single_script() {
     let server = MockServer::with_files(HashMap::from([
         (
             "/registry.json".to_string(),
-            registry("git", "git/index.ts", &[], &["en"]),
+            registry("git", "git/index.ts", &[], &[("git", &["en"])]),
         ),
         (
             "/git/index.ts".to_string(),
@@ -165,7 +178,7 @@ async fn test_install_single_script() {
 async fn test_install_script_not_found() {
     let server = MockServer::with_files(HashMap::from([(
         "/registry.json".to_string(),
-        registry("git", "git/index.ts", &[], &["en"]),
+        registry("git", "git/index.ts", &[], &[("git", &["en"])]),
     )]));
 
     let dir = tempfile::tempdir().unwrap();
@@ -218,7 +231,7 @@ async fn test_install_skip_existing() {
     let server = MockServer::with_files(HashMap::from([
         (
             "/registry.json".to_string(),
-            registry("git", "git/index.ts", &[], &["en"]),
+            registry("git", "git/index.ts", &[], &[("git", &["en"])]),
         ),
         ("/git/index.ts".to_string(), "export default {}".to_string()),
         ("/git/i18n/en.json".to_string(), "{}".to_string()),
@@ -253,7 +266,7 @@ async fn test_install_force_overwrite() {
     let server = MockServer::with_files(HashMap::from([
         (
             "/registry.json".to_string(),
-            registry("git", "git/index.ts", &[], &["en"]),
+            registry("git", "git/index.ts", &[], &[("git", &["en"])]),
         ),
         (
             "/git/index.ts".to_string(),
@@ -291,7 +304,12 @@ async fn test_install_with_deps() {
     let server = MockServer::with_files(HashMap::from([
         (
             "/registry.json".to_string(),
-            registry("git", "git/index.ts", &["npm/utils.ts"], &["en"]),
+            registry(
+                "git",
+                "git/index.ts",
+                &["npm/utils.ts"],
+                &[("git", &["en"])],
+            ),
         ),
         ("/git/index.ts".to_string(), "export default {}".to_string()),
         (
@@ -326,7 +344,7 @@ async fn test_install_i18n_selective() {
     let server = MockServer::with_files(HashMap::from([
         (
             "/registry.json".to_string(),
-            registry("git", "git/index.ts", &[], &["en", "zh-CN"]),
+            registry("git", "git/index.ts", &[], &[("git", &["en", "zh-CN"])]),
         ),
         ("/git/index.ts".to_string(), "export default {}".to_string()),
         ("/git/i18n/en.json".to_string(), r#"{"k":"en"}"#.to_string()),
@@ -366,7 +384,7 @@ async fn test_download_failure_with_retry() {
         HashMap::from([
             (
                 "/registry.json".to_string(),
-                registry("git", "git/index.ts", &[], &["en"]),
+                registry("git", "git/index.ts", &[], &[("git", &["en"])]),
             ),
             ("/git/index.ts".to_string(), "export default {}".to_string()),
             ("/git/i18n/en.json".to_string(), "{}".to_string()),
@@ -403,14 +421,14 @@ async fn test_concurrent_download_multiple_scripts() {
         (
             "/registry.json".to_string(),
             multi_registry(&[
-                ("git", "git/index.ts", vec![], vec!["en"]),
+                ("git", "git/index.ts", vec![], vec![("git", vec!["en"])]),
                 (
                     "docker",
                     "docker/index.ts",
                     vec!["npm/utils.ts"],
-                    vec!["en"],
+                    vec![("docker", vec!["en"])],
                 ),
-                ("bun", "bun/index.ts", vec![], vec!["en"]),
+                ("bun", "bun/index.ts", vec![], vec![("bun", vec!["en"])]),
             ]),
         ),
         (
