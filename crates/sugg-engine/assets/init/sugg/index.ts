@@ -3,7 +3,7 @@ import * as t from "virtual:i18n/sugg";
 
 const SHELLS = ["bash", "zsh", "fish", "nushell", "powershell"];
 
-const REGISTRY_URL = "https://getsugg.github.io/sugg-completions/registry.json";
+const REGISTRY_URL = "https://getsugg.github.io/sugg-completions/generated/registry.json";
 
 const helpOpt: OptionNode = { labels: ["-h", "--help"], description: t.opt_help };
 
