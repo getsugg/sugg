@@ -102,6 +102,15 @@ enum DevCommands {
         #[arg(long)]
         lang: Option<String>,
     },
+    /// Watch completions directory and automatically rebuild on changes
+    Watch {
+        /// Path to completions directory
+        #[arg(long)]
+        completions_dir: Option<PathBuf>,
+        /// Preferred language
+        #[arg(long)]
+        lang: Option<String>,
+    },
 }
 
 #[tokio::main]
@@ -150,6 +159,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .unwrap_or_else(sugg_core::default_completions_dir);
                 let lang = l.or(lang).unwrap_or_else(sugg_engine::detect_locale);
                 sugg_engine::i18n::run_i18n_gen(&dir, &lang);
+                Ok(())
+            }
+            DevCommands::Watch {
+                completions_dir: cd,
+                lang: l,
+            } => {
+                let dir = cd
+                    .or(completions_dir)
+                    .or_else(|| {
+                        std::env::var("SUGG_COMPLETIONS_DIR")
+                            .ok()
+                            .map(PathBuf::from)
+                    })
+                    .unwrap_or_else(sugg_core::default_completions_dir);
+                let lang = l.or(lang).unwrap_or_else(sugg_engine::detect_locale);
+                sugg_engine::build::run_watch(Some(dir), Some(lang)).await?;
                 Ok(())
             }
         },

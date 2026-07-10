@@ -15,9 +15,7 @@ use sugg_core::log_error;
 use anyhow::Context as _;
 use memmap2::Mmap;
 use rkyv::access;
-use rquickjs::{
-    AsyncContext, AsyncRuntime, CatchResultExt, Ctx, FromJs, Function, Value, async_with,
-};
+use rquickjs::{AsyncContext, AsyncRuntime, CatchResultExt, Ctx, FromJs, Function, Value};
 use std::collections::HashMap;
 use std::fs::File;
 
@@ -394,8 +392,36 @@ async fn main() {
         OptionValue(&'a ArchivedOptionItem),
     }
 
+    let mut opt_eq_prefix: Option<String> = None;
+    let mut resolve_prefix = prefix.clone();
+
     let effective_ctx = match parse_result.ctx {
-        Context::Node(node) if prefix.starts_with('-') => EffectiveCtx::Options(node),
+        Context::Node(node) if prefix.starts_with('-') => {
+            if let Some(sep) = prefix.find('=') {
+                let opt_name = prefix[..sep].to_string();
+                let opt_val = prefix[sep + 1..].to_string();
+                let has_label_starts_with = node.options.iter().any(|o| {
+                    o.labels
+                        .iter()
+                        .any(|l| l.as_str().starts_with(prefix.as_str()))
+                });
+                if has_label_starts_with {
+                    EffectiveCtx::Options(node)
+                } else if let Some(opt) = node
+                    .options
+                    .iter()
+                    .find(|o| o.labels.iter().any(|l| l.as_str() == opt_name.as_str()))
+                {
+                    opt_eq_prefix = Some(format!("{}=", opt_name));
+                    resolve_prefix = opt_val;
+                    EffectiveCtx::OptionValue(opt)
+                } else {
+                    EffectiveCtx::Options(node)
+                }
+            } else {
+                EffectiveCtx::Options(node)
+            }
+        }
         Context::Node(node) => EffectiveCtx::SubcommandsAndArgs(node),
         Context::OptionValue(opt) => EffectiveCtx::OptionValue(opt),
     };
@@ -417,14 +443,11 @@ async fn main() {
         }
 
         EffectiveCtx::SubcommandsAndArgs(node) => {
-            // 总是先列子命令（用户可能想切子命令上下文）
             items.extend(node.subcommands.iter().map(|c| {
                 let style = c.style.as_ref().map(from_archived_style);
                 CompletionItem::new(c.name.to_string(), c.description.to_string(), style)
                     .with_trailing_space()
             }));
-            // 位置参数补全：仅在 is_positional_mode 时调用（remaining > 0 才有位置参数待补）
-            // 所有节点统一规则，无 dynamic/static 特例
             if is_positional_mode {
                 items.extend(
                     resolve_completions(
@@ -449,7 +472,7 @@ async fn main() {
                     opt.dynamic_func.as_deref(),
                     opt.static_args.as_ref().map(|v| v.as_slice()),
                     archived,
-                    &prefix,
+                    &resolve_prefix,
                     &cwd,
                     &words,
                     &parsed_options,
@@ -458,6 +481,12 @@ async fn main() {
                 )
                 .await,
             );
+        }
+    }
+
+    if let Some(eq_prefix) = &opt_eq_prefix {
+        for item in &mut items {
+            item.value = format!("{}{}", eq_prefix, item.value);
         }
     }
 
@@ -747,7 +776,9 @@ async fn run_dynamic_js<'a>(
                 match as_strings {
                     Ok(strs) => {
                         for s in strs {
-                            results.push(CompletionItem::simple(s, String::new()));
+                            results.push(
+                                CompletionItem::simple(s, String::new()).with_trailing_space(),
+                            );
                         }
                     }
                     Err(e) => log_error!("JS return value parse error: {:?}", e),
@@ -764,8 +795,20 @@ async fn run_dynamic_js<'a>(
         .expect("Failed to create QuickJS Context");
 
     // 在上下文中执行，通过 match 兜底错误
-    async_with!(ctx => |ctx| {
-        match try_execute(ctx, func_name, bytecode, prefix, path, words, options, shell, positional_args).await {
+    ctx.async_with(async |ctx| {
+        match try_execute(
+            ctx,
+            func_name,
+            bytecode,
+            prefix,
+            path,
+            words,
+            options,
+            shell,
+            positional_args,
+        )
+        .await
+        {
             Ok(items) => items,
             Err(e) => {
                 log_error!("Dynamic JS execution failed: {:#}", e);

@@ -1,7 +1,8 @@
 ---
 source: tests/bundle.rs
-expression: "normalize(static_js, &dir)"
+expression: "normalize(combined, &dir)"
 ---
+// === bun ===
 //#region virtual:env
 const createCompletion = (obj) => obj;
 globalThis.__exec;
@@ -188,7 +189,7 @@ const cmd_upgrade_desc = "Upgrade to latest version of Bun";
 const cmd_why_desc = "Explain why a package is installed";
 const cmd_x_desc = "Execute a package binary (CLI), installing if needed (bunx)";
 const create_option_help = "Show help";
-const description$1 = "Fast JavaScript runtime, package manager, bundler, and test runner.";
+const description = "Fast JavaScript runtime, package manager, bundler, and test runner.";
 const init_option_minimal = "Only initialize type definitions";
 const init_option_react = "Initialize a React project";
 const init_option_yes = "Accept all default options";
@@ -1132,8 +1133,10 @@ const pmSubCommands = {
 		options: [...commonGlobalOpts]
 	}
 };
-var __v_stat_bun_default = createCompletion({ bun: {
-	description: description$1,
+//#endregion
+//#region tests/fixtures/completions/bun/__v_sentry_bun.ts
+var __v_sentry_bun_default = [["bun", createCompletion({ bun: {
+	description,
 	options: commonGlobalOpts,
 	commands: {
 		run: {
@@ -1284,16 +1287,308 @@ var __v_stat_bun_default = createCompletion({ bun: {
 			options: [...commonGlobalOpts]
 		}
 	}
-} });
+} })]];
 //#endregion
-//#region tests/fixtures/completions/cache_stem/__v_stat_cache_stem.ts
-var __v_stat_cache_stem_default = createCompletion({ cache_stem: { args: {
+export { __parseConfig, __v_sentry_bun_default as default };
+
+// === cache_stem ===
+//#region virtual:env
+const createCompletion = (obj) => obj;
+globalThis.__exec;
+globalThis.__execFile;
+globalThis.__scanPath;
+globalThis.__readFile;
+globalThis.__ui;
+const __parseConfig = (modules) => {
+	function sortAndResolveAliases(subcommands) {
+		subcommands.sort((a, b) => a.name.localeCompare(b.name));
+		for (let sub of subcommands) if (sub.__target_name) {
+			let realIdx = subcommands.findIndex((c) => c.name === sub.__target_name && !c.__target_name);
+			if (realIdx !== -1) sub.target = realIdx;
+			delete sub.__target_name;
+		}
+	}
+	function toStaticArgs(items) {
+		if (!Array.isArray(items)) return null;
+		return items.map((item) => {
+			if (typeof item === "string") return {
+				value: item + " ",
+				display: item,
+				description: "",
+				style: null
+			};
+			return {
+				value: item.value !== void 0 ? item.value : item.display + " ",
+				display: item.display,
+				description: item.description || "",
+				style: item.style || null
+			};
+		});
+	}
+	const UNLIMITED = 4294967295;
+	function resolveArgs(args) {
+		if (args == null) return {
+			args_count: 0,
+			dynamic_func: null,
+			static_args: null
+		};
+		if (Array.isArray(args)) return {
+			args_count: 1,
+			dynamic_func: null,
+			static_args: toStaticArgs(args)
+		};
+		if (args.__is_dynamic) return {
+			args_count: 1,
+			dynamic_func: args.id,
+			static_args: null
+		};
+		if (typeof args === "object" && args.count !== void 0) {
+			const items = args.items;
+			const count = args.count > UNLIMITED ? UNLIMITED : args.count;
+			if (items == null) return {
+				args_count: count,
+				dynamic_func: null,
+				static_args: null
+			};
+			if (Array.isArray(items)) return {
+				args_count: count,
+				dynamic_func: null,
+				static_args: toStaticArgs(items)
+			};
+			if (items.__is_dynamic) return {
+				args_count: count,
+				dynamic_func: items.id,
+				static_args: null
+			};
+		}
+		return {
+			args_count: 0,
+			dynamic_func: null,
+			static_args: null
+		};
+	}
+	function traverse(name, node, description = "") {
+		let cmdNode = {
+			name,
+			description,
+			style: node?.style ?? null,
+			target: null,
+			subcommands: [],
+			options: [],
+			args_count: 0,
+			dynamic_func: null,
+			static_args: null
+		};
+		if (!node) return cmdNode;
+		if (node.options) for (let opt of node.options) {
+			let labels = opt.labels || [];
+			const resolved = resolveArgs(opt.args);
+			cmdNode.options.push({
+				labels,
+				description: opt.description || "",
+				style: opt.style ?? null,
+				args_count: resolved.args_count,
+				dynamic_func: resolved.dynamic_func,
+				static_args: resolved.static_args
+			});
+		}
+		{
+			const resolved = resolveArgs(node.args);
+			cmdNode.args_count = resolved.args_count;
+			cmdNode.dynamic_func = resolved.dynamic_func;
+			cmdNode.static_args = resolved.static_args;
+		}
+		if (node.commands) for (let [cmd, def] of Object.entries(node.commands)) {
+			cmdNode.subcommands.push(traverse(cmd, def, def.description || ""));
+			for (const alias of def.aliases || []) cmdNode.subcommands.push({
+				name: alias,
+				description: def.description || "",
+				style: def.style ?? null,
+				__target_name: cmd,
+				target: null,
+				subcommands: [],
+				options: [],
+				args_count: 0,
+				dynamic_func: null,
+				static_args: null
+			});
+		}
+		sortAndResolveAliases(cmdNode.subcommands);
+		return cmdNode;
+	}
+	let rootNode = {
+		name: "",
+		description: "",
+		style: null,
+		target: null,
+		subcommands: [],
+		options: [],
+		args_count: 0,
+		dynamic_func: null,
+		static_args: null
+	};
+	for (let [, def] of modules) {
+		if (!def) continue;
+		for (let [cmd, subDef] of Object.entries(def)) rootNode.subcommands.push(traverse(cmd, subDef, subDef.description || ""));
+	}
+	sortAndResolveAliases(rootNode.subcommands);
+	return { root: rootNode };
+};
+//#endregion
+//#region tests/fixtures/completions/cache_stem/__v_sentry_cache_stem.ts
+var __v_sentry_cache_stem_default = [["cache_stem", createCompletion({ cache_stem: { args: {
 	__is_dynamic: true,
 	id: "__dyn_cache_stem_args"
-} } });
+} } })]];
 //#endregion
-//#region tests/fixtures/completions/docker/__v_stat_docker.ts
-var __v_stat_docker_default = createCompletion({ docker: { commands: {
+export { __parseConfig, __v_sentry_cache_stem_default as default };
+
+// === docker ===
+//#region virtual:env
+const createCompletion = (obj) => obj;
+globalThis.__exec;
+globalThis.__execFile;
+globalThis.__scanPath;
+globalThis.__readFile;
+globalThis.__ui;
+const __parseConfig = (modules) => {
+	function sortAndResolveAliases(subcommands) {
+		subcommands.sort((a, b) => a.name.localeCompare(b.name));
+		for (let sub of subcommands) if (sub.__target_name) {
+			let realIdx = subcommands.findIndex((c) => c.name === sub.__target_name && !c.__target_name);
+			if (realIdx !== -1) sub.target = realIdx;
+			delete sub.__target_name;
+		}
+	}
+	function toStaticArgs(items) {
+		if (!Array.isArray(items)) return null;
+		return items.map((item) => {
+			if (typeof item === "string") return {
+				value: item + " ",
+				display: item,
+				description: "",
+				style: null
+			};
+			return {
+				value: item.value !== void 0 ? item.value : item.display + " ",
+				display: item.display,
+				description: item.description || "",
+				style: item.style || null
+			};
+		});
+	}
+	const UNLIMITED = 4294967295;
+	function resolveArgs(args) {
+		if (args == null) return {
+			args_count: 0,
+			dynamic_func: null,
+			static_args: null
+		};
+		if (Array.isArray(args)) return {
+			args_count: 1,
+			dynamic_func: null,
+			static_args: toStaticArgs(args)
+		};
+		if (args.__is_dynamic) return {
+			args_count: 1,
+			dynamic_func: args.id,
+			static_args: null
+		};
+		if (typeof args === "object" && args.count !== void 0) {
+			const items = args.items;
+			const count = args.count > UNLIMITED ? UNLIMITED : args.count;
+			if (items == null) return {
+				args_count: count,
+				dynamic_func: null,
+				static_args: null
+			};
+			if (Array.isArray(items)) return {
+				args_count: count,
+				dynamic_func: null,
+				static_args: toStaticArgs(items)
+			};
+			if (items.__is_dynamic) return {
+				args_count: count,
+				dynamic_func: items.id,
+				static_args: null
+			};
+		}
+		return {
+			args_count: 0,
+			dynamic_func: null,
+			static_args: null
+		};
+	}
+	function traverse(name, node, description = "") {
+		let cmdNode = {
+			name,
+			description,
+			style: node?.style ?? null,
+			target: null,
+			subcommands: [],
+			options: [],
+			args_count: 0,
+			dynamic_func: null,
+			static_args: null
+		};
+		if (!node) return cmdNode;
+		if (node.options) for (let opt of node.options) {
+			let labels = opt.labels || [];
+			const resolved = resolveArgs(opt.args);
+			cmdNode.options.push({
+				labels,
+				description: opt.description || "",
+				style: opt.style ?? null,
+				args_count: resolved.args_count,
+				dynamic_func: resolved.dynamic_func,
+				static_args: resolved.static_args
+			});
+		}
+		{
+			const resolved = resolveArgs(node.args);
+			cmdNode.args_count = resolved.args_count;
+			cmdNode.dynamic_func = resolved.dynamic_func;
+			cmdNode.static_args = resolved.static_args;
+		}
+		if (node.commands) for (let [cmd, def] of Object.entries(node.commands)) {
+			cmdNode.subcommands.push(traverse(cmd, def, def.description || ""));
+			for (const alias of def.aliases || []) cmdNode.subcommands.push({
+				name: alias,
+				description: def.description || "",
+				style: def.style ?? null,
+				__target_name: cmd,
+				target: null,
+				subcommands: [],
+				options: [],
+				args_count: 0,
+				dynamic_func: null,
+				static_args: null
+			});
+		}
+		sortAndResolveAliases(cmdNode.subcommands);
+		return cmdNode;
+	}
+	let rootNode = {
+		name: "",
+		description: "",
+		style: null,
+		target: null,
+		subcommands: [],
+		options: [],
+		args_count: 0,
+		dynamic_func: null,
+		static_args: null
+	};
+	for (let [, def] of modules) {
+		if (!def) continue;
+		for (let [cmd, subDef] of Object.entries(def)) rootNode.subcommands.push(traverse(cmd, subDef, subDef.description || ""));
+	}
+	sortAndResolveAliases(rootNode.subcommands);
+	return { root: rootNode };
+};
+//#endregion
+//#region tests/fixtures/completions/docker/__v_sentry_docker.ts
+var __v_sentry_docker_default = [["docker", createCompletion({ docker: { commands: {
 	run: { description: "Run a container" },
 	ps: {
 		description: "List containers",
@@ -1303,10 +1598,161 @@ var __v_stat_docker_default = createCompletion({ docker: { commands: {
 		}
 	},
 	stop: { description: "Stop a container" }
-} } });
+} } })]];
 //#endregion
-//#region tests/fixtures/completions/git/__v_stat_git.ts
-var __v_stat_git_default = createCompletion({ git: {
+export { __parseConfig, __v_sentry_docker_default as default };
+
+// === git ===
+//#region virtual:env
+const createCompletion = (obj) => obj;
+globalThis.__exec;
+globalThis.__execFile;
+globalThis.__scanPath;
+globalThis.__readFile;
+globalThis.__ui;
+const __parseConfig = (modules) => {
+	function sortAndResolveAliases(subcommands) {
+		subcommands.sort((a, b) => a.name.localeCompare(b.name));
+		for (let sub of subcommands) if (sub.__target_name) {
+			let realIdx = subcommands.findIndex((c) => c.name === sub.__target_name && !c.__target_name);
+			if (realIdx !== -1) sub.target = realIdx;
+			delete sub.__target_name;
+		}
+	}
+	function toStaticArgs(items) {
+		if (!Array.isArray(items)) return null;
+		return items.map((item) => {
+			if (typeof item === "string") return {
+				value: item + " ",
+				display: item,
+				description: "",
+				style: null
+			};
+			return {
+				value: item.value !== void 0 ? item.value : item.display + " ",
+				display: item.display,
+				description: item.description || "",
+				style: item.style || null
+			};
+		});
+	}
+	const UNLIMITED = 4294967295;
+	function resolveArgs(args) {
+		if (args == null) return {
+			args_count: 0,
+			dynamic_func: null,
+			static_args: null
+		};
+		if (Array.isArray(args)) return {
+			args_count: 1,
+			dynamic_func: null,
+			static_args: toStaticArgs(args)
+		};
+		if (args.__is_dynamic) return {
+			args_count: 1,
+			dynamic_func: args.id,
+			static_args: null
+		};
+		if (typeof args === "object" && args.count !== void 0) {
+			const items = args.items;
+			const count = args.count > UNLIMITED ? UNLIMITED : args.count;
+			if (items == null) return {
+				args_count: count,
+				dynamic_func: null,
+				static_args: null
+			};
+			if (Array.isArray(items)) return {
+				args_count: count,
+				dynamic_func: null,
+				static_args: toStaticArgs(items)
+			};
+			if (items.__is_dynamic) return {
+				args_count: count,
+				dynamic_func: items.id,
+				static_args: null
+			};
+		}
+		return {
+			args_count: 0,
+			dynamic_func: null,
+			static_args: null
+		};
+	}
+	function traverse(name, node, description = "") {
+		let cmdNode = {
+			name,
+			description,
+			style: node?.style ?? null,
+			target: null,
+			subcommands: [],
+			options: [],
+			args_count: 0,
+			dynamic_func: null,
+			static_args: null
+		};
+		if (!node) return cmdNode;
+		if (node.options) for (let opt of node.options) {
+			let labels = opt.labels || [];
+			const resolved = resolveArgs(opt.args);
+			cmdNode.options.push({
+				labels,
+				description: opt.description || "",
+				style: opt.style ?? null,
+				args_count: resolved.args_count,
+				dynamic_func: resolved.dynamic_func,
+				static_args: resolved.static_args
+			});
+		}
+		{
+			const resolved = resolveArgs(node.args);
+			cmdNode.args_count = resolved.args_count;
+			cmdNode.dynamic_func = resolved.dynamic_func;
+			cmdNode.static_args = resolved.static_args;
+		}
+		if (node.commands) for (let [cmd, def] of Object.entries(node.commands)) {
+			cmdNode.subcommands.push(traverse(cmd, def, def.description || ""));
+			for (const alias of def.aliases || []) cmdNode.subcommands.push({
+				name: alias,
+				description: def.description || "",
+				style: def.style ?? null,
+				__target_name: cmd,
+				target: null,
+				subcommands: [],
+				options: [],
+				args_count: 0,
+				dynamic_func: null,
+				static_args: null
+			});
+		}
+		sortAndResolveAliases(cmdNode.subcommands);
+		return cmdNode;
+	}
+	let rootNode = {
+		name: "",
+		description: "",
+		style: null,
+		target: null,
+		subcommands: [],
+		options: [],
+		args_count: 0,
+		dynamic_func: null,
+		static_args: null
+	};
+	for (let [, def] of modules) {
+		if (!def) continue;
+		for (let [cmd, subDef] of Object.entries(def)) rootNode.subcommands.push(traverse(cmd, subDef, subDef.description || ""));
+	}
+	sortAndResolveAliases(rootNode.subcommands);
+	return { root: rootNode };
+};
+globalThis.__exec;
+globalThis.__execFile;
+globalThis.__scanPath;
+globalThis.__readFile;
+globalThis.__ui;
+//#endregion
+//#region tests/fixtures/completions/git/__v_sentry_git.ts
+var __v_sentry_git_default = [["git", createCompletion({ git: {
 	description: "分布式版本控制系统",
 	commands: {
 		init: { description: "初始化新仓库" },
@@ -1398,25 +1844,463 @@ var __v_stat_git_default = createCompletion({ git: {
 			}
 		}
 	}
-} });
+} })]];
 //#endregion
-//#region tests/fixtures/completions/__v_stat_greet.ts
-var __v_stat_greet_default = createCompletion({ greet: {
+export { __parseConfig, __v_sentry_git_default as default };
+
+// === greet ===
+//#region virtual:env
+const createCompletion = (obj) => obj;
+globalThis.__exec;
+globalThis.__execFile;
+globalThis.__scanPath;
+globalThis.__readFile;
+globalThis.__ui;
+const __parseConfig = (modules) => {
+	function sortAndResolveAliases(subcommands) {
+		subcommands.sort((a, b) => a.name.localeCompare(b.name));
+		for (let sub of subcommands) if (sub.__target_name) {
+			let realIdx = subcommands.findIndex((c) => c.name === sub.__target_name && !c.__target_name);
+			if (realIdx !== -1) sub.target = realIdx;
+			delete sub.__target_name;
+		}
+	}
+	function toStaticArgs(items) {
+		if (!Array.isArray(items)) return null;
+		return items.map((item) => {
+			if (typeof item === "string") return {
+				value: item + " ",
+				display: item,
+				description: "",
+				style: null
+			};
+			return {
+				value: item.value !== void 0 ? item.value : item.display + " ",
+				display: item.display,
+				description: item.description || "",
+				style: item.style || null
+			};
+		});
+	}
+	const UNLIMITED = 4294967295;
+	function resolveArgs(args) {
+		if (args == null) return {
+			args_count: 0,
+			dynamic_func: null,
+			static_args: null
+		};
+		if (Array.isArray(args)) return {
+			args_count: 1,
+			dynamic_func: null,
+			static_args: toStaticArgs(args)
+		};
+		if (args.__is_dynamic) return {
+			args_count: 1,
+			dynamic_func: args.id,
+			static_args: null
+		};
+		if (typeof args === "object" && args.count !== void 0) {
+			const items = args.items;
+			const count = args.count > UNLIMITED ? UNLIMITED : args.count;
+			if (items == null) return {
+				args_count: count,
+				dynamic_func: null,
+				static_args: null
+			};
+			if (Array.isArray(items)) return {
+				args_count: count,
+				dynamic_func: null,
+				static_args: toStaticArgs(items)
+			};
+			if (items.__is_dynamic) return {
+				args_count: count,
+				dynamic_func: items.id,
+				static_args: null
+			};
+		}
+		return {
+			args_count: 0,
+			dynamic_func: null,
+			static_args: null
+		};
+	}
+	function traverse(name, node, description = "") {
+		let cmdNode = {
+			name,
+			description,
+			style: node?.style ?? null,
+			target: null,
+			subcommands: [],
+			options: [],
+			args_count: 0,
+			dynamic_func: null,
+			static_args: null
+		};
+		if (!node) return cmdNode;
+		if (node.options) for (let opt of node.options) {
+			let labels = opt.labels || [];
+			const resolved = resolveArgs(opt.args);
+			cmdNode.options.push({
+				labels,
+				description: opt.description || "",
+				style: opt.style ?? null,
+				args_count: resolved.args_count,
+				dynamic_func: resolved.dynamic_func,
+				static_args: resolved.static_args
+			});
+		}
+		{
+			const resolved = resolveArgs(node.args);
+			cmdNode.args_count = resolved.args_count;
+			cmdNode.dynamic_func = resolved.dynamic_func;
+			cmdNode.static_args = resolved.static_args;
+		}
+		if (node.commands) for (let [cmd, def] of Object.entries(node.commands)) {
+			cmdNode.subcommands.push(traverse(cmd, def, def.description || ""));
+			for (const alias of def.aliases || []) cmdNode.subcommands.push({
+				name: alias,
+				description: def.description || "",
+				style: def.style ?? null,
+				__target_name: cmd,
+				target: null,
+				subcommands: [],
+				options: [],
+				args_count: 0,
+				dynamic_func: null,
+				static_args: null
+			});
+		}
+		sortAndResolveAliases(cmdNode.subcommands);
+		return cmdNode;
+	}
+	let rootNode = {
+		name: "",
+		description: "",
+		style: null,
+		target: null,
+		subcommands: [],
+		options: [],
+		args_count: 0,
+		dynamic_func: null,
+		static_args: null
+	};
+	for (let [, def] of modules) {
+		if (!def) continue;
+		for (let [cmd, subDef] of Object.entries(def)) rootNode.subcommands.push(traverse(cmd, subDef, subDef.description || ""));
+	}
+	sortAndResolveAliases(rootNode.subcommands);
+	return { root: rootNode };
+};
+//#endregion
+//#region tests/fixtures/completions/__v_sentry_greet.ts
+var __v_sentry_greet_default = [["greet", createCompletion({ greet: {
 	description: "Greeting tool",
 	commands: {
 		install: { description: "Install dependencies" },
 		run: { description: "Run a script" }
 	}
-} });
+} })]];
 //#endregion
-//#region tests/fixtures/completions/__v_stat_greet_dynamic.ts
-var __v_stat_greet_dynamic_default = createCompletion({ greet_dynamic: { args: {
+export { __parseConfig, __v_sentry_greet_default as default };
+
+// === greet_dynamic ===
+//#region virtual:env
+const createCompletion = (obj) => obj;
+globalThis.__exec;
+globalThis.__execFile;
+globalThis.__scanPath;
+globalThis.__readFile;
+globalThis.__ui;
+const __parseConfig = (modules) => {
+	function sortAndResolveAliases(subcommands) {
+		subcommands.sort((a, b) => a.name.localeCompare(b.name));
+		for (let sub of subcommands) if (sub.__target_name) {
+			let realIdx = subcommands.findIndex((c) => c.name === sub.__target_name && !c.__target_name);
+			if (realIdx !== -1) sub.target = realIdx;
+			delete sub.__target_name;
+		}
+	}
+	function toStaticArgs(items) {
+		if (!Array.isArray(items)) return null;
+		return items.map((item) => {
+			if (typeof item === "string") return {
+				value: item + " ",
+				display: item,
+				description: "",
+				style: null
+			};
+			return {
+				value: item.value !== void 0 ? item.value : item.display + " ",
+				display: item.display,
+				description: item.description || "",
+				style: item.style || null
+			};
+		});
+	}
+	const UNLIMITED = 4294967295;
+	function resolveArgs(args) {
+		if (args == null) return {
+			args_count: 0,
+			dynamic_func: null,
+			static_args: null
+		};
+		if (Array.isArray(args)) return {
+			args_count: 1,
+			dynamic_func: null,
+			static_args: toStaticArgs(args)
+		};
+		if (args.__is_dynamic) return {
+			args_count: 1,
+			dynamic_func: args.id,
+			static_args: null
+		};
+		if (typeof args === "object" && args.count !== void 0) {
+			const items = args.items;
+			const count = args.count > UNLIMITED ? UNLIMITED : args.count;
+			if (items == null) return {
+				args_count: count,
+				dynamic_func: null,
+				static_args: null
+			};
+			if (Array.isArray(items)) return {
+				args_count: count,
+				dynamic_func: null,
+				static_args: toStaticArgs(items)
+			};
+			if (items.__is_dynamic) return {
+				args_count: count,
+				dynamic_func: items.id,
+				static_args: null
+			};
+		}
+		return {
+			args_count: 0,
+			dynamic_func: null,
+			static_args: null
+		};
+	}
+	function traverse(name, node, description = "") {
+		let cmdNode = {
+			name,
+			description,
+			style: node?.style ?? null,
+			target: null,
+			subcommands: [],
+			options: [],
+			args_count: 0,
+			dynamic_func: null,
+			static_args: null
+		};
+		if (!node) return cmdNode;
+		if (node.options) for (let opt of node.options) {
+			let labels = opt.labels || [];
+			const resolved = resolveArgs(opt.args);
+			cmdNode.options.push({
+				labels,
+				description: opt.description || "",
+				style: opt.style ?? null,
+				args_count: resolved.args_count,
+				dynamic_func: resolved.dynamic_func,
+				static_args: resolved.static_args
+			});
+		}
+		{
+			const resolved = resolveArgs(node.args);
+			cmdNode.args_count = resolved.args_count;
+			cmdNode.dynamic_func = resolved.dynamic_func;
+			cmdNode.static_args = resolved.static_args;
+		}
+		if (node.commands) for (let [cmd, def] of Object.entries(node.commands)) {
+			cmdNode.subcommands.push(traverse(cmd, def, def.description || ""));
+			for (const alias of def.aliases || []) cmdNode.subcommands.push({
+				name: alias,
+				description: def.description || "",
+				style: def.style ?? null,
+				__target_name: cmd,
+				target: null,
+				subcommands: [],
+				options: [],
+				args_count: 0,
+				dynamic_func: null,
+				static_args: null
+			});
+		}
+		sortAndResolveAliases(cmdNode.subcommands);
+		return cmdNode;
+	}
+	let rootNode = {
+		name: "",
+		description: "",
+		style: null,
+		target: null,
+		subcommands: [],
+		options: [],
+		args_count: 0,
+		dynamic_func: null,
+		static_args: null
+	};
+	for (let [, def] of modules) {
+		if (!def) continue;
+		for (let [cmd, subDef] of Object.entries(def)) rootNode.subcommands.push(traverse(cmd, subDef, subDef.description || ""));
+	}
+	sortAndResolveAliases(rootNode.subcommands);
+	return { root: rootNode };
+};
+//#endregion
+//#region tests/fixtures/completions/__v_sentry_greet_dynamic.ts
+var __v_sentry_greet_dynamic_default = [["greet_dynamic", createCompletion({ greet_dynamic: { args: {
 	__is_dynamic: true,
 	id: "__dyn_greet_dynamic_args"
-} } });
+} } })]];
 //#endregion
-//#region tests/fixtures/completions/__v_stat_pnpm.ts
-var __v_stat_pnpm_default = createCompletion({ pnpm: { commands: {
+export { __parseConfig, __v_sentry_greet_dynamic_default as default };
+
+// === pnpm ===
+//#region virtual:env
+const createCompletion = (obj) => obj;
+globalThis.__exec;
+globalThis.__execFile;
+globalThis.__scanPath;
+globalThis.__readFile;
+globalThis.__ui;
+const __parseConfig = (modules) => {
+	function sortAndResolveAliases(subcommands) {
+		subcommands.sort((a, b) => a.name.localeCompare(b.name));
+		for (let sub of subcommands) if (sub.__target_name) {
+			let realIdx = subcommands.findIndex((c) => c.name === sub.__target_name && !c.__target_name);
+			if (realIdx !== -1) sub.target = realIdx;
+			delete sub.__target_name;
+		}
+	}
+	function toStaticArgs(items) {
+		if (!Array.isArray(items)) return null;
+		return items.map((item) => {
+			if (typeof item === "string") return {
+				value: item + " ",
+				display: item,
+				description: "",
+				style: null
+			};
+			return {
+				value: item.value !== void 0 ? item.value : item.display + " ",
+				display: item.display,
+				description: item.description || "",
+				style: item.style || null
+			};
+		});
+	}
+	const UNLIMITED = 4294967295;
+	function resolveArgs(args) {
+		if (args == null) return {
+			args_count: 0,
+			dynamic_func: null,
+			static_args: null
+		};
+		if (Array.isArray(args)) return {
+			args_count: 1,
+			dynamic_func: null,
+			static_args: toStaticArgs(args)
+		};
+		if (args.__is_dynamic) return {
+			args_count: 1,
+			dynamic_func: args.id,
+			static_args: null
+		};
+		if (typeof args === "object" && args.count !== void 0) {
+			const items = args.items;
+			const count = args.count > UNLIMITED ? UNLIMITED : args.count;
+			if (items == null) return {
+				args_count: count,
+				dynamic_func: null,
+				static_args: null
+			};
+			if (Array.isArray(items)) return {
+				args_count: count,
+				dynamic_func: null,
+				static_args: toStaticArgs(items)
+			};
+			if (items.__is_dynamic) return {
+				args_count: count,
+				dynamic_func: items.id,
+				static_args: null
+			};
+		}
+		return {
+			args_count: 0,
+			dynamic_func: null,
+			static_args: null
+		};
+	}
+	function traverse(name, node, description = "") {
+		let cmdNode = {
+			name,
+			description,
+			style: node?.style ?? null,
+			target: null,
+			subcommands: [],
+			options: [],
+			args_count: 0,
+			dynamic_func: null,
+			static_args: null
+		};
+		if (!node) return cmdNode;
+		if (node.options) for (let opt of node.options) {
+			let labels = opt.labels || [];
+			const resolved = resolveArgs(opt.args);
+			cmdNode.options.push({
+				labels,
+				description: opt.description || "",
+				style: opt.style ?? null,
+				args_count: resolved.args_count,
+				dynamic_func: resolved.dynamic_func,
+				static_args: resolved.static_args
+			});
+		}
+		{
+			const resolved = resolveArgs(node.args);
+			cmdNode.args_count = resolved.args_count;
+			cmdNode.dynamic_func = resolved.dynamic_func;
+			cmdNode.static_args = resolved.static_args;
+		}
+		if (node.commands) for (let [cmd, def] of Object.entries(node.commands)) {
+			cmdNode.subcommands.push(traverse(cmd, def, def.description || ""));
+			for (const alias of def.aliases || []) cmdNode.subcommands.push({
+				name: alias,
+				description: def.description || "",
+				style: def.style ?? null,
+				__target_name: cmd,
+				target: null,
+				subcommands: [],
+				options: [],
+				args_count: 0,
+				dynamic_func: null,
+				static_args: null
+			});
+		}
+		sortAndResolveAliases(cmdNode.subcommands);
+		return cmdNode;
+	}
+	let rootNode = {
+		name: "",
+		description: "",
+		style: null,
+		target: null,
+		subcommands: [],
+		options: [],
+		args_count: 0,
+		dynamic_func: null,
+		static_args: null
+	};
+	for (let [, def] of modules) {
+		if (!def) continue;
+		for (let [cmd, subDef] of Object.entries(def)) rootNode.subcommands.push(traverse(cmd, subDef, subDef.description || ""));
+	}
+	sortAndResolveAliases(rootNode.subcommands);
+	return { root: rootNode };
+};
+//#endregion
+//#region tests/fixtures/completions/__v_sentry_pnpm.ts
+var __v_sentry_pnpm_default = [["pnpm", createCompletion({ pnpm: { commands: {
 	install: {
 		description: "安装依赖",
 		options: await (async () => [{
@@ -1432,14 +2316,162 @@ var __v_stat_pnpm_default = createCompletion({ pnpm: { commands: {
 			id: "__dyn_pnpm_run_args"
 		}
 	}
-} } });
+} } })]];
+//#endregion
+export { __parseConfig, __v_sentry_pnpm_default as default };
+
+// === testkit ===
+//#region virtual:env
+const createCompletion = (obj) => obj;
+globalThis.__exec;
+globalThis.__execFile;
+globalThis.__scanPath;
+globalThis.__readFile;
+globalThis.__ui;
+const __parseConfig = (modules) => {
+	function sortAndResolveAliases(subcommands) {
+		subcommands.sort((a, b) => a.name.localeCompare(b.name));
+		for (let sub of subcommands) if (sub.__target_name) {
+			let realIdx = subcommands.findIndex((c) => c.name === sub.__target_name && !c.__target_name);
+			if (realIdx !== -1) sub.target = realIdx;
+			delete sub.__target_name;
+		}
+	}
+	function toStaticArgs(items) {
+		if (!Array.isArray(items)) return null;
+		return items.map((item) => {
+			if (typeof item === "string") return {
+				value: item + " ",
+				display: item,
+				description: "",
+				style: null
+			};
+			return {
+				value: item.value !== void 0 ? item.value : item.display + " ",
+				display: item.display,
+				description: item.description || "",
+				style: item.style || null
+			};
+		});
+	}
+	const UNLIMITED = 4294967295;
+	function resolveArgs(args) {
+		if (args == null) return {
+			args_count: 0,
+			dynamic_func: null,
+			static_args: null
+		};
+		if (Array.isArray(args)) return {
+			args_count: 1,
+			dynamic_func: null,
+			static_args: toStaticArgs(args)
+		};
+		if (args.__is_dynamic) return {
+			args_count: 1,
+			dynamic_func: args.id,
+			static_args: null
+		};
+		if (typeof args === "object" && args.count !== void 0) {
+			const items = args.items;
+			const count = args.count > UNLIMITED ? UNLIMITED : args.count;
+			if (items == null) return {
+				args_count: count,
+				dynamic_func: null,
+				static_args: null
+			};
+			if (Array.isArray(items)) return {
+				args_count: count,
+				dynamic_func: null,
+				static_args: toStaticArgs(items)
+			};
+			if (items.__is_dynamic) return {
+				args_count: count,
+				dynamic_func: items.id,
+				static_args: null
+			};
+		}
+		return {
+			args_count: 0,
+			dynamic_func: null,
+			static_args: null
+		};
+	}
+	function traverse(name, node, description = "") {
+		let cmdNode = {
+			name,
+			description,
+			style: node?.style ?? null,
+			target: null,
+			subcommands: [],
+			options: [],
+			args_count: 0,
+			dynamic_func: null,
+			static_args: null
+		};
+		if (!node) return cmdNode;
+		if (node.options) for (let opt of node.options) {
+			let labels = opt.labels || [];
+			const resolved = resolveArgs(opt.args);
+			cmdNode.options.push({
+				labels,
+				description: opt.description || "",
+				style: opt.style ?? null,
+				args_count: resolved.args_count,
+				dynamic_func: resolved.dynamic_func,
+				static_args: resolved.static_args
+			});
+		}
+		{
+			const resolved = resolveArgs(node.args);
+			cmdNode.args_count = resolved.args_count;
+			cmdNode.dynamic_func = resolved.dynamic_func;
+			cmdNode.static_args = resolved.static_args;
+		}
+		if (node.commands) for (let [cmd, def] of Object.entries(node.commands)) {
+			cmdNode.subcommands.push(traverse(cmd, def, def.description || ""));
+			for (const alias of def.aliases || []) cmdNode.subcommands.push({
+				name: alias,
+				description: def.description || "",
+				style: def.style ?? null,
+				__target_name: cmd,
+				target: null,
+				subcommands: [],
+				options: [],
+				args_count: 0,
+				dynamic_func: null,
+				static_args: null
+			});
+		}
+		sortAndResolveAliases(cmdNode.subcommands);
+		return cmdNode;
+	}
+	let rootNode = {
+		name: "",
+		description: "",
+		style: null,
+		target: null,
+		subcommands: [],
+		options: [],
+		args_count: 0,
+		dynamic_func: null,
+		static_args: null
+	};
+	for (let [, def] of modules) {
+		if (!def) continue;
+		for (let [cmd, subDef] of Object.entries(def)) rootNode.subcommands.push(traverse(cmd, subDef, subDef.description || ""));
+	}
+	sortAndResolveAliases(rootNode.subcommands);
+	return { root: rootNode };
+};
 //#endregion
 //#region tests/fixtures/completions/__v_stat_testkit.ts
 const sharedDynamic = {
 	__is_dynamic: true,
 	id: "__dyn_sharedDynamic"
 };
-var __v_stat_testkit_default = createCompletion({ testkit: {
+//#endregion
+//#region tests/fixtures/completions/__v_sentry_testkit.ts
+var __v_sentry_testkit_default = [["testkit", createCompletion({ testkit: {
 	description: "All-in-one test command",
 	options: [{
 		labels: ["-h", "--help"],
@@ -1617,18 +2649,6 @@ var __v_stat_testkit_default = createCompletion({ testkit: {
 			}
 		}
 	}
-} });
+} })]];
 //#endregion
-//#region virtual:static_entry
-var virtual_static_entry_default = [
-	["bun", __v_stat_bun_default],
-	["cache_stem", __v_stat_cache_stem_default],
-	["docker", __v_stat_docker_default],
-	["git", __v_stat_git_default],
-	["greet", __v_stat_greet_default],
-	["greet_dynamic", __v_stat_greet_dynamic_default],
-	["pnpm", __v_stat_pnpm_default],
-	["testkit", __v_stat_testkit_default]
-];
-//#endregion
-export { __parseConfig, virtual_static_entry_default as default };
+export { __parseConfig, __v_sentry_testkit_default as default };

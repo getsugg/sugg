@@ -1,4 +1,5 @@
-use std::path::Path;
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 use sugg_core::path_to_slash;
 use sugg_engine::build_bundles;
 
@@ -16,6 +17,17 @@ macro_rules! bundle_snapshot {
         });
         insta::assert_snapshot!($($tt)*)
     }};
+}
+
+/// 合并所有静态 bundle，按 stem 排序
+fn combine_static_bundles(bundles: Vec<(String, String)>) -> String {
+    let mut bundles = bundles
+        .into_iter()
+        .filter(|(_, js)| !js.trim().is_empty())
+        .map(|(stem, js)| format!("// === {} ===\n{}", stem, js))
+        .collect::<Vec<_>>();
+    bundles.sort();
+    bundles.join("\n")
 }
 
 /// 合并动态 bundle，跳过 JS 内容为空的条目
@@ -36,24 +48,33 @@ fn normalize(s: String, dir: &Path) -> String {
     s.replace(&path_to_slash(dir), "<COMPLETIONS_DIR>")
 }
 
+fn empty_cache() -> HashMap<PathBuf, sugg_engine::CachedFile> {
+    HashMap::new()
+}
+
 #[tokio::test]
 async fn test_bundle_greet_en() {
     let dir = fixture_completions_dir();
-    let (static_js, _) = build_bundles(&dir, "en").await.unwrap();
-    bundle_snapshot!(normalize(static_js, &dir));
+    let mut cache = empty_cache();
+    let (static_bundles, _) = build_bundles(&dir, "en", &mut cache).await.unwrap();
+    let combined = combine_static_bundles(static_bundles);
+    bundle_snapshot!(normalize(combined, &dir));
 }
 
 #[tokio::test]
 async fn test_bundle_greet_zh() {
     let dir = fixture_completions_dir();
-    let (static_js, _) = build_bundles(&dir, "zh").await.unwrap();
-    bundle_snapshot!(normalize(static_js, &dir));
+    let mut cache = empty_cache();
+    let (static_bundles, _) = build_bundles(&dir, "zh", &mut cache).await.unwrap();
+    let combined = combine_static_bundles(static_bundles);
+    bundle_snapshot!(normalize(combined, &dir));
 }
 
 #[tokio::test]
 async fn test_bundle_dynamic_en() {
     let dir = fixture_completions_dir();
-    let (_, dynamic_bundles) = build_bundles(&dir, "en").await.unwrap();
+    let mut cache = empty_cache();
+    let (_, dynamic_bundles) = build_bundles(&dir, "en", &mut cache).await.unwrap();
     let combined = combine_dynamic_bundles(dynamic_bundles);
     bundle_snapshot!(normalize(combined, &dir));
 }
@@ -61,7 +82,8 @@ async fn test_bundle_dynamic_en() {
 #[tokio::test]
 async fn test_bundle_dynamic_zh() {
     let dir = fixture_completions_dir();
-    let (_, dynamic_bundles) = build_bundles(&dir, "zh").await.unwrap();
+    let mut cache = empty_cache();
+    let (_, dynamic_bundles) = build_bundles(&dir, "zh", &mut cache).await.unwrap();
     let combined = combine_dynamic_bundles(dynamic_bundles);
     bundle_snapshot!(normalize(combined, &dir));
 }
@@ -70,7 +92,8 @@ async fn test_bundle_dynamic_zh() {
 #[tokio::test]
 async fn test_bundle_docker_dynamic() {
     let dir = fixture_completions_dir();
-    let (_, dynamic_bundles) = build_bundles(&dir, "en").await.unwrap();
+    let mut cache = empty_cache();
+    let (_, dynamic_bundles) = build_bundles(&dir, "en", &mut cache).await.unwrap();
     let docker = dynamic_bundles
         .into_iter()
         .find(|(stem, _, _)| stem == "docker")

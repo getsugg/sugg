@@ -1,4 +1,5 @@
 use rkyv::{Archive, Deserialize, Serialize};
+use rquickjs::FromJs;
 
 pub fn get_cache_path() -> std::path::PathBuf {
     if let Ok(dir) = std::env::var("SUGG_CACHE_DIR") {
@@ -11,7 +12,15 @@ pub fn get_cache_path() -> std::path::PathBuf {
 
 /// 补全建议的显示样式，与 TypeScript SuggestionStyle 一致
 #[derive(
-    Archive, Deserialize, Serialize, Debug, Default, Clone, serde::Serialize, serde::Deserialize,
+    Archive,
+    Deserialize,
+    Serialize,
+    Debug,
+    Default,
+    Clone,
+    serde::Serialize,
+    serde::Deserialize,
+    FromJs,
 )]
 #[rkyv(attr(derive(Debug)))]
 pub struct SuggestionStyle {
@@ -28,7 +37,15 @@ pub struct SuggestionStyle {
 
 /// 用于存储 args 中的静态数组补全
 #[derive(
-    Archive, Deserialize, Serialize, Debug, Default, Clone, serde::Serialize, serde::Deserialize,
+    Archive,
+    Deserialize,
+    Serialize,
+    Debug,
+    Default,
+    Clone,
+    serde::Serialize,
+    serde::Deserialize,
+    FromJs,
 )]
 #[rkyv(attr(derive(Debug)))]
 pub struct StaticSuggestion {
@@ -38,7 +55,7 @@ pub struct StaticSuggestion {
     pub style: Option<SuggestionStyle>,
 }
 
-#[derive(Archive, Deserialize, Serialize, Debug, Default, Clone, serde::Deserialize)]
+#[derive(Archive, Deserialize, Serialize, Debug, Default, Clone, serde::Deserialize, FromJs)]
 #[rkyv(attr(derive(Debug)))]
 pub struct OptionItem {
     pub labels: Vec<String>,
@@ -50,7 +67,7 @@ pub struct OptionItem {
     pub static_args: Option<Vec<StaticSuggestion>>,
 }
 
-#[derive(Archive, Deserialize, Serialize, Debug, Default, Clone, serde::Deserialize)]
+#[derive(Archive, Deserialize, Serialize, Debug, Default, Clone, serde::Deserialize, FromJs)]
 #[rkyv(attr(derive(Debug)))]
 #[rkyv(serialize_bounds(
     __S: rkyv::ser::Writer + rkyv::ser::Allocator,

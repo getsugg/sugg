@@ -362,7 +362,7 @@ pub fn inject_globals(ctx: Ctx<'_>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rquickjs::{AsyncContext, AsyncRuntime, async_with};
+    use rquickjs::{AsyncContext, AsyncRuntime};
 
     #[tokio::test]
     async fn test_inject_globals() {
@@ -398,7 +398,7 @@ mod tests {
             assert!(is_fetch_func, "__fetch_raw should be injected");
         }
 
-        async_with!(ctx => |ctx| { async_with_fn(ctx).await }).await;
+        ctx.async_with(async |ctx| async_with_fn(ctx).await).await;
     }
 
     #[tokio::test]
@@ -483,7 +483,7 @@ mod tests {
             }
         }
 
-        async_with!(ctx => |ctx| { async_with_fn(ctx).await }).await;
+        ctx.async_with(async |ctx| async_with_fn(ctx).await).await;
     }
 
     #[tokio::test]
@@ -511,7 +511,7 @@ mod tests {
             );
         }
 
-        async_with!(ctx => |ctx| { async_with_fn(ctx).await }).await;
+        ctx.async_with(async |ctx| async_with_fn(ctx).await).await;
     }
 
     #[tokio::test]
@@ -564,7 +564,7 @@ mod tests {
             assert_eq!(d3, vec!["sub/foo"]);
         }
 
-        async_with!(ctx => |ctx| { async_with_fn(ctx).await }).await;
+        ctx.async_with(async |ctx| async_with_fn(ctx).await).await;
     }
 
     #[tokio::test]
@@ -612,7 +612,7 @@ mod tests {
             assert_eq!(body, r#"{"message":"ok"}"#);
         }
 
-        async_with!(ctx => |ctx| { run(ctx, port).await }).await;
+        ctx.async_with(async |ctx| run(ctx, port).await).await;
     }
 
     #[tokio::test]
@@ -634,7 +634,7 @@ mod tests {
             assert!(timed_out, "timeout should return empty string");
         }
 
-        async_with!(ctx => |ctx| { run(ctx).await }).await;
+        ctx.async_with(async |ctx| run(ctx).await).await;
     }
 
     #[tokio::test]
@@ -692,6 +692,6 @@ mod tests {
             assert!(result);
         }
 
-        async_with!(ctx => |ctx| { run(ctx).await }).await;
+        ctx.async_with(async |ctx| run(ctx).await).await;
     }
 }

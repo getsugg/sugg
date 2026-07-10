@@ -161,15 +161,15 @@ expression: all
     "input": "testkit -- dynamicReuse cmd1 ",
     "result": [
       {
-        "value": "shared-a",
+        "value": "shared-a ",
         "display_override": "shared-a"
       },
       {
-        "value": "shared-b",
+        "value": "shared-b ",
         "display_override": "shared-b"
       },
       {
-        "value": "shared-c",
+        "value": "shared-c ",
         "display_override": "shared-c"
       }
     ]

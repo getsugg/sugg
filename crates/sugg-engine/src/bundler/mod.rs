@@ -31,12 +31,15 @@ pub async fn bundle_virtual(
         env_code,
         i18n_modules,
     };
+    let t_build = std::time::Instant::now();
     let mut bundler = BundlerBuilder::default()
         .with_options(options)
         .with_plugins(vec![Arc::new(plugin)])
         .build()
         .map_err(|e| anyhow::anyhow!("Failed to create Bundler: {}", e))?;
+    println!("    ⏱ rolldown build() took {:?}", t_build.elapsed());
 
+    let t_gen = std::time::Instant::now();
     let output = bundler.generate().await.map_err(|e| {
         let msg = e
             .into_vec()
@@ -51,6 +54,7 @@ pub async fn bundle_virtual(
             .join("\n");
         anyhow::anyhow!("Bundling failed:\n{msg}")
     })?;
+    println!("    ⏱ rolldown generate() took {:?}", t_gen.elapsed());
 
     output
         .assets

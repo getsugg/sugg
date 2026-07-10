@@ -8,15 +8,15 @@ expression: all
     "input": "testkit dynamicPositional ",
     "result": [
       {
-        "value": "origin",
+        "value": "origin ",
         "display_override": "origin"
       },
       {
-        "value": "upstream",
+        "value": "upstream ",
         "display_override": "upstream"
       },
       {
-        "value": "mine",
+        "value": "mine ",
         "display_override": "mine"
       }
     ]
@@ -26,11 +26,11 @@ expression: all
     "input": "testkit dynamicPositional origin ",
     "result": [
       {
-        "value": "url-for:origin",
+        "value": "url-for:origin ",
         "display_override": "url-for:origin"
       },
       {
-        "value": "https://github.com/x",
+        "value": "https://github.com/x ",
         "display_override": "https://github.com/x"
       }
     ]

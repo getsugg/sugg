@@ -23,15 +23,15 @@ expression: all
         "description": "Push operation"
       },
       {
-        "value": "file1.txt",
+        "value": "file1.txt ",
         "display_override": "file1.txt"
       },
       {
-        "value": "file2.txt",
+        "value": "file2.txt ",
         "display_override": "file2.txt"
       },
       {
-        "value": "file3.txt",
+        "value": "file3.txt ",
         "display_override": "file3.txt"
       }
     ]

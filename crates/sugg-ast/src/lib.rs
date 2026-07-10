@@ -9,6 +9,7 @@ use oxc::semantic::{ScopeFlags, Semantic, SemanticBuilder, SymbolId};
 use oxc::span::GetSpan;
 use oxc::span::{SourceType, Span};
 use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 
 // 常量
 
@@ -412,6 +413,90 @@ pub fn analyze_dynamic_apis(dynamic_js: &str) -> Vec<ApiUsage> {
     };
     collector.visit_program(&parsed.program);
     collector.results
+}
+
+/// 从源码中提取所有本地 import/require 的 resolved 绝对路径。
+/// 只追踪以 `.` 开头的相对导入（`./foo`、`../bar`），忽略 bare specifier。
+/// `source_path` 是源文件的绝对路径，用于解析相对导入。
+pub fn extract_local_imports(source: &str, source_path: &str) -> Vec<String> {
+    let allocator = Allocator::default();
+    let source_type = SourceType::from_path(source_path).unwrap_or_default();
+    let program = Parser::new(&allocator, source, source_type).parse().program;
+
+    let source_dir = Path::new(source_path)
+        .parent()
+        .unwrap_or(Path::new(""))
+        .to_path_buf();
+
+    struct LocalImportCollector {
+        source_dir: PathBuf,
+        imports: Vec<String>,
+    }
+
+    impl<'a> Visit<'a> for LocalImportCollector {
+        fn visit_import_declaration(&mut self, decl: &ImportDeclaration<'a>) {
+            let specifier = decl.source.value.as_str().trim();
+            if specifier.starts_with('.')
+                && let Some(resolved) = resolve_local(&self.source_dir, specifier)
+            {
+                self.imports.push(resolved);
+            }
+        }
+
+        fn visit_call_expression(&mut self, expr: &CallExpression<'a>) {
+            if let Expression::Identifier(ident) = &expr.callee
+                && ident.name == "require"
+                && let Some(arg) = expr.arguments.first()
+                && let Some(expr) = arg.as_expression()
+                && let Expression::StringLiteral(s) = expr
+            {
+                let specifier = s.value.as_str().trim();
+                if specifier.starts_with('.')
+                    && let Some(resolved) = resolve_local(&self.source_dir, specifier)
+                {
+                    self.imports.push(resolved);
+                }
+            }
+            walk_call_expression(self, expr);
+        }
+
+        fn visit_import_expression(&mut self, expr: &ImportExpression<'a>) {
+            if let Expression::StringLiteral(s) = &expr.source {
+                let specifier = s.value.as_str().trim();
+                if specifier.starts_with('.')
+                    && let Some(resolved) = resolve_local(&self.source_dir, specifier)
+                {
+                    self.imports.push(resolved);
+                }
+            }
+        }
+    }
+
+    let mut collector = LocalImportCollector {
+        source_dir,
+        imports: Vec::new(),
+    };
+    collector.visit_program(&program);
+    collector.imports
+}
+
+fn resolve_local(source_dir: &Path, specifier: &str) -> Option<String> {
+    let base = source_dir.join(specifier);
+    for path in &[
+        base.clone(),
+        base.with_extension("ts"),
+        base.with_extension("js"),
+        base.join("index.ts"),
+        base.join("index.js"),
+    ] {
+        if path.exists() {
+            if let Ok(canon) = path.canonicalize() {
+                return Some(canon.to_string_lossy().to_string());
+            }
+            return Some(path.to_string_lossy().to_string());
+        }
+    }
+    None
 }
 
 #[cfg(test)]

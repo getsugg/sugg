@@ -35,3 +35,4 @@ tempfile.workspace = true
 reqwest.workspace = true
 indicatif = "0.18"
 sys-locale = "0.3.2"
+notify-debouncer-mini = "0.7"

@@ -8,7 +8,7 @@ expression: all
     "input": "git remote add ",
     "result": [
       {
-        "value": "origin",
+        "value": "origin ",
         "display_override": "origin"
       }
     ]
@@ -18,11 +18,11 @@ expression: all
     "input": "git remote add origin ",
     "result": [
       {
-        "value": "git@github.com:user/origin.git",
+        "value": "git@github.com:user/origin.git ",
         "display_override": "git@github.com:user/origin.git"
       },
       {
-        "value": "https://github.com/user/origin.git",
+        "value": "https://github.com/user/origin.git ",
         "display_override": "https://github.com/user/origin.git"
       }
     ]
@@ -32,11 +32,11 @@ expression: all
     "input": "git remote add upstream ",
     "result": [
       {
-        "value": "git@github.com:user/upstream.git",
+        "value": "git@github.com:user/upstream.git ",
         "display_override": "git@github.com:user/upstream.git"
       },
       {
-        "value": "https://github.com/user/upstream.git",
+        "value": "https://github.com/user/upstream.git ",
         "display_override": "https://github.com/user/upstream.git"
       }
     ]
@@ -51,7 +51,7 @@ expression: all
     "input": "git push ",
     "result": [
       {
-        "value": "origin",
+        "value": "origin ",
         "display_override": "origin"
       }
     ]
@@ -61,7 +61,7 @@ expression: all
     "input": "git push origin ",
     "result": [
       {
-        "value": "main",
+        "value": "main ",
         "display_override": "main"
       }
     ]
@@ -71,7 +71,7 @@ expression: all
     "input": "git remote rename ",
     "result": [
       {
-        "value": "origin",
+        "value": "origin ",
         "display_override": "origin"
       }
     ]
@@ -81,7 +81,7 @@ expression: all
     "input": "git checkout ",
     "result": [
       {
-        "value": "main",
+        "value": "main ",
         "display_override": "main"
       }
     ]

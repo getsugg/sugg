@@ -8,15 +8,15 @@ expression: all
     "input": "testkit multiValueOpt --exclude a ",
     "result": [
       {
-        "value": "a",
+        "value": "a ",
         "display_override": "a"
       },
       {
-        "value": "b",
+        "value": "b ",
         "display_override": "b"
       },
       {
-        "value": "c",
+        "value": "c ",
         "display_override": "c"
       }
     ]
@@ -41,15 +41,15 @@ expression: all
     "input": "testkit multiValueOpt --exclude a --exclude b ",
     "result": [
       {
-        "value": "a",
+        "value": "a ",
         "display_override": "a"
       },
       {
-        "value": "b",
+        "value": "b ",
         "display_override": "b"
       },
       {
-        "value": "c",
+        "value": "c ",
         "display_override": "c"
       }
     ]
@@ -59,15 +59,15 @@ expression: all
     "input": "testkit multiValueOpt --exclude a --exclude b --exclude c ",
     "result": [
       {
-        "value": "a",
+        "value": "a ",
         "display_override": "a"
       },
       {
-        "value": "b",
+        "value": "b ",
         "display_override": "b"
       },
       {
-        "value": "c",
+        "value": "c ",
         "display_override": "c"
       }
     ]

@@ -41,15 +41,15 @@ expression: all
     "input": "testkit opts --dynamic-opt ",
     "result": [
       {
-        "value": "item1",
+        "value": "item1 ",
         "display_override": "item1"
       },
       {
-        "value": "item2",
+        "value": "item2 ",
         "display_override": "item2"
       },
       {
-        "value": "item3",
+        "value": "item3 ",
         "display_override": "item3"
       }
     ]
@@ -59,7 +59,7 @@ expression: all
     "input": "testkit opts --dynamic-opt item2",
     "result": [
       {
-        "value": "item2",
+        "value": "item2 ",
         "display_override": "item2"
       }
     ]
@@ -69,15 +69,15 @@ expression: all
     "input": "testkit opts -d item",
     "result": [
       {
-        "value": "item1",
+        "value": "item1 ",
         "display_override": "item1"
       },
       {
-        "value": "item2",
+        "value": "item2 ",
         "display_override": "item2"
       },
       {
-        "value": "item3",
+        "value": "item3 ",
         "display_override": "item3"
       }
     ]
@@ -92,15 +92,15 @@ expression: all
     "input": "testkit opts --shared1 ",
     "result": [
       {
-        "value": "shared-a",
+        "value": "shared-a ",
         "display_override": "shared-a"
       },
       {
-        "value": "shared-b",
+        "value": "shared-b ",
         "display_override": "shared-b"
       },
       {
-        "value": "shared-c",
+        "value": "shared-c ",
         "display_override": "shared-c"
       }
     ]
@@ -110,15 +110,15 @@ expression: all
     "input": "testkit opts --shared2 ",
     "result": [
       {
-        "value": "shared-a",
+        "value": "shared-a ",
         "display_override": "shared-a"
       },
       {
-        "value": "shared-b",
+        "value": "shared-b ",
         "display_override": "shared-b"
       },
       {
-        "value": "shared-c",
+        "value": "shared-c ",
         "display_override": "shared-c"
       }
     ]

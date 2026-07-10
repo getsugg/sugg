@@ -5,29 +5,29 @@ expression: "serde_json::json!({ \"cmd1\": items_cmd1, \"cmd2\": items_cmd2, })"
 {
   "cmd1": [
     {
-      "value": "shared-a",
+      "value": "shared-a ",
       "display_override": "shared-a"
     },
     {
-      "value": "shared-b",
+      "value": "shared-b ",
       "display_override": "shared-b"
     },
     {
-      "value": "shared-c",
+      "value": "shared-c ",
       "display_override": "shared-c"
     }
   ],
   "cmd2": [
     {
-      "value": "shared-a",
+      "value": "shared-a ",
       "display_override": "shared-a"
     },
     {
-      "value": "shared-b",
+      "value": "shared-b ",
       "display_override": "shared-b"
     },
     {
-      "value": "shared-c",
+      "value": "shared-c ",
       "display_override": "shared-c"
     }
   ]

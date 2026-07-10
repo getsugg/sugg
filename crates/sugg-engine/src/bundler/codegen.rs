@@ -1,6 +1,19 @@
-/// 生成注入到每个用户脚本顶部的 import 语句。
+/// 生成注入到每个用户脚本顶部的 import 语句（旧式单 bundle 模式）。
+/// 不再使用——保留仅用于引用和测试。
 pub fn generate_import_stmt() -> String {
     "import { createCompletion, __parseConfig } from 'virtual:env';\n".to_string()
+}
+
+/// 生成单文件静态入口代码。
+/// 每个文件独立打包时，入口导入自己的配置模块和 __parseConfig，
+/// 输出 `[['<stem>', config]]` 供 __parseConfig 消费。
+/// `v_stat` 是配置虚拟模块的完整 ID（与 HashMap 键一致）。
+pub fn generate_per_file_entry(stem: &str, v_stat: &str) -> String {
+    format!(
+        "import {{ __parseConfig }} from 'virtual:env';\nexport {{ __parseConfig }};\n\
+         import c from '{v_stat}';\n\
+         export default [ ['{stem}', c] ];\n"
+    )
 }
 
 /// 生成 virtual:env 模块内容。
@@ -58,6 +71,14 @@ mod tests {
         assert!(!s.contains("readJson"));
         assert!(s.contains("from 'virtual:env'"));
         assert!(!s.contains("virtual:i18n"));
+    }
+
+    #[test]
+    fn test_generate_per_file_entry() {
+        let entry = generate_per_file_entry("git", "/path/to/__v_stat_git.ts");
+        assert!(entry.contains("__parseConfig"));
+        assert!(entry.contains("/path/to/__v_stat_git.ts"));
+        assert!(entry.contains("['git', c]"));
     }
 
     #[test]
