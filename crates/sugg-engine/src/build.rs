@@ -56,7 +56,6 @@ pub(crate) async fn run_build_with_cache(
     );
 
     let lang = lang.clone().unwrap_or_else(crate::detect_locale);
-    let t0 = std::time::Instant::now();
     let (static_results, dynamic_results) =
         match crate::build_bundles(&dir_path, &lang, file_cache).await {
             Ok(res) => res,
@@ -65,7 +64,6 @@ pub(crate) async fn run_build_with_cache(
                 return Ok(());
             }
         };
-    println!("  ⏱ build_bundles took {:?}", t0.elapsed());
 
     let stem_cache: HashMap<String, PathBuf> = file_cache
         .iter()
@@ -93,14 +91,10 @@ pub(crate) async fn run_build_with_cache(
         return Ok(());
     }
 
-    let t_runtime = std::time::Instant::now();
     let rt = AsyncRuntime::new().expect("ERROR: Failed to create QuickJS runtime");
-    println!("  ⏱   AsyncRuntime::new took {:?}", t_runtime.elapsed());
-    let t_ctx = std::time::Instant::now();
     let ctx = AsyncContext::full(&rt)
         .await
         .expect("ERROR: Failed to create QuickJS context");
-    println!("  ⏱   AsyncContext::full took {:?}", t_ctx.elapsed());
 
     // ── 哪些文件需要 QuickJS 处理（跳过缓存命中的） ──
     let mut static_to_eval: Vec<(usize, String, String)> = Vec::new();
@@ -130,7 +124,6 @@ pub(crate) async fn run_build_with_cache(
     }
 
     // ── 批量 QuickJS：单文件静态评估 ──
-    let t_eval = std::time::Instant::now();
     let mut fresh_nodes: Vec<(usize, CommandNode)> = Vec::new();
     if !static_to_eval.is_empty() {
         let eval_result: Vec<(usize, CommandNode)> = ctx
@@ -182,14 +175,8 @@ pub(crate) async fn run_build_with_cache(
             fresh_nodes.push((*idx, node.clone()));
         }
     }
-    println!(
-        "  ⏱   static eval ({} files) took {:?}",
-        static_to_eval.len(),
-        t_eval.elapsed()
-    );
 
     // ── 批量 QuickJS：字节码编译 ──
-    let t_bc = std::time::Instant::now();
     let mut fresh_bytecodes: Vec<(usize, Vec<u8>)> = Vec::new();
     for (idx, stem, code) in &dyn_to_compile {
         let bc_result = ctx
@@ -216,11 +203,6 @@ pub(crate) async fn run_build_with_cache(
             }
         }
     }
-    println!(
-        "  ⏱   bytecode compile ({} files) took {:?}",
-        dyn_to_compile.len(),
-        t_bc.elapsed()
-    );
 
     // ── 合并所有 CommandNode ──
     let mut all_nodes: Vec<(usize, CommandNode)> = static_cached;
@@ -398,7 +380,6 @@ pub async fn run_watch(
                 changed.file_name().unwrap().to_string_lossy()
             );
         }
-        let start = std::time::Instant::now();
         if let Err(e) = run_build_with_cache(
             Some(dir_path.clone()),
             lang.clone(),
@@ -410,11 +391,7 @@ pub async fn run_watch(
         {
             log_error!("Rebuild failed: {:#}", e);
         } else {
-            println!(
-                "{} Hot Reloaded in {:?}",
-                sugg_core::ICON_SUCCESS,
-                start.elapsed()
-            );
+            println!("{} Hot Reloaded", sugg_core::ICON_SUCCESS);
         }
     }
 

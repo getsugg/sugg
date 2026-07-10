@@ -80,7 +80,6 @@ pub async fn build_bundles(
             .unwrap_or_default()
     };
     let mut translations_by_ns: HashMap<String, HashMap<String, String>> = HashMap::new();
-    let t_i18n = std::time::Instant::now();
     for (ns, i18n_dir) in scan_i18n_dirs(dir_path) {
         let fallbacks = get_fallback_chain(lang);
 
@@ -90,7 +89,6 @@ pub async fn build_bundles(
         }
         translations_by_ns.insert(ns, map);
     }
-    println!("  ⏱ i18n load took {:?}", t_i18n.elapsed());
 
     let i18n_hash = {
         let mut h = std::collections::hash_map::DefaultHasher::new();
@@ -133,7 +131,6 @@ pub async fn build_bundles(
     let mut cached_dynamic: Vec<(String, String, Vec<String>)> = Vec::new();
 
     let mut seen_stems = std::collections::HashSet::new();
-    let t_file_loop = std::time::Instant::now();
     for entry in entries.flatten() {
         let path = entry.path();
         let path = if path.is_dir() {
@@ -211,13 +208,7 @@ pub async fn build_bundles(
         }
 
         println!("   {}", file_path_str);
-        let file_start = std::time::Instant::now();
         let result = ast::extract_dynamics(&source, &file_path_str);
-        println!(
-            "    ⏱ ast extract {} took {:?}",
-            file_stem,
-            file_start.elapsed()
-        );
 
         let deps = {
             let mut d = HashMap::new();
@@ -260,12 +251,6 @@ pub async fn build_bundles(
             func_ids: result.2,
         });
     }
-    println!(
-        "  ⏱ file loop total {:?} ({} fresh + {} cached)",
-        t_file_loop.elapsed(),
-        fresh_files.len(),
-        cached_static.len()
-    );
 
     let total_files = fresh_files.len() + cached_static.len();
     if total_files == 0 {
@@ -276,7 +261,6 @@ pub async fn build_bundles(
     let env_code = generate_env_code("");
 
     // ── 第二遍：并发打包 fresh 文件的 static 和 dynamic ──
-    let t_static = std::time::Instant::now();
     let mut static_set = tokio::task::JoinSet::new();
     for file in &fresh_files {
         let v_stat = format!("{}/__v_stat_{}.ts", file.abs_dir, file.stem);
@@ -312,13 +296,7 @@ pub async fn build_bundles(
             cached.static_bundle = Some(code.clone());
         }
     }
-    println!(
-        "  ⏱ static bundles ({} concurrent) took {:?}",
-        fresh_files.len(),
-        t_static.elapsed()
-    );
 
-    let t_dyn = std::time::Instant::now();
     let mut dyn_set = tokio::task::JoinSet::new();
     for file in &fresh_files {
         let v_dyn = format!("{}/__v_dyn_{}.ts", file.abs_dir, file.stem);
@@ -354,11 +332,6 @@ pub async fn build_bundles(
             cached.dyn_bundle = Some(code.clone());
         }
     }
-    println!(
-        "  ⏱ dynamic bundles ({} concurrent) took {:?}",
-        fresh_files.len(),
-        t_dyn.elapsed()
-    );
 
     // ── 组装最终结果（cached + fresh） ──
     let mut static_results: Vec<(String, String)> = cached_static;
