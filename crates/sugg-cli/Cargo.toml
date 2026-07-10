@@ -11,5 +11,5 @@ rquickjs.workspace = true
 rkyv.workspace = true
 
 # CLI 专用
-memmap2 = "0.9.10"
+memmap2 = "0.9.11"
 lexopt = "0.3.2"

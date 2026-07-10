@@ -29,21 +29,21 @@ sugg-core = { path = "crates/sugg-core" }
 sugg-ast = { path = "crates/sugg-ast" }
 sugg-engine = { path = "crates/sugg-engine" }
 sugg-wasm = { path = "crates/sugg-wasm" }
-anyhow = "1.0.102"
+anyhow = "1.0.103"
 tokio = { version = "1.52.3", features = ["rt", "macros", "fs", "process", "net", "time"] }
 reqwest = { version = "0.13", default-features = false, features = ["rustls", "rustls-native-certs", "json", "stream"] }
 rquickjs = { version = "0.12", features = ["futures", "macro"] }
-rkyv = { version = "0.8.16" }
+rkyv = { version = "0.8.17" }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.150"
-console = "0.16.3"
+console = "0.16.4"
 dirs-next = "2.0.0"
 tempfile = "3.27.0"
 oxc = { version = "0.139", default-features = false, features = ["ast_visit", "semantic"] }
 
 
 [workspace.dependencies.insta]
-version = "1.39"
+version = "1.48"
 features = ["json"]
 
 [profile.release]
