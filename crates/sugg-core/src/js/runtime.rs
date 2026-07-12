@@ -150,25 +150,38 @@ pub fn inject_globals(ctx: Ctx<'_>) {
         "__exec",
         Function::new(
             ctx.clone(),
-            Async(|command: String| async move {
-                #[cfg(target_os = "windows")]
-                let output = {
-                    use std::os::windows::process::CommandExt;
-                    let mut std_cmd = std::process::Command::new("cmd");
-                    std_cmd.arg("/C");
-                    std_cmd.raw_arg(&command);
-                    tokio::process::Command::from(std_cmd).output().await
-                };
+            Async(|command: String, timeout_ms: u64| async move {
+                let fut = async {
+                    #[cfg(target_os = "windows")]
+                    {
+                        use std::os::windows::process::CommandExt;
+                        let mut std_cmd = std::process::Command::new("cmd");
+                        std_cmd.arg("/C");
+                        std_cmd.raw_arg(&command);
+                        tokio::process::Command::from(std_cmd).output().await
+                    }
 
-                #[cfg(not(target_os = "windows"))]
-                let output = tokio::process::Command::new("sh")
-                    .args(&["-c", &command])
-                    .output()
-                    .await;
-                match output {
-                    Ok(o) => String::from_utf8_lossy(&o.stdout).into_owned(),
-                    Err(e) => {
+                    #[cfg(not(target_os = "windows"))]
+                    {
+                        tokio::process::Command::new("sh")
+                            .args(&["-c", &command])
+                            .output()
+                            .await
+                    }
+                };
+                match tokio::time::timeout(std::time::Duration::from_millis(timeout_ms), fut).await
+                {
+                    Ok(Ok(o)) => String::from_utf8_lossy(&o.stdout).into_owned(),
+                    Ok(Err(e)) => {
                         crate::log_warn!("Command execution failed `{}`: {:?}", &command, e);
+                        String::new()
+                    }
+                    Err(_) => {
+                        crate::log_warn!(
+                            "Command execution timed out after {}ms: `{}`",
+                            timeout_ms,
+                            &command
+                        );
                         String::new()
                     }
                 }
@@ -185,20 +198,30 @@ pub fn inject_globals(ctx: Ctx<'_>) {
         "__execFile",
         Function::new(
             ctx.clone(),
-            Async(|cmd: String, args: Opt<Vec<String>>| async move {
-                let args = args.0.unwrap_or_default();
-                match tokio::process::Command::new(&cmd)
-                    .args(&args)
-                    .output()
+            Async(
+                |cmd: String, args: Vec<String>, timeout_ms: u64| async move {
+                    match tokio::time::timeout(
+                        std::time::Duration::from_millis(timeout_ms),
+                        tokio::process::Command::new(&cmd).args(&args).output(),
+                    )
                     .await
-                {
-                    Ok(o) => String::from_utf8_lossy(&o.stdout).into_owned(),
-                    Err(e) => {
-                        crate::log_warn!("execFile execution failed `{}`: {:?}", &cmd, e);
-                        String::new()
+                    {
+                        Ok(Ok(o)) => String::from_utf8_lossy(&o.stdout).into_owned(),
+                        Ok(Err(e)) => {
+                            crate::log_warn!("execFile execution failed `{}`: {:?}", &cmd, e);
+                            String::new()
+                        }
+                        Err(_) => {
+                            crate::log_warn!(
+                                "execFile execution timed out after {}ms: `{}`",
+                                timeout_ms,
+                                &cmd
+                            );
+                            String::new()
+                        }
                     }
-                }
-            }),
+                },
+            ),
         ),
     ) {
         crate::log_error!("Failed to inject __execFile global: {:?}", e);
@@ -219,7 +242,7 @@ pub fn inject_globals(ctx: Ctx<'_>) {
                 let headers: std::collections::HashMap<String, String> =
                     config_obj.get("headers").unwrap_or_default();
                 let body: String = config_obj.get("body").unwrap_or_default();
-                let timeout_ms: u64 = config_obj.get("timeout").unwrap_or(2000);
+                let timeout_ms: u64 = config_obj.get("timeout").unwrap_or(5000);
                 async move {
                     let client = http_client();
                     let timeout = std::time::Duration::from_millis(timeout_ms);
@@ -413,7 +436,7 @@ mod tests {
 
             let script = r#"
                 (async () => {
-                    const out = await __execFile("rustc", ["--version"]);
+                    const out = await __execFile("rustc", ["--version"], 5000);
                     return out.trim();
                 })()
             "#;
@@ -429,7 +452,7 @@ mod tests {
             {
                 let script2 = r#"
                     (async () => {
-                        const out = await __execFile("/bin/echo", ["hello", "world"]);
+                        const out = await __execFile("/bin/echo", ["hello", "world"], 5000);
                         return out.trim();
                     })()
                 "#;
@@ -442,7 +465,7 @@ mod tests {
             {
                 let script2 = r#"
                     (async () => {
-                        const out = await __execFile("cmd.exe", ["/c", "echo", "hello"]);
+                        const out = await __execFile("cmd.exe", ["/c", "echo", "hello"], 5000);
                         return out.trim();
                     })()
                 "#;
@@ -454,7 +477,7 @@ mod tests {
             {
                 let script3 = r#"
                     (async () => {
-                        const out = await __execFile("rustc");
+                        const out = await __execFile("rustc", [], 5000);
                         return typeof out === 'string' ? 'ok' : 'wrong_type';
                     })()
                 "#;
@@ -470,7 +493,7 @@ mod tests {
             {
                 let script4 = r#"
                     (async () => {
-                        const out = await __execFile("/bin/echo", []);
+                        const out = await __execFile("/bin/echo", [], 5000);
                         return out.trim();
                     })()
                 "#;
@@ -498,7 +521,7 @@ mod tests {
 
             let script = r#"
                 (async () => {
-                    const out = await __execFile("nonexistent_command_xyz", ["--version"]);
+                    const out = await __execFile("nonexistent_command_xyz", ["--version"], 5000);
                     return out;
                 })()
             "#;
@@ -632,6 +655,37 @@ mod tests {
             let promise: rquickjs::Promise = ctx.eval(script).unwrap();
             let timed_out: bool = promise.into_future().await.unwrap();
             assert!(timed_out, "timeout should return empty string");
+        }
+
+        ctx.async_with(async |ctx| run(ctx).await).await;
+    }
+
+    #[tokio::test]
+    async fn test_exec_file_timeout() {
+        let rt = AsyncRuntime::new().unwrap();
+        let ctx = AsyncContext::full(&rt).await.unwrap();
+
+        async fn run(ctx: Ctx<'_>) {
+            inject_globals(ctx.clone());
+
+            // execFile with a blocking command and 100ms timeout should return empty
+            #[cfg(windows)]
+            let script = r#"
+                (async () => {
+                    const out = await __execFile("ping", ["-n", "10", "127.0.0.1"], 100);
+                    return out === "";
+                })()
+            "#;
+            #[cfg(not(windows))]
+            let script = r#"
+                (async () => {
+                    const out = await __execFile("sleep", ["10"], 100);
+                    return out === "";
+                })()
+            "#;
+            let promise: rquickjs::Promise = ctx.eval(script).unwrap();
+            let timed_out: bool = promise.into_future().await.unwrap();
+            assert!(timed_out, "execFile should time out with 100ms timeout");
         }
 
         ctx.async_with(async |ctx| run(ctx).await).await;

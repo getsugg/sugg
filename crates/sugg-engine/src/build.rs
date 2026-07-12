@@ -326,7 +326,7 @@ pub async fn run_watch(
     std::thread::spawn(move || {
         let (tx, rx) = std::sync::mpsc::channel::<DebounceEventResult>();
         let mut debouncer = match new_debouncer(
-            Duration::from_millis(300),
+            Duration::from_millis(100),
             move |result: DebounceEventResult| {
                 let _ = tx.send(result);
             },

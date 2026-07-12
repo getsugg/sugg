@@ -137,13 +137,17 @@ declare module "sugg" {
   }
 
   /**
-   * Lightweight HTTP request with a configurable timeout (default 2000ms) to avoid
+   * Lightweight HTTP request with a configurable timeout (default 5000ms) to avoid
    * hanging the terminal during completion.
    */
   export function fetch(url: string, options?: FetchOptions): Promise<FetchResponse>;
 
+  export interface ExecOptions {
+    timeout?: number;
+  }
+
   /** Run a command through a shell (sh -c / cmd /C). Use for pipes, redirects, `$VAR` expansion. */
-  export function exec(cmd: string): Promise<string>;
+  export function exec(cmd: string, options?: ExecOptions): Promise<string>;
 
   /**
    * Spawn a process directly (no shell). Faster than `exec` and immune to shell-quoting issues.
@@ -151,7 +155,7 @@ declare module "sugg" {
    * @param args Argument vector; no manual escaping required.
    * @returns    Standard output as a string.
    */
-  export function execFile(cmd: string, args?: string[]): Promise<string>;
+  export function execFile(cmd: string, args?: string[], options?: ExecOptions): Promise<string>;
 
   export interface ScanDirItem {
     display: string;

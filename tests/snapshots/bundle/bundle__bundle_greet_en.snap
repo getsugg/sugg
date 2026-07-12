@@ -5,8 +5,6 @@ expression: "normalize(combined, &dir)"
 // === bun ===
 //#region virtual:env
 const createCompletion = (obj) => obj;
-globalThis.__exec;
-globalThis.__execFile;
 globalThis.__scanPath;
 globalThis.__readFile;
 globalThis.__ui;
@@ -336,8 +334,6 @@ const x_option_no_install = "Skip installation if package is not already install
 const x_option_package = "Specify package to install when binary name differs from package name";
 const x_option_silent = "Suppress output during installation";
 const x_option_verbose = "Enable verbose output during installation";
-globalThis.__exec;
-globalThis.__execFile;
 globalThis.__scanPath;
 globalThis.__readFile;
 globalThis.__ui;
@@ -1294,8 +1290,6 @@ export { __parseConfig, __v_sentry_bun_default as default };
 // === cache_stem ===
 //#region virtual:env
 const createCompletion = (obj) => obj;
-globalThis.__exec;
-globalThis.__execFile;
 globalThis.__scanPath;
 globalThis.__readFile;
 globalThis.__ui;
@@ -1446,8 +1440,6 @@ export { __parseConfig, __v_sentry_cache_stem_default as default };
 // === docker ===
 //#region virtual:env
 const createCompletion = (obj) => obj;
-globalThis.__exec;
-globalThis.__execFile;
 globalThis.__scanPath;
 globalThis.__readFile;
 globalThis.__ui;
@@ -1605,8 +1597,6 @@ export { __parseConfig, __v_sentry_docker_default as default };
 // === git ===
 //#region virtual:env
 const createCompletion = (obj) => obj;
-globalThis.__exec;
-globalThis.__execFile;
 globalThis.__scanPath;
 globalThis.__readFile;
 globalThis.__ui;
@@ -1745,8 +1735,6 @@ const __parseConfig = (modules) => {
 	sortAndResolveAliases(rootNode.subcommands);
 	return { root: rootNode };
 };
-globalThis.__exec;
-globalThis.__execFile;
 globalThis.__scanPath;
 globalThis.__readFile;
 globalThis.__ui;
@@ -1851,8 +1839,6 @@ export { __parseConfig, __v_sentry_git_default as default };
 // === greet ===
 //#region virtual:env
 const createCompletion = (obj) => obj;
-globalThis.__exec;
-globalThis.__execFile;
 globalThis.__scanPath;
 globalThis.__readFile;
 globalThis.__ui;
@@ -2006,8 +1992,6 @@ export { __parseConfig, __v_sentry_greet_default as default };
 // === greet_dynamic ===
 //#region virtual:env
 const createCompletion = (obj) => obj;
-globalThis.__exec;
-globalThis.__execFile;
 globalThis.__scanPath;
 globalThis.__readFile;
 globalThis.__ui;
@@ -2158,8 +2142,6 @@ export { __parseConfig, __v_sentry_greet_dynamic_default as default };
 // === pnpm ===
 //#region virtual:env
 const createCompletion = (obj) => obj;
-globalThis.__exec;
-globalThis.__execFile;
 globalThis.__scanPath;
 globalThis.__readFile;
 globalThis.__ui;
@@ -2323,8 +2305,6 @@ export { __parseConfig, __v_sentry_pnpm_default as default };
 // === testkit ===
 //#region virtual:env
 const createCompletion = (obj) => obj;
-globalThis.__exec;
-globalThis.__execFile;
 globalThis.__scanPath;
 globalThis.__readFile;
 globalThis.__ui;

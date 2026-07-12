@@ -6,8 +6,10 @@ expression: "normalize(docker, &dir)"
 const container_desc = "Running container";
 //#endregion
 //#region sugg
-const exec = globalThis.__exec;
-globalThis.__execFile;
+const exec = (cmd, options) => {
+	const timeout = options?.timeout ?? 5e3;
+	return globalThis.__exec(cmd, timeout);
+};
 globalThis.__scanPath;
 globalThis.__readFile;
 globalThis.__ui;

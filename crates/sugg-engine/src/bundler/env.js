@@ -10,14 +10,24 @@ export const readJson = async (path) => {
   }
 };
 
-export const exec = globalThis.__exec;
-export const execFile = globalThis.__execFile;
+export const exec = (cmd, options) => {
+  const timeout = options?.timeout ?? 5000;
+  return globalThis.__exec(cmd, timeout);
+};
+export const execFile = (cmd, args, options) => {
+  if (args && !Array.isArray(args)) {
+    options = args;
+    args = [];
+  }
+  const timeout = options?.timeout ?? 5000;
+  return globalThis.__execFile(cmd, args ?? [], timeout);
+};
 export const scanPath = globalThis.__scanPath;
 export const readFile = globalThis.__readFile;
 export const ui = globalThis.__ui;
 
 export const fetch = async (url, options = {}) => {
-  const timeout = typeof options.timeout === 'number' ? options.timeout : 2000;
+  const timeout = typeof options.timeout === 'number' ? options.timeout : 5000;
   const rawResponseStr = await globalThis.__fetch_raw({
     url: url,
     method: options.method || "GET",
