@@ -12,21 +12,37 @@ const suggestion_package_from_registry = "来自注册表的包";
 const suggestion_script = "脚本";
 //#endregion
 //#region sugg
-const readJson = async (path) => {
-	const content = await globalThis.__readFile(path);
-	if (!content) return {};
+const unwrap = (raw, context) => {
+	let parsed;
 	try {
+		parsed = JSON.parse(raw);
+	} catch (e) {
+		throw new Error(`${context}: invalid response (${e.message})`);
+	}
+	if (!parsed.ok) throw new Error(`${context}: ${parsed.error}`);
+	return parsed.data;
+};
+const readFile = async (path) => {
+	const raw = await globalThis.__readFile(path);
+	return unwrap(raw, `readFile("${path}")`);
+};
+const readJson = async (path) => {
+	try {
+		const content = await readFile(path);
 		return JSON.parse(content);
 	} catch {
 		return {};
 	}
 };
-const exec = (cmd, options) => {
+const exec = async (cmd, options) => {
 	const timeout = options?.timeout ?? 5e3;
-	return globalThis.__exec(cmd, timeout);
+	const raw = await globalThis.__exec(cmd, timeout);
+	return unwrap(raw, `exec("${cmd}")`);
 };
-const scanPath = globalThis.__scanPath;
-globalThis.__readFile;
+const scanPath = async (input, baseDir) => {
+	const raw = baseDir != null ? await globalThis.__scanPath(input, baseDir) : await globalThis.__scanPath(input);
+	return unwrap(raw, `scanPath("${input}")`);
+};
 globalThis.__ui;
 //#endregion
 //#region tests/fixtures/completions/bun/__v_dyn_bun.ts
@@ -135,8 +151,6 @@ const __dyn_bunCommands_build_args = async (ctx) => getScriptFiles(ctx);
 export { __dyn_bunCommands_add_args, __dyn_bunCommands_build_args, __dyn_bunCommands_install_args, __dyn_bunCommands_remove_args, __dyn_bunCommands_run_args, __dyn_bunCommands_test_args, __dyn_bunCommands_update_args, __dyn_bunCommands_why_args, __dyn_pmSubCommands_pkg_args, __dyn_pmSubCommands_trust_args, __dyn_pmSubCommands_why_args };
 
 // === cache_stem ===
-globalThis.__scanPath;
-globalThis.__readFile;
 globalThis.__ui;
 const resolveKey = (key) => {
 	let result;
@@ -176,12 +190,21 @@ export { __dyn_cache_stem_args };
 const container_desc = "运行中的容器";
 //#endregion
 //#region sugg
-const exec = (cmd, options) => {
-	const timeout = options?.timeout ?? 5e3;
-	return globalThis.__exec(cmd, timeout);
+const unwrap = (raw, context) => {
+	let parsed;
+	try {
+		parsed = JSON.parse(raw);
+	} catch (e) {
+		throw new Error(`${context}: invalid response (${e.message})`);
+	}
+	if (!parsed.ok) throw new Error(`${context}: ${parsed.error}`);
+	return parsed.data;
 };
-globalThis.__scanPath;
-globalThis.__readFile;
+const exec = async (cmd, options) => {
+	const timeout = options?.timeout ?? 5e3;
+	const raw = await globalThis.__exec(cmd, timeout);
+	return unwrap(raw, `exec("${cmd}")`);
+};
 globalThis.__ui;
 //#endregion
 //#region tests/fixtures/completions/docker/__v_dyn_docker.ts
@@ -196,12 +219,21 @@ export { __dyn_docker_ps_args };
 
 // === git ===
 //#region sugg
-const exec = (cmd, options) => {
-	const timeout = options?.timeout ?? 5e3;
-	return globalThis.__exec(cmd, timeout);
+const unwrap = (raw, context) => {
+	let parsed;
+	try {
+		parsed = JSON.parse(raw);
+	} catch (e) {
+		throw new Error(`${context}: invalid response (${e.message})`);
+	}
+	if (!parsed.ok) throw new Error(`${context}: ${parsed.error}`);
+	return parsed.data;
 };
-globalThis.__scanPath;
-globalThis.__readFile;
+const exec = async (cmd, options) => {
+	const timeout = options?.timeout ?? 5e3;
+	const raw = await globalThis.__exec(cmd, timeout);
+	return unwrap(raw, `exec("${cmd}")`);
+};
 globalThis.__ui;
 //#endregion
 //#region tests/fixtures/completions/git/__v_dyn_git.ts
@@ -275,17 +307,28 @@ export { __dyn_greet_dynamic_args };
 const a = "外部引入的变量";
 //#endregion
 //#region sugg
-const readJson = async (path) => {
-	const content = await globalThis.__readFile(path);
-	if (!content) return {};
+const unwrap = (raw, context) => {
+	let parsed;
 	try {
+		parsed = JSON.parse(raw);
+	} catch (e) {
+		throw new Error(`${context}: invalid response (${e.message})`);
+	}
+	if (!parsed.ok) throw new Error(`${context}: ${parsed.error}`);
+	return parsed.data;
+};
+const readFile = async (path) => {
+	const raw = await globalThis.__readFile(path);
+	return unwrap(raw, `readFile("${path}")`);
+};
+const readJson = async (path) => {
+	try {
+		const content = await readFile(path);
 		return JSON.parse(content);
 	} catch {
 		return {};
 	}
 };
-globalThis.__scanPath;
-globalThis.__readFile;
 globalThis.__ui;
 //#endregion
 //#region tests/fixtures/completions/__v_dyn_pnpm.ts
@@ -300,8 +343,7 @@ const __dyn_pnpm_run_args = async () => {
 export { __dyn_pnpm_run_args };
 
 // === testkit ===
-globalThis.__scanPath;
-globalThis.__readFile;
+//#region sugg
 const ui = globalThis.__ui;
 //#endregion
 //#region tests/fixtures/completions/__v_dyn_testkit.ts

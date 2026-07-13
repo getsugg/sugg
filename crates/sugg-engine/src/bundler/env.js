@@ -1,51 +1,75 @@
+const unwrap = (raw, context) => {
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (e) {
+    throw new Error(`${context}: invalid response (${e.message})`);
+  }
+  if (!parsed.ok) throw new Error(`${context}: ${parsed.error}`);
+  return parsed.data;
+};
+
 export const createCompletion = (obj) => obj;
 
+export const readFile = async (path) => {
+  const raw = await globalThis.__readFile(path);
+  return unwrap(raw, `readFile("${path}")`);
+};
+
 export const readJson = async (path) => {
-  const content = await globalThis.__readFile(path);
-  if (!content) return {};
   try {
+    const content = await readFile(path);
     return JSON.parse(content);
   } catch {
     return {};
   }
 };
 
-export const exec = (cmd, options) => {
+export const exec = async (cmd, options) => {
   const timeout = options?.timeout ?? 5000;
-  return globalThis.__exec(cmd, timeout);
+  const raw = await globalThis.__exec(cmd, timeout);
+  return unwrap(raw, `exec("${cmd}")`);
 };
-export const execFile = (cmd, args, options) => {
+
+export const execFile = async (cmd, args, options) => {
   if (args && !Array.isArray(args)) {
     options = args;
     args = [];
   }
   const timeout = options?.timeout ?? 5000;
-  return globalThis.__execFile(cmd, args ?? [], timeout);
+  const raw = await globalThis.__execFile(cmd, args ?? [], timeout);
+  const argsStr = args?.length ? ` ${args.join(" ")}` : "";
+  return unwrap(raw, `execFile("${cmd}"${argsStr})`);
 };
-export const scanPath = globalThis.__scanPath;
-export const readFile = globalThis.__readFile;
+
+export const scanPath = async (input, baseDir) => {
+  const raw =
+    baseDir != null
+      ? await globalThis.__scanPath(input, baseDir)
+      : await globalThis.__scanPath(input);
+  return unwrap(raw, `scanPath("${input}")`);
+};
+
 export const ui = globalThis.__ui;
 
 export const fetch = async (url, options = {}) => {
-  const timeout = typeof options.timeout === 'number' ? options.timeout : 5000;
-  const rawResponseStr = await globalThis.__fetch_raw({
+  const raw = await globalThis.__fetch_raw({
     url: url,
     method: options.method || "GET",
     headers: options.headers || {},
     body: options.body || "",
-    timeout: timeout
+    timeout: typeof options.timeout === "number" ? options.timeout : 5000,
   });
-  if (!rawResponseStr) {
-    throw new Error(`Request timed out after ${timeout}ms or failed.`);
-  }
-  const raw = JSON.parse(rawResponseStr);
+  const data = unwrap(raw, `fetch("${url}")`);
+  if (!data || typeof data.status !== "number")
+    throw new Error(`fetch("${url}"): unexpected response format`);
   return {
-    ok: raw.status >= 200 && raw.status < 300,
-    status: raw.status,
-    statusText: raw.statusText,
-    headers: { get: (name) => raw.headers[name.toLowerCase()] || null },
-    text: async () => raw.body,
-    json: async () => JSON.parse(raw.body),
+    ok: data.status >= 200 && data.status < 300,
+    status: data.status,
+    statusText: data.statusText,
+    headers: { get: (name) => data.headers[name.toLowerCase()] || null },
+    text: async () => data.body,
+    json: async () => JSON.parse(data.body),
   };
 };
 
@@ -94,7 +118,7 @@ export const __parseConfig = (modules) => {
   // 不保护 NaN / -Infinity / 负数：JSON.stringify 会把 NaN / -Infinity 变 "null"，
   // 负数变 "-5"，serde 解析 u32 字段会 Err → unwrap_or_default() 让整个 root 变空。
   // 这是 fail-loud：用户手贱写 NaN / 负数，崩 root 是用户的责任，引擎不替用户擦屁股。
-  const UNLIMITED = 0xFFFFFFFF;  // u32::MAX，CLI step 4 看到这个值不检查 remaining
+  const UNLIMITED = 0xffffffff; // u32::MAX，CLI step 4 看到这个值不检查 remaining
   function resolveArgs(args) {
     if (args == null) {
       return { args_count: 0, dynamic_func: null, static_args: null };
@@ -215,8 +239,7 @@ const resolveKey = (key) => {
       result = [...key.words].slice(0, -1).concat(key.path).join("\0");
     else if (typeof key.join === "function") result = key.join("\0");
     else result = String(key);
-  }
-  else result = key;
+  } else result = key;
   return __SCRIPT_STEM ? __SCRIPT_STEM + "\0" + result : result;
 };
 
@@ -225,7 +248,11 @@ export const cache = {
     const k = resolveKey(key);
     const cached = globalThis.__cache.get(k);
     if (cached !== undefined && cached !== "") {
-      try { return JSON.parse(cached); } catch { return cached; }
+      try {
+        return JSON.parse(cached);
+      } catch {
+        return cached;
+      }
     }
     if (!fetcher) return undefined;
     const fresh = await fetcher();

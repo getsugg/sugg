@@ -724,7 +724,22 @@ async fn run_dynamic_js<'a>(
                 .into_future::<Value>()
                 .await
                 .catch(&ctx)
-                .map_err(|e| anyhow::anyhow!("Promise resolution failed: {e:?}"))?
+                .map_err(|e| match e {
+                    rquickjs::CaughtError::Exception(ex) => {
+                        let msg = ex.message().unwrap_or_default();
+                        if msg.is_empty() {
+                            anyhow::anyhow!("JS exception: {ex:?}")
+                        } else {
+                            anyhow::anyhow!("{msg}")
+                        }
+                    }
+                    rquickjs::CaughtError::Value(v) => {
+                        anyhow::anyhow!("Promise rejected with non-Error value: {v:?}")
+                    }
+                    rquickjs::CaughtError::Error(err) => {
+                        anyhow::anyhow!("{err:?}")
+                    }
+                })?
         } else {
             js_result
         };
@@ -811,7 +826,7 @@ async fn run_dynamic_js<'a>(
         {
             Ok(items) => items,
             Err(e) => {
-                log_error!("Dynamic JS execution failed: {:#}", e);
+                log_error!("{:#}", e);
                 Vec::new()
             }
         }

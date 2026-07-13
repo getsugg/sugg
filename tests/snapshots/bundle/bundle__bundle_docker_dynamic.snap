@@ -6,12 +6,21 @@ expression: "normalize(docker, &dir)"
 const container_desc = "Running container";
 //#endregion
 //#region sugg
-const exec = (cmd, options) => {
-	const timeout = options?.timeout ?? 5e3;
-	return globalThis.__exec(cmd, timeout);
+const unwrap = (raw, context) => {
+	let parsed;
+	try {
+		parsed = JSON.parse(raw);
+	} catch (e) {
+		throw new Error(`${context}: invalid response (${e.message})`);
+	}
+	if (!parsed.ok) throw new Error(`${context}: ${parsed.error}`);
+	return parsed.data;
 };
-globalThis.__scanPath;
-globalThis.__readFile;
+const exec = async (cmd, options) => {
+	const timeout = options?.timeout ?? 5e3;
+	const raw = await globalThis.__exec(cmd, timeout);
+	return unwrap(raw, `exec("${cmd}")`);
+};
 globalThis.__ui;
 //#endregion
 //#region tests/fixtures/completions/docker/__v_dyn_docker.ts

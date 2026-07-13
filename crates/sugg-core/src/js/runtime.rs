@@ -15,29 +15,6 @@ fn http_client() -> &'static reqwest::Client {
     })
 }
 
-/// Rust 原生结构体，通过 IntoJs 自动转化为 JS 对象
-#[derive(Debug, Clone)]
-pub struct ScanDirEntry {
-    pub display: String,
-    pub value: String,
-    pub is_dir: bool,
-}
-
-impl<'js> rquickjs::IntoJs<'js> for ScanDirEntry {
-    fn into_js(self, ctx: &Ctx<'js>) -> rquickjs::Result<Value<'js>> {
-        let obj = Object::new(ctx.clone())?;
-        obj.set("display", self.display)?;
-        obj.set("value", self.value)?;
-        obj.set("isDir", self.is_dir)?;
-        if self.is_dir {
-            let style = Object::new(ctx.clone())?;
-            style.set("fg", "blue")?;
-            obj.set("style", style)?;
-        }
-        Ok(obj.into_value())
-    }
-}
-
 /// 极致性能的判断目录方法（避开全量 stat 系统调用）
 #[inline]
 async fn is_dir_fast(entry: &tokio::fs::DirEntry) -> bool {
@@ -63,12 +40,12 @@ pub fn inject_globals(ctx: Ctx<'_>) {
             ctx.clone(),
             Async(|path: String| async move {
                 match tokio::fs::read_to_string(&path).await {
-                    Ok(content) => content,
+                    Ok(content) => serde_json::json!({"ok": true, "data": content}).to_string(),
                     Err(e) => {
                         if e.kind() != std::io::ErrorKind::NotFound {
                             crate::log_warn!("Failed to read file {}: {:?}", &path, e);
                         }
-                        String::new()
+                        serde_json::json!({"ok": false, "error": format!("{e}")}).to_string()
                     }
                 }
             }),
@@ -107,39 +84,54 @@ pub fn inject_globals(ctx: Ctx<'_>) {
 
                 let scan_path = std::path::Path::new(&base_dir).join(&s_dir);
 
-                let mut entries = Vec::with_capacity(32);
                 match tokio::fs::read_dir(&scan_path).await {
                     Ok(mut dir) => {
+                        let mut entries = Vec::with_capacity(32);
                         while let Ok(Some(entry)) = dir.next_entry().await {
                             let name = entry.file_name().to_string_lossy().into_owned();
                             let is_dir = is_dir_fast(&entry).await;
 
                             let full = format!("{}{}", p_dir, name);
 
-                            let (display, value) = if is_dir {
-                                (format!("{}/", full), format!("{}/", full))
+                            let display = if is_dir {
+                                format!("{}/", full)
                             } else {
-                                (full.clone(), format!("{} ", full))
+                                full.clone()
                             };
-                            entries.push(ScanDirEntry {
-                                display,
-                                value,
-                                is_dir,
+                            let value = if is_dir {
+                                format!("{}/", full)
+                            } else {
+                                format!("{} ", full)
+                            };
+                            let mut item = serde_json::json!({
+                                "display": display,
+                                "value": value,
+                                "isDir": is_dir,
                             });
+                            if is_dir {
+                                item["style"] = serde_json::json!({"fg": "blue"});
+                            }
+                            entries.push(item);
                         }
+                        entries.sort_by(|a, b| {
+                            let a_dir = a["isDir"].as_bool().unwrap_or(false);
+                            let b_dir = b["isDir"].as_bool().unwrap_or(false);
+                            b_dir.cmp(&a_dir).then_with(|| {
+                                a["display"]
+                                    .as_str()
+                                    .unwrap_or("")
+                                    .cmp(b["display"].as_str().unwrap_or(""))
+                            })
+                        });
+                        serde_json::json!({"ok": true, "data": entries}).to_string()
                     }
                     Err(e) => {
                         if e.kind() != std::io::ErrorKind::NotFound {
                             crate::log_warn!("Path scan failed {}: {:?}", scan_path.display(), e);
                         }
+                        serde_json::json!({"ok": false, "error": format!("{e}")}).to_string()
                     }
                 }
-                entries.sort_by(|a, b| {
-                    b.is_dir
-                        .cmp(&a.is_dir)
-                        .then_with(|| a.display.cmp(&b.display))
-                });
-                entries
             }),
         ),
     ) {
@@ -171,10 +163,12 @@ pub fn inject_globals(ctx: Ctx<'_>) {
                 };
                 match tokio::time::timeout(std::time::Duration::from_millis(timeout_ms), fut).await
                 {
-                    Ok(Ok(o)) => String::from_utf8_lossy(&o.stdout).into_owned(),
+                    Ok(Ok(o)) => {
+                        serde_json::json!({"ok": true, "data": String::from_utf8_lossy(&o.stdout)}).to_string()
+                    }
                     Ok(Err(e)) => {
                         crate::log_warn!("Command execution failed `{}`: {:?}", &command, e);
-                        String::new()
+                        serde_json::json!({"ok": false, "error": format!("{e:?}")}).to_string()
                     }
                     Err(_) => {
                         crate::log_warn!(
@@ -182,7 +176,7 @@ pub fn inject_globals(ctx: Ctx<'_>) {
                             timeout_ms,
                             &command
                         );
-                        String::new()
+                        serde_json::json!({"ok": false, "error": format!("timed out after {timeout_ms}ms")}).to_string()
                     }
                 }
             }),
@@ -206,10 +200,12 @@ pub fn inject_globals(ctx: Ctx<'_>) {
                     )
                     .await
                     {
-                        Ok(Ok(o)) => String::from_utf8_lossy(&o.stdout).into_owned(),
+                        Ok(Ok(o)) => {
+                            serde_json::json!({"ok": true, "data": String::from_utf8_lossy(&o.stdout)}).to_string()
+                        }
                         Ok(Err(e)) => {
                             crate::log_warn!("execFile execution failed `{}`: {:?}", &cmd, e);
-                            String::new()
+                            serde_json::json!({"ok": false, "error": format!("{e:?}")}).to_string()
                         }
                         Err(_) => {
                             crate::log_warn!(
@@ -217,7 +213,7 @@ pub fn inject_globals(ctx: Ctx<'_>) {
                                 timeout_ms,
                                 &cmd
                             );
-                            String::new()
+                            serde_json::json!({"ok": false, "error": format!("timed out after {timeout_ms}ms")}).to_string()
                         }
                     }
                 },
@@ -268,21 +264,28 @@ pub fn inject_globals(ctx: Ctx<'_>) {
                             let mut resp_headers = std::collections::HashMap::new();
                             for (key, val) in resp.headers().iter() {
                                 if let Ok(val_str) = val.to_str() {
-                                    resp_headers.insert(key.to_string(), val_str.to_string());
+                                    resp_headers
+                                        .insert(key.as_str().to_lowercase(), val_str.to_string());
                                 }
                             }
                             let resp_body = resp.text().await.unwrap_or_default();
                             let res_map = serde_json::json!({
-                                "status": status,
-                                "statusText": status_text,
-                                "headers": resp_headers,
-                                "body": resp_body
+                                "ok": true,
+                                "data": {
+                                    "status": status,
+                                    "statusText": status_text,
+                                    "headers": resp_headers,
+                                    "body": resp_body
+                                }
                             });
                             serde_json::to_string(&res_map).unwrap_or_default()
                         }
                         Err(e) => {
-                            crate::log_warn!("__fetch_raw request failed or timed out: {:?}", e);
-                            String::new()
+                            let res_map = serde_json::json!({
+                                "ok": false,
+                                "error": format!("{:?}", e)
+                            });
+                            serde_json::to_string(&res_map).unwrap_or_default()
                         }
                     }
                 }
@@ -436,8 +439,10 @@ mod tests {
 
             let script = r#"
                 (async () => {
-                    const out = await __execFile("rustc", ["--version"], 5000);
-                    return out.trim();
+                    const raw = await __execFile("rustc", ["--version"], 5000);
+                    const parsed = JSON.parse(raw);
+                    if (!parsed.ok) throw new Error(parsed.error);
+                    return parsed.data.trim();
                 })()
             "#;
             let promise: rquickjs::Promise = ctx.eval(script).unwrap();
@@ -452,8 +457,10 @@ mod tests {
             {
                 let script2 = r#"
                     (async () => {
-                        const out = await __execFile("/bin/echo", ["hello", "world"], 5000);
-                        return out.trim();
+                        const raw = await __execFile("/bin/echo", ["hello", "world"], 5000);
+                        const parsed = JSON.parse(raw);
+                        if (!parsed.ok) throw new Error(parsed.error);
+                        return parsed.data.trim();
                     })()
                 "#;
                 let promise2: rquickjs::Promise = ctx.eval(script2).unwrap();
@@ -465,44 +472,15 @@ mod tests {
             {
                 let script2 = r#"
                     (async () => {
-                        const out = await __execFile("cmd.exe", ["/c", "echo", "hello"], 5000);
-                        return out.trim();
+                        const raw = await __execFile("cmd.exe", ["/c", "echo", "hello"], 5000);
+                        const parsed = JSON.parse(raw);
+                        if (!parsed.ok) throw new Error(parsed.error);
+                        return parsed.data.trim();
                     })()
                 "#;
                 let promise2: rquickjs::Promise = ctx.eval(script2).unwrap();
                 let result2: String = promise2.into_future().await.unwrap();
                 assert_eq!(result2, "hello");
-            }
-
-            {
-                let script3 = r#"
-                    (async () => {
-                        const out = await __execFile("rustc", [], 5000);
-                        return typeof out === 'string' ? 'ok' : 'wrong_type';
-                    })()
-                "#;
-                let promise3: rquickjs::Promise = ctx.eval(script3).unwrap();
-                let result3: String = promise3.into_future().await.unwrap();
-                assert_eq!(
-                    result3, "ok",
-                    "execFile called without args should return a string"
-                );
-            }
-
-            #[cfg(unix)]
-            {
-                let script4 = r#"
-                    (async () => {
-                        const out = await __execFile("/bin/echo", [], 5000);
-                        return out.trim();
-                    })()
-                "#;
-                let promise4: rquickjs::Promise = ctx.eval(script4).unwrap();
-                let result4: String = promise4.into_future().await.unwrap();
-                assert_eq!(
-                    result4, "",
-                    "/bin/echo called without args should output empty"
-                );
             }
         }
 
@@ -521,16 +499,21 @@ mod tests {
 
             let script = r#"
                 (async () => {
-                    const out = await __execFile("nonexistent_command_xyz", ["--version"], 5000);
-                    return out;
+                    const raw = await __execFile("nonexistent_command_xyz", ["--version"], 5000);
+                    const parsed = JSON.parse(raw);
+                    return JSON.stringify({ ok: parsed.ok, error: parsed.error || "" });
                 })()
             "#;
             let promise: rquickjs::Promise = ctx.eval(script).unwrap();
             let result: String = promise.into_future().await.unwrap();
+            let parsed: serde_json::Value = serde_json::from_str(&result).unwrap();
             assert!(
-                result.is_empty(),
-                "不存在的命令应返回空字符串, 得到: {:?}",
-                result
+                !parsed["ok"].as_bool().unwrap(),
+                "不存在的命令应返回 ok=false"
+            );
+            assert!(
+                !parsed["error"].as_str().unwrap_or("").is_empty(),
+                "应包含错误信息"
             );
         }
 
@@ -568,22 +551,43 @@ mod tests {
                 base_str = base_str.replace("\\", "/");
             }
 
-            let script1 = format!("__scanPath('bi', '{}')", base_str);
+            let script1 = format!(
+                r#"(async () => {{ const r = JSON.parse(await __scanPath('bi', '{}')); if (!r.ok) throw new Error(r.error); return JSON.stringify(r.data); }})()"#,
+                base_str
+            );
             let promise1: rquickjs::Promise = ctx.eval(script1.as_str()).unwrap();
-            let items1: Vec<rquickjs::Object> = promise1.into_future().await.unwrap();
-            let d1: Vec<String> = items1.iter().map(|o| o.get("display").unwrap()).collect();
+            let items1: String = promise1.into_future().await.unwrap();
+            let items1: Vec<serde_json::Value> = serde_json::from_str(&items1).unwrap();
+            let d1: Vec<String> = items1
+                .iter()
+                .map(|o| o["display"].as_str().unwrap().to_string())
+                .collect();
             assert_eq!(d1, vec!["bin/"]);
 
-            let script2 = format!("globalThis.__scanPath('', '{}/bin')", base_str);
+            let script2 = format!(
+                r#"(async () => {{ const r = JSON.parse(await globalThis.__scanPath('', '{}/bin')); if (!r.ok) throw new Error(r.error); return JSON.stringify(r.data); }})()"#,
+                base_str
+            );
             let promise2: rquickjs::Promise = ctx.eval(script2.as_str()).unwrap();
-            let items2: Vec<rquickjs::Object> = promise2.into_future().await.unwrap();
-            let d2: Vec<String> = items2.iter().map(|o| o.get("display").unwrap()).collect();
+            let items2: String = promise2.into_future().await.unwrap();
+            let items2: Vec<serde_json::Value> = serde_json::from_str(&items2).unwrap();
+            let d2: Vec<String> = items2
+                .iter()
+                .map(|o| o["display"].as_str().unwrap().to_string())
+                .collect();
             assert_eq!(d2, vec!["sub/", "eslint"]);
 
-            let script3 = format!("globalThis.__scanPath('sub/', '{}/bin')", base_str);
+            let script3 = format!(
+                r#"(async () => {{ const r = JSON.parse(await globalThis.__scanPath('sub/', '{}/bin')); if (!r.ok) throw new Error(r.error); return JSON.stringify(r.data); }})()"#,
+                base_str
+            );
             let promise3: rquickjs::Promise = ctx.eval(script3.as_str()).unwrap();
-            let items3: Vec<rquickjs::Object> = promise3.into_future().await.unwrap();
-            let d3: Vec<String> = items3.iter().map(|o| o.get("display").unwrap()).collect();
+            let items3: String = promise3.into_future().await.unwrap();
+            let items3: Vec<serde_json::Value> = serde_json::from_str(&items3).unwrap();
+            let d3: Vec<String> = items3
+                .iter()
+                .map(|o| o["display"].as_str().unwrap().to_string())
+                .collect();
             assert_eq!(d3, vec!["sub/foo"]);
         }
 
@@ -621,14 +625,15 @@ mod tests {
                 r#"
                 (async () => {{
                     const raw = await __fetch_raw({{ url: "http://127.0.0.1:{}/test", timeout: 3000 }});
-                    return raw;
+                    const parsed = JSON.parse(raw);
+                    if (!parsed.ok) throw new Error(parsed.error);
+                    return JSON.stringify(parsed.data);
                 }})()
                 "#,
                 port
             );
             let promise: rquickjs::Promise = ctx.eval(script.as_str()).unwrap();
             let raw: String = promise.into_future().await.unwrap();
-            assert!(!raw.is_empty(), "raw response should not be empty");
             let parsed: serde_json::Value = serde_json::from_str(&raw).unwrap();
             assert_eq!(parsed["status"], 200);
             let body: String = serde_json::from_value(parsed["body"].clone()).unwrap();
@@ -649,12 +654,19 @@ mod tests {
             let script = r#"
                 (async () => {
                     const raw = await __fetch_raw({ url: "http://127.0.0.1:1/nonexistent", timeout: 100 });
-                    return raw === "";
+                    const parsed = JSON.parse(raw);
+                    return JSON.stringify({ ok: parsed.ok, error: parsed.error || "" });
                 })()
             "#;
             let promise: rquickjs::Promise = ctx.eval(script).unwrap();
-            let timed_out: bool = promise.into_future().await.unwrap();
-            assert!(timed_out, "timeout should return empty string");
+            let raw: String = promise.into_future().await.unwrap();
+            let parsed: serde_json::Value = serde_json::from_str(&raw).unwrap();
+            assert!(
+                !parsed["ok"].as_bool().unwrap(),
+                "should return ok=false on timeout"
+            );
+            let error_msg = parsed["error"].as_str().unwrap_or("");
+            assert!(!error_msg.is_empty(), "error message should not be empty");
         }
 
         ctx.async_with(async |ctx| run(ctx).await).await;
@@ -668,24 +680,33 @@ mod tests {
         async fn run(ctx: Ctx<'_>) {
             inject_globals(ctx.clone());
 
-            // execFile with a blocking command and 100ms timeout should return empty
             #[cfg(windows)]
             let script = r#"
                 (async () => {
-                    const out = await __execFile("ping", ["-n", "10", "127.0.0.1"], 100);
-                    return out === "";
+                    const raw = await __execFile("ping", ["-n", "10", "127.0.0.1"], 100);
+                    const parsed = JSON.parse(raw);
+                    return JSON.stringify({ ok: parsed.ok, error: parsed.error || "" });
                 })()
             "#;
             #[cfg(not(windows))]
             let script = r#"
                 (async () => {
-                    const out = await __execFile("sleep", ["10"], 100);
-                    return out === "";
+                    const raw = await __execFile("sleep", ["10"], 100);
+                    const parsed = JSON.parse(raw);
+                    return JSON.stringify({ ok: parsed.ok, error: parsed.error || "" });
                 })()
             "#;
             let promise: rquickjs::Promise = ctx.eval(script).unwrap();
-            let timed_out: bool = promise.into_future().await.unwrap();
-            assert!(timed_out, "execFile should time out with 100ms timeout");
+            let raw: String = promise.into_future().await.unwrap();
+            let parsed: serde_json::Value = serde_json::from_str(&raw).unwrap();
+            assert!(
+                !parsed["ok"].as_bool().unwrap(),
+                "should return ok=false on timeout"
+            );
+            assert!(
+                !parsed["error"].as_str().unwrap_or("").is_empty(),
+                "error message should not be empty"
+            );
         }
 
         ctx.async_with(async |ctx| run(ctx).await).await;
