@@ -3915,7 +3915,7 @@ dependencies = [
 
 [[package]]
 name = "sugg"
-version = "0.3.7"
+version = "0.3.8"
 dependencies = [
  "anyhow",
  "lexopt",
@@ -3928,7 +3928,7 @@ dependencies = [
 
 [[package]]
 name = "sugg-ast"
-version = "0.3.7"
+version = "0.3.8"
 dependencies = [
  "oxc",
  "serde",
@@ -3937,7 +3937,7 @@ dependencies = [
 
 [[package]]
 name = "sugg-core"
-version = "0.3.7"
+version = "0.3.8"
 dependencies = [
  "anyhow",
  "console",
@@ -3953,14 +3953,14 @@ dependencies = [
 
 [[package]]
 name = "sugg-deploy"
-version = "0.3.7"
+version = "0.3.8"
 dependencies = [
  "dirs-next",
 ]
 
 [[package]]
 name = "sugg-engine"
-version = "0.3.7"
+version = "0.3.8"
 dependencies = [
  "anyhow",
  "clap",
@@ -3986,7 +3986,7 @@ dependencies = [
 
 [[package]]
 name = "sugg-tests"
-version = "0.3.7"
+version = "0.3.8"
 dependencies = [
  "insta",
  "serde",
@@ -3999,7 +3999,7 @@ dependencies = [
 
 [[package]]
 name = "sugg-wasm"
-version = "0.3.7"
+version = "0.3.8"
 dependencies = [
  "serde",
  "serde-wasm-bindgen",
