@@ -5,13 +5,13 @@ use rquickjs::{
     function::{Async, Opt, Rest},
 };
 
-fn http_client() -> &'static reqwest::Client {
-    static CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
-    CLIENT.get_or_init(|| {
-        reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(5))
-            .build()
-            .expect("Failed to create reqwest Client")
+fn http_agent() -> &'static ureq::Agent {
+    static AGENT: OnceLock<ureq::Agent> = OnceLock::new();
+    AGENT.get_or_init(|| {
+        let config = ureq::Agent::config_builder()
+            .timeout_global(Some(std::time::Duration::from_secs(10)))
+            .build();
+        config.into()
     })
 }
 
@@ -41,12 +41,7 @@ pub fn inject_globals(ctx: Ctx<'_>) {
             Async(|path: String| async move {
                 match tokio::fs::read_to_string(&path).await {
                     Ok(content) => serde_json::json!({"ok": true, "data": content}).to_string(),
-                    Err(e) => {
-                        if e.kind() != std::io::ErrorKind::NotFound {
-                            crate::log_warn!("Failed to read file {}: {:?}", &path, e);
-                        }
-                        serde_json::json!({"ok": false, "error": format!("{e}")}).to_string()
-                    }
+                    Err(e) => serde_json::json!({"ok": false, "error": format!("{e}")}).to_string(),
                 }
             }),
         ),
@@ -126,8 +121,8 @@ pub fn inject_globals(ctx: Ctx<'_>) {
                         serde_json::json!({"ok": true, "data": entries}).to_string()
                     }
                     Err(e) => {
-                        if e.kind() != std::io::ErrorKind::NotFound {
-                            crate::log_warn!("Path scan failed {}: {:?}", scan_path.display(), e);
+                        if e.kind() == std::io::ErrorKind::NotFound {
+                            return serde_json::json!({"ok": true, "data": []}).to_string();
                         }
                         serde_json::json!({"ok": false, "error": format!("{e}")}).to_string()
                     }
@@ -167,15 +162,9 @@ pub fn inject_globals(ctx: Ctx<'_>) {
                         serde_json::json!({"ok": true, "data": String::from_utf8_lossy(&o.stdout)}).to_string()
                     }
                     Ok(Err(e)) => {
-                        crate::log_warn!("Command execution failed `{}`: {:?}", &command, e);
                         serde_json::json!({"ok": false, "error": format!("{e:?}")}).to_string()
                     }
                     Err(_) => {
-                        crate::log_warn!(
-                            "Command execution timed out after {}ms: `{}`",
-                            timeout_ms,
-                            &command
-                        );
                         serde_json::json!({"ok": false, "error": format!("timed out after {timeout_ms}ms")}).to_string()
                     }
                 }
@@ -204,15 +193,9 @@ pub fn inject_globals(ctx: Ctx<'_>) {
                             serde_json::json!({"ok": true, "data": String::from_utf8_lossy(&o.stdout)}).to_string()
                         }
                         Ok(Err(e)) => {
-                            crate::log_warn!("execFile execution failed `{}`: {:?}", &cmd, e);
                             serde_json::json!({"ok": false, "error": format!("{e:?}")}).to_string()
                         }
                         Err(_) => {
-                            crate::log_warn!(
-                                "execFile execution timed out after {}ms: `{}`",
-                                timeout_ms,
-                                &cmd
-                            );
                             serde_json::json!({"ok": false, "error": format!("timed out after {timeout_ms}ms")}).to_string()
                         }
                     }
@@ -240,53 +223,65 @@ pub fn inject_globals(ctx: Ctx<'_>) {
                 let body: String = config_obj.get("body").unwrap_or_default();
                 let timeout_ms: u64 = config_obj.get("timeout").unwrap_or(5000);
                 async move {
-                    let client = http_client();
                     let timeout = std::time::Duration::from_millis(timeout_ms);
-                    let method = match method_str.to_uppercase().as_str() {
-                        "POST" => reqwest::Method::POST,
-                        "PUT" => reqwest::Method::PUT,
-                        "DELETE" => reqwest::Method::DELETE,
-                        "PATCH" => reqwest::Method::PATCH,
-                        _ => reqwest::Method::GET,
-                    };
-                    let mut req = client.request(method, &url).timeout(timeout);
-                    for (k, v) in &headers {
-                        req = req.header(k.as_str(), v.as_str());
-                    }
-                    if !body.is_empty() {
-                        req = req.body(body.clone());
-                    }
-                    match req.send().await {
-                        Ok(resp) => {
-                            let status = resp.status().as_u16();
-                            let status_text =
-                                resp.status().canonical_reason().unwrap_or("").to_string();
-                            let mut resp_headers = std::collections::HashMap::new();
-                            for (key, val) in resp.headers().iter() {
-                                if let Ok(val_str) = val.to_str() {
-                                    resp_headers
-                                        .insert(key.as_str().to_lowercase(), val_str.to_string());
-                                }
+
+                    let result = tokio::time::timeout(
+                        timeout,
+                        tokio::task::spawn_blocking(move || {
+                            use std::str::FromStr;
+                            let http_method = ureq::http::Method::from_str(&method_str)
+                                .unwrap_or(ureq::http::Method::GET);
+
+                            let mut builder =
+                                ureq::http::Request::builder().method(http_method).uri(&url);
+                            for (k, v) in &headers {
+                                builder = builder.header(k.as_str(), v.as_str());
                             }
-                            let resp_body = resp.text().await.unwrap_or_default();
-                            let res_map = serde_json::json!({
-                                "ok": true,
-                                "data": {
-                                    "status": status,
-                                    "statusText": status_text,
-                                    "headers": resp_headers,
-                                    "body": resp_body
+                            let request = builder.body(body).unwrap();
+                            let agent = http_agent();
+                            match agent.run(request) {
+                                Ok(mut resp) => {
+                                    let status = resp.status().as_u16();
+                                    let status_text =
+                                        resp.status().canonical_reason().unwrap_or("").to_string();
+                                    let mut resp_headers = std::collections::HashMap::new();
+                                    for (name, value) in resp.headers() {
+                                        if let Ok(v) = value.to_str() {
+                                            resp_headers.insert(
+                                                name.as_str().to_lowercase(),
+                                                v.to_string(),
+                                            );
+                                        }
+                                    }
+                                    let resp_body =
+                                        resp.body_mut().read_to_string().unwrap_or_default();
+                                    serde_json::json!({
+                                        "ok": true,
+                                        "data": {
+                                            "status": status,
+                                            "statusText": status_text,
+                                            "headers": resp_headers,
+                                            "body": resp_body
+                                        }
+                                    })
+                                    .to_string()
                                 }
-                            });
-                            serde_json::to_string(&res_map).unwrap_or_default()
+                                Err(e) => serde_json::json!({
+                                    "ok": false,
+                                    "error": format!("{:?}", e)
+                                })
+                                .to_string(),
+                            }
+                        }),
+                    )
+                    .await;
+
+                    match result {
+                        Ok(Ok(json)) => json,
+                        Ok(Err(_)) => {
+                            serde_json::json!({"ok": false, "error": "join error"}).to_string()
                         }
-                        Err(e) => {
-                            let res_map = serde_json::json!({
-                                "ok": false,
-                                "error": format!("{:?}", e)
-                            });
-                            serde_json::to_string(&res_map).unwrap_or_default()
-                        }
+                        Err(_) => serde_json::json!({"ok": false, "error": "timeout"}).to_string(),
                     }
                 }
             }),

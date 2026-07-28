@@ -30,8 +30,8 @@ sugg-ast = { path = "crates/sugg-ast" }
 sugg-engine = { path = "crates/sugg-engine" }
 sugg-wasm = { path = "crates/sugg-wasm" }
 anyhow = "1.0.103"
-tokio = { version = "1.52.3", features = ["rt", "macros", "fs", "process", "net", "time"] }
-reqwest = { version = "0.13", default-features = false, features = ["rustls", "rustls-native-certs", "json", "stream"] }
+tokio = { version = "1.52.3", features = ["rt", "macros", "fs", "process", "net", "time", "io-util"] }
+ureq = { version = "3", default-features = false, features = ["json", "gzip", "rustls"] }
 rquickjs = { version = "0.12", features = ["futures", "macro"] }
 rkyv = { version = "0.8.17" }
 serde = { version = "1.0.228", features = ["derive"] }

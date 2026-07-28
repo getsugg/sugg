@@ -303,12 +303,8 @@ pub async fn run_watch(
         fs::create_dir_all(&dir_path)?;
     }
 
-    let canonical = dir_path.canonicalize()?;
-    println!(
-        "{} Watching {}",
-        sugg_core::ICON_SCAN,
-        sugg_core::path_to_slash(&canonical)
-    );
+    let _canonical = dir_path.canonicalize()?;
+    println!("{} Watching for file changes...", sugg_core::ICON_SCAN);
 
     let mut file_cache: HashMap<PathBuf, crate::CachedFile> = HashMap::new();
     run_build_with_cache(
@@ -375,11 +371,12 @@ pub async fn run_watch(
                 file_cache.remove(changed);
             }
             println!(
-                "\n{} Changed: {}",
+                "{} File saved: {}",
                 sugg_core::ICON_BUILD,
                 changed.file_name().unwrap().to_string_lossy()
             );
         }
+        let start = std::time::Instant::now();
         if let Err(e) = run_build_with_cache(
             Some(dir_path.clone()),
             lang.clone(),
@@ -391,7 +388,13 @@ pub async fn run_watch(
         {
             log_error!("Rebuild failed: {:#}", e);
         } else {
-            println!("{} Hot Reloaded", sugg_core::ICON_SUCCESS);
+            let elapsed = start.elapsed().as_millis();
+            println!(
+                "{} Compiled QuickJS bytecode    {}ms",
+                sugg_core::ICON_SUCCESS,
+                elapsed
+            );
+            println!("{} Zero-copy cache updated", sugg_core::ICON_SUCCESS);
         }
     }
 

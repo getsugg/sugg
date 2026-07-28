@@ -9,7 +9,7 @@ For full type signatures (`CommandNode`, `OptionNode`, `Suggestion`, `DynamicCom
 ## Core Rules
 
 1. Every script must export `createCompletion({ commandName: { ... } })`. The top-level key is the command name (e.g. `git.ts` → `{ git: { ... } }`).
-2. Use TypeScript freely — extract constants, helper functions, and reusable `dynamic` callbacks.
+2. Use TypeScript freely — extract **reusable** constants and helpers (used 2+ times). Single-use expressions inline directly — named wrappers around one-off logic add only indirection.
 3. Prefer `Promise.all` over sequential `await` for independent async operations.
 
 ---
@@ -252,7 +252,8 @@ add: {
 - ❌ Omitting `args` on options that take a value (write `args: []` even with no suggestions)
 - ❌ Using placeholders like `<file>` in `args` (use `args: []` instead)
 - ❌ i18n keys containing `.`
-- ❌ Unnecessary variable extraction of single-use small structures — inline ~20 lines or fewer
+- ❌ Unnecessary variable extraction of single-use structures — inline them
+- ❌ `args: { count: Infinity }` on a node that also has `commands` — the infinite count swallows all tokens, subcommand routing is bypassed. Use `count: 0` (default) on command-grouping nodes.
 
 ---
 
