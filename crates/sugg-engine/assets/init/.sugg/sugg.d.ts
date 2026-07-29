@@ -88,7 +88,7 @@ interface ArgsSpec {
    * Use a positive integer or `Infinity`. NaN / negative numbers will collapse the
    * entire root to empty at bundle time (fail-loud).
    */
-  count?: number;
+  count: number;
   /** Suggestions (static or dynamic). Omit to require a value with no suggestions. */
   items?: string[] | Suggestion[] | DynamicCommand;
 }
