@@ -8,6 +8,7 @@
   "dev_desc": "Development utilities",
   "dev_init_desc": "Initialize workspace: write types, guides, and tsconfig",
   "dev_i18n_desc": "Generate i18n.d.ts type declarations from translation files",
+  "dev_watch_desc": "Watch completions directory and automatically rebuild on changes",
   "init_desc": "Print shell integration script",
   "help_desc": "Print this message or the help of the given subcommand",
   "opt_completions_dir": "Path to completions directory",
