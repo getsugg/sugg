@@ -21,6 +21,18 @@ const cacheDirOpt: OptionNode = {
   args: [],
 };
 
+const dumpDynamicOpt: OptionNode = {
+  labels: ["--dump-dynamic"],
+  description: t.opt_dump_dynamic,
+  args: [],
+};
+
+const maxResultsOpt: OptionNode = {
+  labels: ["--max-results"],
+  description: t.opt_max_results,
+  args: [],
+};
+
 export default createCompletion({
   sugg: {
     description: t.desc,
@@ -28,11 +40,7 @@ export default createCompletion({
     commands: {
       complete: {
         description: t.complete_desc,
-        options: [
-          cacheDirOpt,
-          helpOpt,
-          { labels: ["--max-results"], description: t.opt_max_results, args: [] },
-        ],
+        options: [cacheDirOpt, maxResultsOpt, helpOpt],
         args: SHELLS,
       },
       commands: {
@@ -41,13 +49,7 @@ export default createCompletion({
       },
       reload: {
         description: t.reload_desc,
-        options: [
-          completionsDirOpt,
-          langOpt,
-          cacheDirOpt,
-          helpOpt,
-          { labels: ["--dump-dynamic"], description: t.opt_dump_dynamic, args: [] },
-        ],
+        options: [completionsDirOpt, langOpt, cacheDirOpt, dumpDynamicOpt, helpOpt],
       },
       upgrade: {
         description: t.upgrade_desc,
@@ -65,10 +67,6 @@ export default createCompletion({
             description: t.dev_i18n_desc,
             options: [completionsDirOpt, langOpt, helpOpt],
           },
-          watch: {
-            description: t.dev_watch_desc,
-            options: [completionsDirOpt, langOpt, helpOpt],
-          },
         },
       },
       init: {
@@ -80,26 +78,23 @@ export default createCompletion({
         description: t.install_desc,
         options: [
           helpOpt,
-          completionsDirOpt,
           { labels: ["--list"], description: t.opt_list },
           { labels: ["--all"], description: t.opt_all },
           { labels: ["--force"], description: t.opt_force },
-          { labels: ["--lang"], description: t.opt_lang, args: [] },
+          { labels: ["--lang"], description: t.opt_lang, args: { count: Infinity } },
+          completionsDirOpt,
         ],
         args: {
           count: Infinity,
           items: dynamic(async () => {
             return cache.get("sugg-install-scripts", 3600000, async () => {
-              try {
-                const res = await fetch(REGISTRY_URL);
-                const registry = await res.json();
-                return registry.scripts.map((s: any) => ({
-                  display: s.name,
-                  description: s.description,
-                }));
-              } catch {
-                return [];
-              }
+              const res = await fetch(REGISTRY_URL);
+
+              const registry = await res.json();
+              return registry.scripts.map((s: any) => ({
+                display: s.name,
+                description: s.description,
+              }));
             });
           }),
         },

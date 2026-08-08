@@ -106,6 +106,16 @@ export default createCompletion({
 
 ---
 
+## Error Handling
+
+Completion is an optional aid — the user can dismiss the menu with `Esc`. **Prefer loud failures over silent ones**: a swallowed error silently degrades the feature with no way to diagnose it.
+
+- **Do not wrap external calls in `dynamic` with `try/catch`** (e.g. `exec`, `execFile`, `fetch`, `readJson`). Let exceptions propagate to the completion UI so the user sees why completion is unavailable — and a broken script's errors are also how you learn it needs fixing.
+- `return []` is the "no suggestions here" contract — **not** a way to mask errors. Use it only when the call *should not be made* in the first place (e.g. an empty `prefix` where the CLI requires a query).
+- **Legal exception — fallback chains**: when a primary source may legitimately fail and a fallback exists (e.g. a config read falling back to a CLI query), `catch {}` the primary to try the fallback — but the terminal failure must remain visible.
+
+---
+
 ## `args` Forms
 
 Both `OptionNode` and `CommandNode` accept the same `args` forms, unified under an `args_count` model:

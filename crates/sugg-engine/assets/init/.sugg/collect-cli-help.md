@@ -74,16 +74,18 @@ done
 
 Run: `bash _tmp/run1.sh`
 
-Then send the updated `_tmp/${tool}_help` to AI and ask:
-> "Which of these subcommands have further subcommands? Output as a bash associative array, e.g. `subs["parent"]="child1 child2"`"
+Then send `_tmp/${tool}_help` to AI and ask:
+> "For each help block in PART 1, determine if the command lists subcommands (in any format — `Commands:` section, a table, a usage line, or any listing of sub-commands). Output all commands that have their own subcommands as a bash associative array, e.g. `subs["container"]="run ls create exec"`. If none do, output `subs=()`."
 
-Fill the result into `subs` in step 2 below.
+Fill the result into `subs` in step 2 below. If the result is empty, skip to **Verify depth** below.
 
 ---
 
-## Step 2 (and beyond) — Collect deeper levels
+## Step N — Collect deeper levels (N ≥ 2)
 
-Save as `_tmp/run2.sh`, fill in `tool` and `subs`, then run. Append further levels by repeating the same pattern.
+For each level beyond the first, save as `_tmp/runN.sh`, fill in `tool` and `subs`, then run.
+
+**Level 2** — save as `_tmp/run2.sh`:
 
 ```bash
 #!/bin/bash
@@ -94,7 +96,7 @@ file="_tmp/${tool}_help"
 
 declare -A subs
 # paste AI output here
-# e.g. subs["config"]="set get delete list"
+# e.g. subs["container"]="run ls create exec"
 
 echo "" >> "$file"
 echo "========== PART 2: level-2 subcommands --help ==========" >> "$file"
@@ -110,7 +112,10 @@ done
 
 Run: `bash _tmp/run2.sh`
 
-Repeat: send the updated help to AI, ask for the next level's subcommands, create `run3.sh`, run it. Keep going until AI says there are no more subcommands.
+Then send `_tmp/${tool}_help` to AI and ask:
+> "Examine every new help block in PART 2 (and any earlier PART not yet checked). For each one, determine if it lists subcommands (in any format). Output all that do as a bash associative array. The key is the full prefix used in the `----------` header, and the value is the subcommand list — e.g. `subs["docker container"]="run ls create"`. If none do, output `subs=()`."
+
+If `subs` is not empty, create `_tmp/run3.sh` using the same pattern (PART 3, three nested loops for `cmd`/`sub`/`subsub`), run it, and repeat. If empty, skip to **Verify depth**.
 
 ---
 
@@ -118,8 +123,19 @@ Repeat: send the updated help to AI, ask for the next level's subcommands, creat
 
 - The script appends to the file. To start over, re-run section **Initial** to overwrite.
 - `--version` failures are non-fatal and won't abort the script.
-- For deeper levels, just repeat the step 2 pattern with one more loop level.
-- AI never misses a subcommand — it reads the raw `Commands:` section. Trust its output over manual copying.
+- AI may miss subcommands at deeper levels — always run **Verify depth** before proceeding.
+- At levels beyond 2, the subs key uses the full prefix (e.g. `subs["container run"]="subsub"`). Adjust the loop nesting in `runN.sh` accordingly: each extra level adds one more `for` loop.
+
+---
+
+## Verify depth — No skipped levels
+
+Before writing the completion script, verify that no level was skipped. Every PART block in `_tmp/<tool>_help` that lists subcommands (in any format) must have those subcommands collected in a deeper PART.
+
+Send `_tmp/<tool>_help` to AI and ask:
+> "Examine every PART block in the file. For each one that lists subcommands (regardless of format — `Commands:` section, table, usage line, inline list, etc.), verify that every listed subcommand has its own `--help` block collected in a deeper PART. Report any commands whose subcommands were not collected."
+
+Do not proceed to writing the completion script until all levels are complete.
 
 ---
 
