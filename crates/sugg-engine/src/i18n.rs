@@ -55,7 +55,7 @@ pub fn run_i18n_gen(completions_dir: &Path, lang: &str) {
         translations: &'a BTreeMap<String, String>,
     ) -> Option<&'a str> {
         for fb in fallbacks.iter().rev() {
-            for (lang, _) in translations.iter() {
+            for lang in translations.keys() {
                 if lang.eq_ignore_ascii_case(fb) {
                     return Some(lang.as_str());
                 }
