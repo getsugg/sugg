@@ -7,7 +7,7 @@ use std::time::Duration;
 use tokio::sync::Semaphore;
 use tokio::task::JoinSet;
 
-pub const REGISTRY_URL: &str = "https://getsugg.github.io/sugg-completions/generated/registry.json";
+pub const REGISTRY_URL: &str = "https://getsugg.github.io/generated/registry.json";
 pub const RAW_BASE: &str =
     "https://raw.githubusercontent.com/getsugg/sugg-completions/master/completions";
 
