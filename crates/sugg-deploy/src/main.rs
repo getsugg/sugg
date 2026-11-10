@@ -22,6 +22,7 @@ use std::process::Command;
 const ICON_BUILD: &str = "🔧";
 const ICON_ERROR: &str = "❌";
 const ICON_SUCCESS: &str = "✅";
+#[cfg(windows)]
 const ICON_WARN: &str = "❗";
 const ICON_INFO: &str = "💡";
 
@@ -143,11 +144,10 @@ fn main() {
 
 /// 将指定目录添加到系统 PATH 环境变量
 fn add_dir_to_path(bin_dir: &std::path::Path) {
-    let dir_str = bin_dir.to_string_lossy().replace('/', "\\");
-
     #[cfg(windows)]
     {
         // Windows：通过 PowerShell 设置用户级 PATH
+        let dir_str = bin_dir.to_string_lossy().replace('/', "\\");
         let output = Command::new("powershell")
             .args([
                 "-NoProfile",
