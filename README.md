@@ -7,6 +7,8 @@
 
 **English** | [简体中文](./README.zh-CN.md)
 
+[![CI](https://github.com/getsugg/sugg/actions/workflows/ci.yml/badge.svg)](https://github.com/getsugg/sugg/actions/workflows/ci.yml)
+
 **Sugg** is a lightweight, high-performance shell completion engine written in Rust. It enables developers to author complex shell completion scripts in modern TypeScript/JavaScript, compiling them into precompiled bytecode with zero-copy (`rkyv`) caching to deliver near-zero latency completions in terminal environments.
 
 ## Features
@@ -164,6 +166,12 @@ Sugg decouples completion evaluations from compilation to maintain near-zero ren
 - `sugg dev init`: Writes type declarations, guides, and `tsconfig.json` files.
 - `sugg dev i18n`: Scans JSON locales to generate typed declarations for `virtual:i18n/*`.
 - `sugg upgrade`: Automatically self-upgrades Sugg to the latest release on GitHub.
+
+## Contributing
+
+Bug reports, feature requests and pull requests are welcome — see
+[CONTRIBUTING.md](CONTRIBUTING.md) for the build, test and commit conventions.
+Security issues should go through [SECURITY.md](SECURITY.md) instead of a public issue.
 
 ## License
 

@@ -5,9 +5,10 @@ use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::sync::Once;
 use std::sync::OnceLock;
+use tempfile::TempDir;
 
 static BUILD_ONCE: Once = Once::new();
 
@@ -125,6 +126,81 @@ pub fn get_fixture_dir(sub_path: &str) -> PathBuf {
     path
 }
 
+/// Whether the `bun` binary is available.
+///
+/// Some completion fixtures shell out to `bun` (`bun getcompletes`, `bun pm ls -g`),
+/// so the tests that rely on them are skipped when bun is not installed instead of
+/// failing with a misleading snapshot mismatch.
+pub fn bun_available() -> bool {
+    Command::new("bun")
+        .arg("--version")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .map(|status| status.success())
+        .unwrap_or(false)
+}
+
+/// Whether the `git` binary is available.
+pub fn git_available() -> bool {
+    Command::new("git")
+        .arg("--version")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .map(|status| status.success())
+        .unwrap_or(false)
+}
+
+/// Creates a throwaway git repository with deterministic branches and remotes.
+///
+/// Completion tests that run `git remote` / `git branch` must not depend on the
+/// branches and remotes of the surrounding checkout, otherwise they fail depending
+/// on which branches exist locally or whether CI checked out a detached HEAD.
+pub fn git_project() -> TempDir {
+    let dir = tempfile::tempdir().expect("failed to create git fixture dir");
+    let git = |args: &[&str]| {
+        let output = Command::new("git")
+            .args(args)
+            .current_dir(dir.path())
+            .output()
+            .expect("failed to run git");
+        assert!(
+            output.status.success(),
+            "git {:?} failed: {}",
+            args,
+            String::from_utf8_lossy(&output.stderr)
+        );
+    };
+
+    git(&["init", "-q", "-b", "main"]);
+    git(&[
+        "-c",
+        "user.name=Sugg Tests",
+        "-c",
+        "user.email=tests@sugg.invalid",
+        "commit",
+        "-q",
+        "--allow-empty",
+        "-m",
+        "init",
+    ]);
+    git(&["branch", "dev"]);
+    git(&[
+        "remote",
+        "add",
+        "origin",
+        "https://github.com/getsugg/sugg.git",
+    ]);
+    git(&[
+        "remote",
+        "add",
+        "upstream",
+        "https://github.com/getsugg/sugg-completions.git",
+    ]);
+    dir
+}
+
 #[allow(dead_code)]
 pub fn normalize_items(items: &[Value], project_dir: &Path) -> Vec<Value> {
     let mut sorted: Vec<_> = items.to_vec();
@@ -225,10 +301,11 @@ pub fn get_sandbox() -> &'static SharedSandbox {
 
         let mut project_dirs = HashMap::new();
         for name in &["minimal", "pnpm", "bun"] {
-            project_dirs.insert(
-                name.to_string(),
-                get_fixture_dir(&format!("projects/{}", name)),
-            );
+            let dir = get_fixture_dir(&format!("projects/{}", name));
+            // `minimal` is an intentionally empty project directory. Git cannot track
+            // empty directories, so a fresh clone or worktree does not have it.
+            fs::create_dir_all(&dir).unwrap();
+            project_dirs.insert(name.to_string(), dir);
         }
 
         SharedSandbox {

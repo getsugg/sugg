@@ -304,7 +304,7 @@ export { __dyn_greet_dynamic_greet_dynamic_args };
 
 // === pnpm ===
 //#region tests/fixtures/completions/_lib.ts
-const a = "外部引入的变量";
+const a = "imported value";
 //#endregion
 //#region sugg
 const unwrap = (raw, context) => {
@@ -336,7 +336,7 @@ const __dyn_pnpm_pnpm_run_args = async () => {
 	const scripts = (await readJson("package.json")).scripts || {};
 	return Object.entries(scripts).map(([name, cmd]) => ({
 		display: name,
-		description: `运行指令 ${a}: ${cmd}`
+		description: `Run script ${a}: ${cmd}`
 	}));
 };
 //#endregion

@@ -2,6 +2,12 @@
 name = "sugg-wasm"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
+description = "WebAssembly bindings for Sugg completion-script AST extraction."
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+publish = false
 
 [lib]
 crate-type = ["cdylib"]

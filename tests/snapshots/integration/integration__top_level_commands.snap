@@ -19,7 +19,7 @@ expression: "normalize_items(&items, &sandbox.project_dirs[\"minimal\"])"
   {
     "value": "git ",
     "display_override": "git",
-    "description": "分布式版本控制系统"
+    "description": "Distributed version control system"
   },
   {
     "value": "greet ",

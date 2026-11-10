@@ -1,0 +1,78 @@
+name: Bug report
+description: Something is broken or a completion is wrong
+title: "[bug] "
+labels: ["bug"]
+body:
+    - type: markdown
+      attributes:
+          value: |
+              Thanks for the report! Please fill in as much as you can — the shell,
+              version and exact command line usually make the difference.
+    - type: textarea
+      id: what-happened
+      attributes:
+          label: What happened?
+          description: Describe the actual result and what you expected instead.
+          placeholder: |
+              Typing `npm update -g <TAB>` returns nothing, but I expected the list of globally installed packages.
+      validations:
+          required: true
+    - type: textarea
+      id: reproduce
+      attributes:
+          label: Steps to reproduce
+          placeholder: |
+              1. `sugg init zsh` (or the shell you use)
+              2. Type: npm update -g <TAB>
+              3. Nothing is suggested
+      validations:
+          required: true
+    - type: input
+      id: version
+      attributes:
+          label: Sugg version
+          description: Output of `sugg --version`
+          placeholder: 0.3.10
+      validations:
+          required: true
+    - type: dropdown
+      id: shell
+      attributes:
+          label: Shell
+          options:
+              - Nushell
+              - Zsh
+              - Fish
+              - Bash
+              - PowerShell
+              - Not shell related
+      validations:
+          required: true
+    - type: input
+      id: os
+      attributes:
+          label: OS and architecture
+          placeholder: Windows 11 / x86_64, macOS 15 / aarch64, Ubuntu 24.04 / x86_64
+      validations:
+          required: true
+    - type: input
+      id: script
+      attributes:
+          label: Completion script
+          description: Which completion script is involved, and is it from the registry or your own?
+          placeholder: npm (installed with `sugg install npm`)
+    - type: textarea
+      id: logs
+      attributes:
+          label: Logs or output
+          description: Any error output, `sugg reload` output, or a minimal script that reproduces it.
+          render: shell
+    - type: checkboxes
+      id: checks
+      attributes:
+          label: Checklist
+          options:
+              - label: I searched existing issues for the same problem
+                required: true
+              - label: I am on the latest release (`sugg upgrade`)
+                required: true

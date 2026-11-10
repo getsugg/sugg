@@ -16,7 +16,8 @@ macro_rules! integration_snapshot {
 
 mod common;
 use common::{
-    complete, get_fixture_dir, get_sandbox, has_item, normalize_items, reload, reload_with_lang,
+    bun_available, complete, get_fixture_dir, get_sandbox, git_available, git_project, has_item,
+    normalize_items, reload, reload_with_lang,
 };
 use std::fs;
 use tempfile::tempdir;
@@ -32,6 +33,11 @@ fn test_reload_success() {
 
 #[test]
 fn test_root_command_cleaning() {
+    if !bun_available() {
+        eprintln!("skipping test_root_command_cleaning: `bun` is not installed");
+        return;
+    }
+
     let sandbox = get_sandbox();
     let proj_bun = &sandbox.project_dirs["bun"];
     let proj_pnpm = &sandbox.project_dirs["pnpm"];
@@ -69,6 +75,11 @@ fn test_style_attribute() {
 
 #[test]
 fn test_real_bun_project_run_scripts() {
+    if !bun_available() {
+        eprintln!("skipping test_real_bun_project_run_scripts: `bun` is not installed");
+        return;
+    }
+
     let sandbox = get_sandbox();
     let items = complete("bun run ", &sandbox.project_dirs["bun"], &sandbox.cache_dir);
     integration_snapshot!(
@@ -209,6 +220,11 @@ fn test_i18n_dynamic_zh() {
 
 #[test]
 fn test_bun_x_vs_run_paths() {
+    if !bun_available() {
+        eprintln!("skipping test_bun_x_vs_run_paths: `bun` is not installed");
+        return;
+    }
+
     let sandbox = get_sandbox();
     let project_path = get_fixture_dir("projects/bun_x_vs_run");
 
@@ -422,8 +438,15 @@ fn test_ctx_args_positional() {
 
 #[test]
 fn test_git_remote_add_positional() {
+    if !git_available() {
+        eprintln!("skipping test_git_remote_add_positional: `git` is not installed");
+        return;
+    }
+
     let sandbox = get_sandbox();
-    let proj = &sandbox.project_dirs["minimal"];
+    // Run against a throwaway repository so branches and remotes are deterministic.
+    let git_dir = git_project();
+    let proj = git_dir.path();
 
     // git remote add <name> <url>：
     //   - 第一位置 (args=[])  → 补 remote name 列表

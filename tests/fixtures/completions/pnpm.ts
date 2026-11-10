@@ -4,19 +4,19 @@ export default createCompletion({
   pnpm: {
     commands: {
       install: {
-        description: "安装依赖",
+        description: "Install dependencies",
         options: await (async () => [
-          { labels: ["-g", "--global"], description: "全局安装", style: { fg: "green" } },
+          { labels: ["-g", "--global"], description: "Install globally", style: { fg: "green" } },
         ])(),
       },
       run: {
-        description: "运行任务或文件",
+        description: "Run a task or file",
         args: dynamic(async () => {
           const pkg = await readJson("package.json");
           const scripts = pkg.scripts || {};
           return Object.entries(scripts).map(([name, cmd]) => ({
             display: name,
-            description: `运行指令 ${a}: ${cmd}`,
+            description: `Run script ${a}: ${cmd}`,
           }));
         }),
       },

@@ -2,6 +2,12 @@
 name = "sugg-deploy"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
+description = "Local installer that copies freshly built Sugg binaries into ~/.sugg."
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+publish = false
 
 [dependencies]
 dirs-next.workspace = true

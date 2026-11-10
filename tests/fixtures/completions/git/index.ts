@@ -29,16 +29,16 @@ const getBranches = async (): Promise<string[]> => {
 
 export default createCompletion({
   git: {
-    description: "分布式版本控制系统",
+    description: "Distributed version control system",
     commands: {
       // 简单子命令
-      init: { description: "初始化新仓库" },
-      status: { description: "显示工作区状态" },
-      log: { description: "显示提交日志" },
+      init: { description: "Create an empty repository" },
+      status: { description: "Show working tree status" },
+      log: { description: "Show commit logs" },
 
       // git add <files>...：任意多文件（count: Infinity 表达无限）
       add: {
-        description: "添加文件到暂存区",
+        description: "Add files to the index",
         args: {
           count: Infinity,
           items: dynamic(async (ctx) => {
@@ -52,13 +52,13 @@ export default createCompletion({
 
       // git commit [-m <message>]
       commit: {
-        description: "提交变更",
-        options: [{ labels: ["-m", "--message"], description: "提交信息", args: [] }],
+        description: "Record changes to the repository",
+        options: [{ labels: ["-m", "--message"], description: "Commit message", args: [] }],
       },
 
       // git checkout <branch>：第一位置补 branch 列表
       checkout: {
-        description: "切换分支",
+        description: "Switch branches",
         args: dynamic(async () => {
           const branches = await getBranches();
           return branches;
@@ -67,7 +67,7 @@ export default createCompletion({
 
       // git branch <name>：第一位置补 branch 列表
       branch: {
-        description: "列出/创建分支",
+        description: "List or create branches",
         args: dynamic(async () => {
           const branches = await getBranches();
           return branches;
@@ -76,7 +76,7 @@ export default createCompletion({
 
       // git push <remote> <branch>：ctx.positionals.length 区分位置（严格 count=2）
       push: {
-        description: "推送到远端",
+        description: "Update remote refs",
         args: {
           count: 2,
           items: dynamic(async (ctx) => {
@@ -93,7 +93,7 @@ export default createCompletion({
 
       // git pull <remote> <branch>：同上（严格 count=2）
       pull: {
-        description: "拉取远端",
+        description: "Fetch and integrate with another repository",
         args: {
           count: 2,
           items: dynamic(async (ctx) => {
@@ -110,14 +110,14 @@ export default createCompletion({
 
       // git remote 子命令群
       remote: {
-        description: "管理远端仓库",
+        description: "Manage tracked repositories",
         commands: {
           // git remote -v：列出远端（带 URL），无补全
-          list: { description: "列出所有远端" },
+          list: { description: "List all remotes" },
 
           // git remote add <name> <url>（严格 count=2）
           add: {
-            description: "添加新远端",
+            description: "Add a new remote",
             args: {
               count: 2,
               items: dynamic(async (ctx) => {
@@ -137,7 +137,7 @@ export default createCompletion({
 
           // git remote rename <old> <new>（严格 count=2）
           rename: {
-            description: "重命名远端",
+            description: "Rename a remote",
             args: {
               count: 2,
               items: dynamic(async (ctx) => {
@@ -151,7 +151,7 @@ export default createCompletion({
 
           // git remote remove <name>
           remove: {
-            description: "删除远端",
+            description: "Remove a remote",
             args: dynamic(async () => {
               return getRemotes();
             }),

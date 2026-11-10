@@ -1,1 +1,1 @@
-export const a = "外部引入的变量";
+export const a = "imported value";

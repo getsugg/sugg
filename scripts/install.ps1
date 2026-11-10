@@ -7,19 +7,23 @@ Downloads the latest version of Sugg and installs it to ~\.sugg.
 It automatically adds ~\.sugg\bin to the User's PATH environment variable.
 
 .EXAMPLE
-Invoke-RestMethod -Uri "https://raw.githubusercontent.com/YOUR_GITHUB_NAME/sugg/main/install.ps1" | Invoke-Expression
+Invoke-RestMethod -Uri "https://raw.githubusercontent.com/getsugg/sugg/main/scripts/install.ps1" | Invoke-Expression
 #>
 
 $ErrorActionPreference = "Stop"
 
 # ==========================================
-# Configuration (Modify for your repository)
+# Configuration
 # ==========================================
 $GithubRepo = "getsugg/sugg"
-$AssetName  = "sugg-x86_64-pc-windows-msvc.zip" # TODO: Ensure this matches your release filename
+$AssetName  = "sugg-x86_64-pc-windows-msvc.zip"
 
 # Installation paths
-$InstallDir = "$env:USERPROFILE\.sugg"
+if ($env:SUGG_HOME) {
+    $InstallDir = $env:SUGG_HOME
+} else {
+    $InstallDir = "$env:USERPROFILE\.sugg"
+}
 $BinDir     = "$InstallDir\bin"
 
 Write-Host "🚀 Starting Sugg installation..." -ForegroundColor Cyan

@@ -6,7 +6,7 @@ expression: "normalize_items(&items, &sandbox.project_dirs[\"minimal\"])"
   {
     "value": "--global ",
     "display_override": "--global",
-    "description": "全局安装",
+    "description": "Install globally",
     "style": {
       "fg": "green"
     }
@@ -14,7 +14,7 @@ expression: "normalize_items(&items, &sandbox.project_dirs[\"minimal\"])"
   {
     "value": "-g ",
     "display_override": "-g",
-    "description": "全局安装",
+    "description": "Install globally",
     "style": {
       "fg": "green"
     }

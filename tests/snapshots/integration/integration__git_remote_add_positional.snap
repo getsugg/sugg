@@ -10,6 +10,10 @@ expression: all
       {
         "value": "origin ",
         "display_override": "origin"
+      },
+      {
+        "value": "upstream ",
+        "display_override": "upstream"
       }
     ]
   },
@@ -53,6 +57,10 @@ expression: all
       {
         "value": "origin ",
         "display_override": "origin"
+      },
+      {
+        "value": "upstream ",
+        "display_override": "upstream"
       }
     ]
   },
@@ -60,6 +68,10 @@ expression: all
     "name": "push_second",
     "input": "git push origin ",
     "result": [
+      {
+        "value": "dev ",
+        "display_override": "dev"
+      },
       {
         "value": "main ",
         "display_override": "main"
@@ -73,6 +85,10 @@ expression: all
       {
         "value": "origin ",
         "display_override": "origin"
+      },
+      {
+        "value": "upstream ",
+        "display_override": "upstream"
       }
     ]
   },
@@ -80,6 +96,10 @@ expression: all
     "name": "checkout_first",
     "input": "git checkout ",
     "result": [
+      {
+        "value": "dev ",
+        "display_override": "dev"
+      },
       {
         "value": "main ",
         "display_override": "main"

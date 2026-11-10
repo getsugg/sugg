@@ -1729,13 +1729,13 @@ globalThis.__ui;
 //#endregion
 //#region tests/fixtures/completions/git/__v_sentry_git.ts
 var __v_sentry_git_default = [["git", createCompletion({ git: {
-	description: "分布式版本控制系统",
+	description: "Distributed version control system",
 	commands: {
-		init: { description: "初始化新仓库" },
-		status: { description: "显示工作区状态" },
-		log: { description: "显示提交日志" },
+		init: { description: "Create an empty repository" },
+		status: { description: "Show working tree status" },
+		log: { description: "Show commit logs" },
 		add: {
-			description: "添加文件到暂存区",
+			description: "Add files to the index",
 			args: {
 				count: Infinity,
 				items: {
@@ -1745,29 +1745,29 @@ var __v_sentry_git_default = [["git", createCompletion({ git: {
 			}
 		},
 		commit: {
-			description: "提交变更",
+			description: "Record changes to the repository",
 			options: [{
 				labels: ["-m", "--message"],
-				description: "提交信息",
+				description: "Commit message",
 				args: []
 			}]
 		},
 		checkout: {
-			description: "切换分支",
+			description: "Switch branches",
 			args: {
 				__is_dynamic: true,
 				id: "__dyn_git_git_checkout_args"
 			}
 		},
 		branch: {
-			description: "列出/创建分支",
+			description: "List or create branches",
 			args: {
 				__is_dynamic: true,
 				id: "__dyn_git_git_branch_args"
 			}
 		},
 		push: {
-			description: "推送到远端",
+			description: "Update remote refs",
 			args: {
 				count: 2,
 				items: {
@@ -1777,7 +1777,7 @@ var __v_sentry_git_default = [["git", createCompletion({ git: {
 			}
 		},
 		pull: {
-			description: "拉取远端",
+			description: "Fetch and integrate with another repository",
 			args: {
 				count: 2,
 				items: {
@@ -1787,11 +1787,11 @@ var __v_sentry_git_default = [["git", createCompletion({ git: {
 			}
 		},
 		remote: {
-			description: "管理远端仓库",
+			description: "Manage tracked repositories",
 			commands: {
-				list: { description: "列出所有远端" },
+				list: { description: "List all remotes" },
 				add: {
-					description: "添加新远端",
+					description: "Add a new remote",
 					args: {
 						count: 2,
 						items: {
@@ -1801,7 +1801,7 @@ var __v_sentry_git_default = [["git", createCompletion({ git: {
 					}
 				},
 				rename: {
-					description: "重命名远端",
+					description: "Rename a remote",
 					args: {
 						count: 2,
 						items: {
@@ -1811,7 +1811,7 @@ var __v_sentry_git_default = [["git", createCompletion({ git: {
 					}
 				},
 				remove: {
-					description: "删除远端",
+					description: "Remove a remote",
 					args: {
 						__is_dynamic: true,
 						id: "__dyn_git_git_remote_remove_args"
@@ -2266,15 +2266,15 @@ const __parseConfig = (modules) => {
 //#region tests/fixtures/completions/__v_sentry_pnpm.ts
 var __v_sentry_pnpm_default = [["pnpm", createCompletion({ pnpm: { commands: {
 	install: {
-		description: "安装依赖",
+		description: "Install dependencies",
 		options: await (async () => [{
 			labels: ["-g", "--global"],
-			description: "全局安装",
+			description: "Install globally",
 			style: { fg: "green" }
 		}])()
 	},
 	run: {
-		description: "运行任务或文件",
+		description: "Run a task or file",
 		args: {
 			__is_dynamic: true,
 			id: "__dyn_pnpm_pnpm_run_args"

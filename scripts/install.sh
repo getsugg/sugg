@@ -86,7 +86,7 @@ else
     exit 1
 fi
 
-# 3. PATH 提示
+# 3. PATH hint
 echo -e "${YELLOW}Please add the following to your shell profile:${NC}"
 echo -e "  ${CYAN}export PATH=\"$BIN_DIR:\$PATH\"${NC}"
 echo -e "${YELLOW}Then run 'sugg init <shell>' to enable shell integration.${NC}"

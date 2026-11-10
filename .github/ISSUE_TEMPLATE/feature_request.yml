@@ -1,0 +1,44 @@
+name: Feature request
+description: Suggest a new capability or an improvement
+title: "[feature] "
+labels: ["enhancement"]
+body:
+    - type: textarea
+      id: problem
+      attributes:
+          label: What problem are you trying to solve?
+          description: Describe the use case, not just the solution.
+          placeholder: I maintain completions for a CLI with 300+ generated subcommands and want to avoid writing them by hand.
+      validations:
+          required: true
+    - type: textarea
+      id: proposal
+      attributes:
+          label: Proposed solution
+          description: How would you like Sugg to behave? API sketches and examples are welcome.
+    - type: textarea
+      id: alternatives
+      attributes:
+          label: Alternatives considered
+          description: Other tools or workarounds you have tried.
+    - type: dropdown
+      id: area
+      attributes:
+          label: Area
+          options:
+              - Completion scripts / JS API
+              - CLI (`sugg` command)
+              - Shell integration
+              - Performance
+              - Installation / upgrade
+              - Documentation
+              - Other
+      validations:
+          required: true
+    - type: checkboxes
+      id: checks
+      attributes:
+          label: Checklist
+          options:
+              - label: I searched existing issues for a similar request
+                required: true

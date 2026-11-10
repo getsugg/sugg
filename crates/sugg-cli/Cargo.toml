@@ -2,6 +2,12 @@
 name = "sugg"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
+description = "Cross-shell smart command completion engine."
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+publish = false
 
 [dependencies]
 sugg-core.workspace = true

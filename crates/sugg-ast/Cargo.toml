@@ -2,6 +2,12 @@
 name = "sugg-ast"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
+description = "Static analysis: extract commands and dynamic functions from completion scripts."
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+publish = false
 
 [dependencies]
 oxc.workspace = true

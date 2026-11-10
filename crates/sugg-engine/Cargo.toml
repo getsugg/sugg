@@ -2,6 +2,12 @@
 name = "sugg-engine"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
+description = "Build pipeline: bundle completion scripts with Rolldown and compile them to QuickJS bytecode."
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+publish = false
 
 [lib]
 name = "sugg_engine"

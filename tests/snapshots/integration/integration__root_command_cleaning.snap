@@ -82,12 +82,12 @@ expression: all
       {
         "value": "build ",
         "display_override": "build",
-        "description": "运行指令 外部引入的变量: echo build"
+        "description": "Run script imported value: echo build"
       },
       {
         "value": "test ",
         "display_override": "test",
-        "description": "运行指令 外部引入的变量: echo test"
+        "description": "Run script imported value: echo test"
       }
     ]
   },
@@ -98,12 +98,12 @@ expression: all
       {
         "value": "build ",
         "display_override": "build",
-        "description": "运行指令 外部引入的变量: echo build"
+        "description": "Run script imported value: echo build"
       },
       {
         "value": "test ",
         "display_override": "test",
-        "description": "运行指令 外部引入的变量: echo test"
+        "description": "Run script imported value: echo test"
       }
     ]
   }

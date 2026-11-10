@@ -285,7 +285,7 @@ fn delegate_to_engine() -> ! {
         if !path.exists() {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
-                format!("未找到 sugg-engine: {}", path.display()),
+                format!("sugg-engine not found: {}", path.display()),
             ));
         }
         #[cfg(unix)]
@@ -303,7 +303,11 @@ fn delegate_to_engine() -> ! {
     match spawn_res {
         Ok(code) => std::process::exit(code),
         Err(e) => {
-            eprintln!("{} 启动引擎失败: {}", sugg_core::ICON_ERROR, e);
+            eprintln!(
+                "{} failed to start sugg-engine: {}",
+                sugg_core::ICON_ERROR,
+                e
+            );
             std::process::exit(1);
         }
     }

@@ -2,6 +2,12 @@
 name = "sugg-core"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
+description = "Core types and the QuickJS runtime shared by the Sugg engine and CLI."
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+publish = false
 
 [dependencies]
 tokio.workspace = true

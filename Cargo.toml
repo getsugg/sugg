@@ -7,24 +7,27 @@ members = [
     "crates/sugg-cli",
     "crates/sugg-deploy",
 ]
-# 添加此行：指定默认编译和测试成员
+# Build and test these members by default
 default-members = [
     "crates/sugg-core",
     "crates/sugg-ast",
     "crates/sugg-engine",
     "crates/sugg-cli",
     "crates/sugg-deploy",
-    ".",                  # "." 表示根目录下的 sugg-tests 包
+    ".",                  # "." is the root sugg-tests package
 ]
 resolver = "2"
 
 [workspace.package]
 version = "0.3.10"
 edition = "2024"
-authors = ["Your Name <your.email@example.com>"]
+rust-version = "1.85"
+license = "MIT"
+repository = "https://github.com/getsugg/sugg"
+homepage = "https://getsugg.github.io/"
 
 [workspace.dependencies]
-# 共享依赖
+# Shared dependencies
 sugg-core = { path = "crates/sugg-core" }
 sugg-ast = { path = "crates/sugg-ast" }
 sugg-engine = { path = "crates/sugg-engine" }
@@ -53,7 +56,7 @@ opt-level = "z"
 panic = "abort"
 strip = true
 
-# 根包：仅用于托管集成测试
+# Root package: hosts the integration tests only
 [package]
 name = "sugg-tests"
 version.workspace = true

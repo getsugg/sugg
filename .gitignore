@@ -6,5 +6,16 @@
 .agents
 /AGENTS.md
 .vscode
+.DS_Store
 
+# ratoon worktree pool
 .ratoon/*
+
+# Local scratch files
+/local/
+/wasm-pkg/
+/tempdyn_dump/
+/todo.md
+
+# insta pending snapshots
+*.snap.new

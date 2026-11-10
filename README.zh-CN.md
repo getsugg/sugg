@@ -9,6 +9,8 @@
 
 [English](./README.md) | **简体中文**
 
+[![CI](https://github.com/getsugg/sugg/actions/workflows/ci.yml/badge.svg)](https://github.com/getsugg/sugg/actions/workflows/ci.yml)
+
 Sugg 是一个基于 Rust 编写的 Shell 补全引擎。它允许开发者使用 TypeScript/JavaScript 来编写复杂的补全逻辑，并通过预编译字节码和内存零拷贝（Zero-copy）技术，提供低延迟的终端交互体验。
 
 ## 核心特性
@@ -165,6 +167,11 @@ Sugg 将补全的解析阶段与构建阶段严格分离：
 - `sugg dev init`: 生成开发环境文件（类型声明、指南及 `tsconfig.json`）。
 - `sugg dev i18n`: 扫描目录并从 JSON 翻译文件生成 `i18n.d.ts` 类型声明。
 - `sugg upgrade`: 自动检查并升级 Sugg 到 GitHub 上的最新版本。
+
+## 贡献
+
+欢迎提交 issue、功能建议和 pull request，构建、测试与提交规范见
+[CONTRIBUTING.md](CONTRIBUTING.md)。安全问题请按 [SECURITY.md](SECURITY.md) 私下报告。
 
 ## 许可证
 

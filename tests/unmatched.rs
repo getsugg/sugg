@@ -1,5 +1,5 @@
 mod common;
-use common::{complete, get_sandbox, normalize_items};
+use common::{bun_available, complete, get_sandbox, normalize_items};
 
 /// 快照宏，统一输出到 tests/snapshots/unmatched/
 macro_rules! unmatched_snapshot {
@@ -30,6 +30,13 @@ fn test_unmatched_word_with_non_empty_prefix_filters_dynamic() {
 
 #[test]
 fn test_valid_subcommand_with_trailing_space_returns_all_dynamic() {
+    if !bun_available() {
+        eprintln!(
+            "skipping test_valid_subcommand_with_trailing_space_returns_all_dynamic: `bun` is not installed"
+        );
+        return;
+    }
+
     let sandbox = get_sandbox();
     let items = complete("bun run ", &sandbox.project_dirs["bun"], &sandbox.cache_dir);
     unmatched_snapshot!(
