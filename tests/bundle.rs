@@ -30,14 +30,17 @@ fn combine_static_bundles(bundles: Vec<(String, String)>) -> String {
     bundles.join("\n")
 }
 
-/// 合并动态 bundle，跳过 JS 内容为空的条目
+/// 合并动态 bundle，跳过 JS 内容为空的条目，按 stem 排序
 fn combine_dynamic_bundles(bundles: Vec<(String, String, Vec<String>)>) -> String {
-    bundles
+    let mut bundles = bundles
         .into_iter()
         .filter(|(_, js, _)| !js.trim().is_empty())
         .map(|(stem, js, _)| format!("// === {} ===\n{}", stem, js))
-        .collect::<Vec<_>>()
-        .join("\n")
+        .collect::<Vec<_>>();
+    // Directory iteration order differs between filesystems (NTFS vs ext4),
+    // so sort to keep the snapshot stable across platforms.
+    bundles.sort();
+    bundles.join("\n")
 }
 
 fn fixture_completions_dir() -> std::path::PathBuf {

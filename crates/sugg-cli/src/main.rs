@@ -291,7 +291,7 @@ fn delegate_to_engine() -> ! {
         #[cfg(unix)]
         {
             use std::os::unix::process::CommandExt;
-            return Err(std::process::Command::new(&path).args(&args).exec());
+            Err(std::process::Command::new(&path).args(&args).exec())
         }
         #[cfg(not(unix))]
         {

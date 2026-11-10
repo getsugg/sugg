@@ -20,8 +20,12 @@ const getRemotes = async (): Promise<string[]> => {
 
 const getBranches = async (): Promise<string[]> => {
   try {
-    const out = await exec("git branch --format=%(refname:short)");
-    return out.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+    // No shell metacharacters: cmd /C and sh -c must both pass this through.
+    const out = await exec("git branch --no-color");
+    return out
+      .split(/\r?\n/)
+      .map((s) => s.replace(/^[*+]\s*/, "").trim())
+      .filter(Boolean);
   } catch {
     return [];
   }
