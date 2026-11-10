@@ -104,8 +104,8 @@ async function getAddPackages(ctx) {
 		return [];
 	}
 }
-const __dyn_pmSubCommands_why_args = async () => getInstalledPackages();
-const __dyn_pmSubCommands_pkg_args = async (ctx) => {
+const __dyn_bun_pmSubCommands_why_args = async () => getInstalledPackages();
+const __dyn_bun_pmSubCommands_pkg_args = async (ctx) => {
 	return [
 		"get",
 		"set",
@@ -113,8 +113,8 @@ const __dyn_pmSubCommands_pkg_args = async (ctx) => {
 		"fix"
 	].filter((c) => c.startsWith(ctx.prefix));
 };
-const __dyn_pmSubCommands_trust_args = async () => getInstalledPackages();
-const __dyn_bunCommands_run_args = async (ctx) => {
+const __dyn_bun_pmSubCommands_trust_args = async () => getInstalledPackages();
+const __dyn_bun_bunCommands_run_args = async (ctx) => {
 	let [scripts, bins, files] = await Promise.all([
 		getScriptNames(),
 		getBinNames(),
@@ -137,18 +137,18 @@ const __dyn_bunCommands_run_args = async (ctx) => {
 		...bins
 	];
 };
-const __dyn_bunCommands_test_args = async (ctx) => getTestFiles(ctx);
-const __dyn_bunCommands_install_args = async (ctx) => getAddPackages(ctx);
-const __dyn_bunCommands_add_args = async (ctx) => getAddPackages(ctx);
-const __dyn_bunCommands_remove_args = async (ctx) => {
+const __dyn_bun_bunCommands_test_args = async (ctx) => getTestFiles(ctx);
+const __dyn_bun_bunCommands_install_args = async (ctx) => getAddPackages(ctx);
+const __dyn_bun_bunCommands_add_args = async (ctx) => getAddPackages(ctx);
+const __dyn_bun_bunCommands_remove_args = async (ctx) => {
 	if (ctx.options["-g"] === true || ctx.options["--global"] === true) return getGlobalPackages();
 	return getInstalledPackages();
 };
-const __dyn_bunCommands_update_args = async () => getInstalledPackages();
-const __dyn_bunCommands_why_args = async () => getInstalledPackages();
-const __dyn_bunCommands_build_args = async (ctx) => getScriptFiles(ctx);
+const __dyn_bun_bunCommands_update_args = async () => getInstalledPackages();
+const __dyn_bun_bunCommands_why_args = async () => getInstalledPackages();
+const __dyn_bun_bunCommands_build_args = async (ctx) => getScriptFiles(ctx);
 //#endregion
-export { __dyn_bunCommands_add_args, __dyn_bunCommands_build_args, __dyn_bunCommands_install_args, __dyn_bunCommands_remove_args, __dyn_bunCommands_run_args, __dyn_bunCommands_test_args, __dyn_bunCommands_update_args, __dyn_bunCommands_why_args, __dyn_pmSubCommands_pkg_args, __dyn_pmSubCommands_trust_args, __dyn_pmSubCommands_why_args };
+export { __dyn_bun_bunCommands_add_args, __dyn_bun_bunCommands_build_args, __dyn_bun_bunCommands_install_args, __dyn_bun_bunCommands_remove_args, __dyn_bun_bunCommands_run_args, __dyn_bun_bunCommands_test_args, __dyn_bun_bunCommands_update_args, __dyn_bun_bunCommands_why_args, __dyn_bun_pmSubCommands_pkg_args, __dyn_bun_pmSubCommands_trust_args, __dyn_bun_pmSubCommands_why_args };
 
 // === cache_stem ===
 globalThis.__ui;
@@ -179,11 +179,11 @@ const cache = {
 };
 //#endregion
 //#region tests/fixtures/completions/cache_stem/__v_dyn_cache_stem.ts
-const __dyn_cache_stem_args = async () => {
+const __dyn_cache_stem_cache_stem_args = async () => {
 	return await cache.get("stem_test", 6e4, async () => ["item"]) || [];
 };
 //#endregion
-export { __dyn_cache_stem_args };
+export { __dyn_cache_stem_cache_stem_args };
 
 // === docker ===
 //#region virtual:i18n/docker
@@ -208,14 +208,14 @@ const exec = async (cmd, options) => {
 globalThis.__ui;
 //#endregion
 //#region tests/fixtures/completions/docker/__v_dyn_docker.ts
-const __dyn_docker_ps_args = async () => {
+const __dyn_docker_docker_ps_args = async () => {
 	return (await exec("docker ps --format '{{.Names}}'")).split("\n").filter(Boolean).map((name) => ({
 		display: name,
 		description: container_desc
 	}));
 };
 //#endregion
-export { __dyn_docker_ps_args };
+export { __dyn_docker_docker_ps_args };
 
 // === git ===
 //#region sugg
@@ -251,40 +251,40 @@ const getBranches = async () => {
 		return [];
 	}
 };
-const __dyn_git_add_args_items = async (ctx) => {
+const __dyn_git_git_add_args_items = async (ctx) => {
 	if (ctx.positionals.length === 0) return ["."];
 	return [];
 };
-const __dyn_git_checkout_args = async () => {
+const __dyn_git_git_checkout_args = async () => {
 	return await getBranches();
 };
-const __dyn_git_branch_args = async () => {
+const __dyn_git_git_branch_args = async () => {
 	return await getBranches();
 };
-const __dyn_git_push_args_items = async (ctx) => {
+const __dyn_git_git_push_args_items = async (ctx) => {
 	if (ctx.positionals.length === 0) return getRemotes();
 	if (ctx.positionals.length === 1) return getBranches();
 	return [];
 };
-const __dyn_git_pull_args_items = async (ctx) => {
+const __dyn_git_git_pull_args_items = async (ctx) => {
 	if (ctx.positionals.length === 0) return getRemotes();
 	if (ctx.positionals.length === 1) return getBranches();
 	return [];
 };
-const __dyn_git_remote_add_args_items = async (ctx) => {
+const __dyn_git_git_remote_add_args_items = async (ctx) => {
 	if (ctx.positionals.length === 0) return getRemotes();
 	if (ctx.positionals.length === 1) return [`git@github.com:user/${ctx.positionals[0]}.git`, `https://github.com/user/${ctx.positionals[0]}.git`];
 	return [];
 };
-const __dyn_git_remote_rename_args_items = async (ctx) => {
+const __dyn_git_git_remote_rename_args_items = async (ctx) => {
 	if (ctx.positionals.length === 0) return getRemotes();
 	return [];
 };
-const __dyn_git_remote_remove_args = async () => {
+const __dyn_git_git_remote_remove_args = async () => {
 	return getRemotes();
 };
 //#endregion
-export { __dyn_git_add_args_items, __dyn_git_branch_args, __dyn_git_checkout_args, __dyn_git_pull_args_items, __dyn_git_push_args_items, __dyn_git_remote_add_args_items, __dyn_git_remote_remove_args, __dyn_git_remote_rename_args_items };
+export { __dyn_git_git_add_args_items, __dyn_git_git_branch_args, __dyn_git_git_checkout_args, __dyn_git_git_pull_args_items, __dyn_git_git_push_args_items, __dyn_git_git_remote_add_args_items, __dyn_git_git_remote_remove_args, __dyn_git_git_remote_rename_args_items };
 
 // === greet_dynamic ===
 //#region virtual:i18n/greet_dynamic
@@ -292,7 +292,7 @@ const bye_desc = "再见描述";
 const hello_desc = "你好描述";
 //#endregion
 //#region tests/fixtures/completions/__v_dyn_greet_dynamic.ts
-const __dyn_greet_dynamic_args = () => [{
+const __dyn_greet_dynamic_greet_dynamic_args = () => [{
 	display: "hello",
 	description: hello_desc
 }, {
@@ -300,7 +300,7 @@ const __dyn_greet_dynamic_args = () => [{
 	description: bye_desc
 }];
 //#endregion
-export { __dyn_greet_dynamic_args };
+export { __dyn_greet_dynamic_greet_dynamic_args };
 
 // === pnpm ===
 //#region tests/fixtures/completions/_lib.ts
@@ -332,7 +332,7 @@ const readJson = async (path) => {
 globalThis.__ui;
 //#endregion
 //#region tests/fixtures/completions/__v_dyn_pnpm.ts
-const __dyn_pnpm_run_args = async () => {
+const __dyn_pnpm_pnpm_run_args = async () => {
 	const scripts = (await readJson("package.json")).scripts || {};
 	return Object.entries(scripts).map(([name, cmd]) => ({
 		display: name,
@@ -340,28 +340,28 @@ const __dyn_pnpm_run_args = async () => {
 	}));
 };
 //#endregion
-export { __dyn_pnpm_run_args };
+export { __dyn_pnpm_pnpm_run_args };
 
 // === testkit ===
 //#region sugg
 const ui = globalThis.__ui;
 //#endregion
 //#region tests/fixtures/completions/__v_dyn_testkit.ts
-const __dyn_sharedDynamic = async () => {
+const __dyn_testkit_sharedDynamic = async () => {
 	return [
 		"shared-a",
 		"shared-b",
 		"shared-c"
 	];
 };
-const __dyn_testkit_opts_options_d_args = async () => {
+const __dyn_testkit_testkit_opts_options_d_args = async () => {
 	return [
 		"item1",
 		"item2",
 		"item3"
 	];
 };
-const __dyn_testkit_optsinfo_args = async (ctx) => {
+const __dyn_testkit_testkit_optsinfo_args = async (ctx) => {
 	const lines = [];
 	const opts = ctx.options;
 	if (opts["-g"]) lines.push("global:true");
@@ -374,14 +374,14 @@ const __dyn_testkit_optsinfo_args = async (ctx) => {
 		value: s
 	}));
 };
-const __dyn_testkit_hybrid_args = async () => {
+const __dyn_testkit_testkit_hybrid_args = async () => {
 	return [
 		"file1.txt",
 		"file2.txt",
 		"file3.txt"
 	];
 };
-const __dyn_testkit_logdemo_args = async (ctx) => {
+const __dyn_testkit_testkit_logdemo_args = async (ctx) => {
 	const prefix = ctx.prefix ?? "";
 	if (prefix.startsWith("bad-")) throw new Error(`❌ Invalid prefix detected: "${prefix}" — please remove the leading "bad-"`);
 	else {
@@ -406,12 +406,12 @@ const __dyn_testkit_logdemo_args = async (ctx) => {
 		}
 	];
 };
-const __dyn_testkit_multiValueOpt_options_exclude_args_items = () => [
+const __dyn_testkit_testkit_multiValueOpt_options_exclude_args_items = () => [
 	"a",
 	"b",
 	"c"
 ];
-const __dyn_testkit_dynamicPositional_args_items = async (ctx) => {
+const __dyn_testkit_testkit_dynamicPositional_args_items = async (ctx) => {
 	if (ctx.positionals.length === 0) return [
 		"origin",
 		"upstream",
@@ -421,4 +421,4 @@ const __dyn_testkit_dynamicPositional_args_items = async (ctx) => {
 	return [];
 };
 //#endregion
-export { __dyn_sharedDynamic, __dyn_testkit_dynamicPositional_args_items, __dyn_testkit_hybrid_args, __dyn_testkit_logdemo_args, __dyn_testkit_multiValueOpt_options_exclude_args_items, __dyn_testkit_opts_options_d_args, __dyn_testkit_optsinfo_args };
+export { __dyn_testkit_sharedDynamic, __dyn_testkit_testkit_dynamicPositional_args_items, __dyn_testkit_testkit_hybrid_args, __dyn_testkit_testkit_logdemo_args, __dyn_testkit_testkit_multiValueOpt_options_exclude_args_items, __dyn_testkit_testkit_opts_options_d_args, __dyn_testkit_testkit_optsinfo_args };

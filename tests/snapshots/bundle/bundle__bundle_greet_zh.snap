@@ -1056,7 +1056,7 @@ const pmSubCommands = {
 		description: pm_why_desc,
 		args: {
 			__is_dynamic: true,
-			id: "__dyn_pmSubCommands_why_args"
+			id: "__dyn_bun_pmSubCommands_why_args"
 		},
 		options: [...commonGlobalOpts]
 	},
@@ -1078,7 +1078,7 @@ const pmSubCommands = {
 		description: pm_pkg_desc,
 		args: {
 			__is_dynamic: true,
-			id: "__dyn_pmSubCommands_pkg_args"
+			id: "__dyn_bun_pmSubCommands_pkg_args"
 		},
 		options: [...commonGlobalOpts]
 	},
@@ -1113,7 +1113,7 @@ const pmSubCommands = {
 		description: pm_trust_desc,
 		args: {
 			__is_dynamic: true,
-			id: "__dyn_pmSubCommands_trust_args"
+			id: "__dyn_bun_pmSubCommands_trust_args"
 		},
 		options: [...commonGlobalOpts, {
 			labels: ["--all"],
@@ -1135,7 +1135,7 @@ var __v_sentry_bun_default = [["bun", createCompletion({ bun: {
 			description: cmd_run_desc,
 			args: {
 				__is_dynamic: true,
-				id: "__dyn_bunCommands_run_args"
+				id: "__dyn_bun_bunCommands_run_args"
 			},
 			options: [...commonGlobalOpts]
 		},
@@ -1143,7 +1143,7 @@ var __v_sentry_bun_default = [["bun", createCompletion({ bun: {
 			description: cmd_test_desc,
 			args: {
 				__is_dynamic: true,
-				id: "__dyn_bunCommands_test_args"
+				id: "__dyn_bun_bunCommands_test_args"
 			},
 			options: [...commonGlobalOpts, ...testOptions]
 		},
@@ -1167,7 +1167,7 @@ var __v_sentry_bun_default = [["bun", createCompletion({ bun: {
 			description: cmd_install_desc,
 			args: {
 				__is_dynamic: true,
-				id: "__dyn_bunCommands_install_args"
+				id: "__dyn_bun_bunCommands_install_args"
 			},
 			options: [...commonGlobalOpts, ...installOptions]
 		},
@@ -1176,7 +1176,7 @@ var __v_sentry_bun_default = [["bun", createCompletion({ bun: {
 			description: cmd_add_desc,
 			args: {
 				__is_dynamic: true,
-				id: "__dyn_bunCommands_add_args"
+				id: "__dyn_bun_bunCommands_add_args"
 			},
 			options: [...commonGlobalOpts, ...installOptions]
 		},
@@ -1185,7 +1185,7 @@ var __v_sentry_bun_default = [["bun", createCompletion({ bun: {
 			description: cmd_remove_desc,
 			args: {
 				__is_dynamic: true,
-				id: "__dyn_bunCommands_remove_args"
+				id: "__dyn_bun_bunCommands_remove_args"
 			},
 			options: [...commonGlobalOpts, ...installOptions]
 		},
@@ -1193,7 +1193,7 @@ var __v_sentry_bun_default = [["bun", createCompletion({ bun: {
 			description: cmd_update_desc,
 			args: {
 				__is_dynamic: true,
-				id: "__dyn_bunCommands_update_args"
+				id: "__dyn_bun_bunCommands_update_args"
 			},
 			options: [
 				...commonGlobalOpts,
@@ -1246,7 +1246,7 @@ var __v_sentry_bun_default = [["bun", createCompletion({ bun: {
 			description: cmd_why_desc,
 			args: {
 				__is_dynamic: true,
-				id: "__dyn_bunCommands_why_args"
+				id: "__dyn_bun_bunCommands_why_args"
 			},
 			options: [...commonGlobalOpts]
 		},
@@ -1254,7 +1254,7 @@ var __v_sentry_bun_default = [["bun", createCompletion({ bun: {
 			description: cmd_build_desc,
 			args: {
 				__is_dynamic: true,
-				id: "__dyn_bunCommands_build_args"
+				id: "__dyn_bun_bunCommands_build_args"
 			},
 			options: [...commonGlobalOpts, ...buildOptions]
 		},
@@ -1426,7 +1426,7 @@ const __parseConfig = (modules) => {
 //#region tests/fixtures/completions/cache_stem/__v_sentry_cache_stem.ts
 var __v_sentry_cache_stem_default = [["cache_stem", createCompletion({ cache_stem: { args: {
 	__is_dynamic: true,
-	id: "__dyn_cache_stem_args"
+	id: "__dyn_cache_stem_cache_stem_args"
 } } })]];
 //#endregion
 export { __parseConfig, __v_sentry_cache_stem_default as default };
@@ -1578,7 +1578,7 @@ var __v_sentry_docker_default = [["docker", createCompletion({ docker: { command
 		description: "列出容器",
 		args: {
 			__is_dynamic: true,
-			id: "__dyn_docker_ps_args"
+			id: "__dyn_docker_docker_ps_args"
 		}
 	},
 	stop: { description: "停止容器" }
@@ -1740,7 +1740,7 @@ var __v_sentry_git_default = [["git", createCompletion({ git: {
 				count: Infinity,
 				items: {
 					__is_dynamic: true,
-					id: "__dyn_git_add_args_items"
+					id: "__dyn_git_git_add_args_items"
 				}
 			}
 		},
@@ -1756,14 +1756,14 @@ var __v_sentry_git_default = [["git", createCompletion({ git: {
 			description: "切换分支",
 			args: {
 				__is_dynamic: true,
-				id: "__dyn_git_checkout_args"
+				id: "__dyn_git_git_checkout_args"
 			}
 		},
 		branch: {
 			description: "列出/创建分支",
 			args: {
 				__is_dynamic: true,
-				id: "__dyn_git_branch_args"
+				id: "__dyn_git_git_branch_args"
 			}
 		},
 		push: {
@@ -1772,7 +1772,7 @@ var __v_sentry_git_default = [["git", createCompletion({ git: {
 				count: 2,
 				items: {
 					__is_dynamic: true,
-					id: "__dyn_git_push_args_items"
+					id: "__dyn_git_git_push_args_items"
 				}
 			}
 		},
@@ -1782,7 +1782,7 @@ var __v_sentry_git_default = [["git", createCompletion({ git: {
 				count: 2,
 				items: {
 					__is_dynamic: true,
-					id: "__dyn_git_pull_args_items"
+					id: "__dyn_git_git_pull_args_items"
 				}
 			}
 		},
@@ -1796,7 +1796,7 @@ var __v_sentry_git_default = [["git", createCompletion({ git: {
 						count: 2,
 						items: {
 							__is_dynamic: true,
-							id: "__dyn_git_remote_add_args_items"
+							id: "__dyn_git_git_remote_add_args_items"
 						}
 					}
 				},
@@ -1806,7 +1806,7 @@ var __v_sentry_git_default = [["git", createCompletion({ git: {
 						count: 2,
 						items: {
 							__is_dynamic: true,
-							id: "__dyn_git_remote_rename_args_items"
+							id: "__dyn_git_git_remote_rename_args_items"
 						}
 					}
 				},
@@ -1814,7 +1814,7 @@ var __v_sentry_git_default = [["git", createCompletion({ git: {
 					description: "删除远端",
 					args: {
 						__is_dynamic: true,
-						id: "__dyn_git_remote_remove_args"
+						id: "__dyn_git_git_remote_remove_args"
 					}
 				}
 			}
@@ -2118,7 +2118,7 @@ const __parseConfig = (modules) => {
 //#region tests/fixtures/completions/__v_sentry_greet_dynamic.ts
 var __v_sentry_greet_dynamic_default = [["greet_dynamic", createCompletion({ greet_dynamic: { args: {
 	__is_dynamic: true,
-	id: "__dyn_greet_dynamic_args"
+	id: "__dyn_greet_dynamic_greet_dynamic_args"
 } } })]];
 //#endregion
 export { __parseConfig, __v_sentry_greet_dynamic_default as default };
@@ -2277,7 +2277,7 @@ var __v_sentry_pnpm_default = [["pnpm", createCompletion({ pnpm: { commands: {
 		description: "运行任务或文件",
 		args: {
 			__is_dynamic: true,
-			id: "__dyn_pnpm_run_args"
+			id: "__dyn_pnpm_pnpm_run_args"
 		}
 	}
 } } })]];
@@ -2427,7 +2427,7 @@ const __parseConfig = (modules) => {
 //#region tests/fixtures/completions/__v_stat_testkit.ts
 const sharedDynamic = {
 	__is_dynamic: true,
-	id: "__dyn_sharedDynamic"
+	id: "__dyn_testkit_sharedDynamic"
 };
 //#endregion
 //#region tests/fixtures/completions/__v_sentry_testkit.ts
@@ -2465,7 +2465,7 @@ var __v_sentry_testkit_default = [["testkit", createCompletion({ testkit: {
 					description: "Dynamic option",
 					args: {
 						__is_dynamic: true,
-						id: "__dyn_testkit_opts_options_d_args"
+						id: "__dyn_testkit_testkit_opts_options_d_args"
 					}
 				},
 				{
@@ -2504,7 +2504,7 @@ var __v_sentry_testkit_default = [["testkit", createCompletion({ testkit: {
 			],
 			args: {
 				__is_dynamic: true,
-				id: "__dyn_testkit_optsinfo_args"
+				id: "__dyn_testkit_testkit_optsinfo_args"
 			}
 		},
 		dynamicReuse: {
@@ -2524,7 +2524,7 @@ var __v_sentry_testkit_default = [["testkit", createCompletion({ testkit: {
 			description: "Has both subcommands and args",
 			args: {
 				__is_dynamic: true,
-				id: "__dyn_testkit_hybrid_args"
+				id: "__dyn_testkit_testkit_hybrid_args"
 			},
 			commands: {
 				push: { description: "Push operation" },
@@ -2555,7 +2555,7 @@ var __v_sentry_testkit_default = [["testkit", createCompletion({ testkit: {
 			description: "Demonstrate log and throw output in the UI",
 			args: {
 				__is_dynamic: true,
-				id: "__dyn_testkit_logdemo_args"
+				id: "__dyn_testkit_testkit_logdemo_args"
 			}
 		},
 		positionalCount: {
@@ -2577,7 +2577,7 @@ var __v_sentry_testkit_default = [["testkit", createCompletion({ testkit: {
 					count: 3,
 					items: {
 						__is_dynamic: true,
-						id: "__dyn_testkit_multiValueOpt_options_exclude_args_items"
+						id: "__dyn_testkit_testkit_multiValueOpt_options_exclude_args_items"
 					}
 				}
 			}, { labels: ["--include"] }]
@@ -2593,7 +2593,7 @@ var __v_sentry_testkit_default = [["testkit", createCompletion({ testkit: {
 				count: Infinity,
 				items: {
 					__is_dynamic: true,
-					id: "__dyn_testkit_dynamicPositional_args_items"
+					id: "__dyn_testkit_testkit_dynamicPositional_args_items"
 				}
 			}
 		},

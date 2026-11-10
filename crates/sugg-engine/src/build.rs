@@ -268,6 +268,19 @@ pub(crate) async fn run_build_with_cache(
     }
     cache.dyn_index.sort_by(|a, b| a.0.cmp(&b.0));
 
+    // 动态函数 ID 必须全局唯一：运行时按裸 ID 做 binary_search 定位字节码，
+    // 一旦重名就会静默执行到别的脚本的函数（例如 npm 的 pkgOrGlobal 跑到 pnpm 上）。
+    // 命名空间前缀已避免正常情况下的冲突，这里兜底校验清洗后仍可能出现的重名。
+    for pair in cache.dyn_index.windows(2) {
+        if pair[0].0 == pair[1].0 {
+            return Err(anyhow::anyhow!(
+                "Duplicate dynamic function id '{}'. Two completion scripts produced the same id; rename one of the scripts or dynamic variables.",
+                pair[0].0
+            )
+            .into());
+        }
+    }
+
     // ── 序列化 ──
     let cache_path = cache_dir
         .as_ref()

@@ -208,7 +208,7 @@ pub async fn build_bundles(
         }
 
         println!("   {}", file_path_str);
-        let result = ast::extract_dynamics(&source, &file_path_str);
+        let result = ast::extract_dynamics_with_namespace(&source, &file_path_str, &file_stem);
 
         let deps = {
             let mut d = HashMap::new();

@@ -24,11 +24,11 @@ const exec = async (cmd, options) => {
 globalThis.__ui;
 //#endregion
 //#region tests/fixtures/completions/docker/__v_dyn_docker.ts
-const __dyn_docker_ps_args = async () => {
+const __dyn_docker_docker_ps_args = async () => {
 	return (await exec("docker ps --format '{{.Names}}'")).split("\n").filter(Boolean).map((name) => ({
 		display: name,
 		description: container_desc
 	}));
 };
 //#endregion
-export { __dyn_docker_ps_args };
+export { __dyn_docker_docker_ps_args };

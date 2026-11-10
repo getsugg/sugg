@@ -288,8 +288,73 @@ pub fn generate_minimal_dynamic_module(
     generate_minimal_dynamic_module_impl(source, &program, &semantic, dynamics, id_map)
 }
 
+/// 从脚本路径推断命名空间（`npm/index.ts` → `npm`，`winget.ts` → `winget`）。
+///
+/// 规则与引擎侧 `file_stem` 保持一致：`index.ts` 取父目录名。
+pub fn namespace_from_path(path: &str) -> String {
+    let p = std::path::Path::new(path);
+    let raw_stem = p
+        .file_stem()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    if raw_stem == "index" {
+        p.parent()
+            .and_then(|d| d.file_name())
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or(raw_stem)
+    } else {
+        raw_stem
+    }
+}
+
+/// 把命名空间清洗成可安全拼进 JS 标识符的形式。
+fn sanitize_namespace(namespace: &str) -> String {
+    let cleaned: String = namespace
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
+        .collect();
+    if cleaned.chars().all(|c| c == '_') {
+        "script".to_string()
+    } else {
+        cleaned
+    }
+}
+
+/// 构造动态函数 ID。
+///
+/// 命名空间前缀保证不同脚本之间不会产生同名动态函数：
+/// `__dyn_<namespace>_<context>`。空命名空间保留旧行为（仅供单文件场景使用）。
+fn make_dynamic_id(namespace: &str, context_name: &str, count: usize) -> String {
+    let ns_prefix = if namespace.is_empty() {
+        String::new()
+    } else {
+        format!("{}_", sanitize_namespace(namespace))
+    };
+    if count == 0 {
+        format!("{}{}{}", DYNAMIC_FUNC_PREFIX, ns_prefix, context_name)
+    } else {
+        format!(
+            "{}{}{}_{}",
+            DYNAMIC_FUNC_PREFIX, ns_prefix, context_name, count
+        )
+    }
+}
+
 /// 提取源码中的 dynamic() 调用和 createCompletion 调用，返回 (modified_source, pure_dynamic_js, func_ids)
+///
+/// 命名空间取自 `path`（见 [`namespace_from_path`]），保证同一套补全脚本目录下
+/// 不同脚本的动态函数 ID 全局唯一。引擎在文件 stem 与路径推断不一致时应使用
+/// [`extract_dynamics_with_namespace`] 显式传入命名空间。
 pub fn extract_dynamics(source: &str, path: &str) -> (String, String, Vec<String>) {
+    extract_dynamics_with_namespace(source, path, &namespace_from_path(path))
+}
+
+/// 与 [`extract_dynamics`] 相同，但由调用方显式指定命名空间（通常为脚本 stem）。
+pub fn extract_dynamics_with_namespace(
+    source: &str,
+    path: &str,
+    namespace: &str,
+) -> (String, String, Vec<String>) {
     let allocator = Allocator::default();
     let source_type = SourceType::from_path(path).unwrap_or_default();
     let parsed = Parser::new(&allocator, source, source_type).parse();
@@ -305,11 +370,7 @@ pub fn extract_dynamics(source: &str, path: &str) -> (String, String, Vec<String
 
     for info in &extractor.dynamics {
         let count = name_counts.entry(info.context_name.clone()).or_insert(0);
-        let id = if *count == 0 {
-            format!("{}{}", DYNAMIC_FUNC_PREFIX, info.context_name)
-        } else {
-            format!("{}{}_{}", DYNAMIC_FUNC_PREFIX, info.context_name, count)
-        };
+        let id = make_dynamic_id(namespace, &info.context_name, *count);
         *count += 1;
         id_map.insert(info.full_span.start, id);
     }
@@ -528,16 +589,16 @@ export default config;
         let (modified_source, pure_dynamic_js, _func_ids) = extract_dynamics(source, "test.ts");
 
         assert!(modified_source.contains("__is_dynamic: true"));
-        assert!(modified_source.contains("__dyn_dynamic"));
-        assert!(modified_source.contains("__dyn_addCommand_args"));
-        assert!(modified_source.contains("__dyn_config_args"));
+        assert!(modified_source.contains("__dyn_test_dynamic"));
+        assert!(modified_source.contains("__dyn_test_addCommand_args"));
+        assert!(modified_source.contains("__dyn_test_config_args"));
         assert!(!modified_source.contains("dynamic(async () =>"));
 
         assert!(!pure_dynamic_js.contains("const config = null;"));
         assert!(!pure_dynamic_js.contains("dynamic(async () =>"));
-        assert!(pure_dynamic_js.contains("export const __dyn_dynamic"));
-        assert!(pure_dynamic_js.contains("export const __dyn_addCommand_args"));
-        assert!(pure_dynamic_js.contains("export const __dyn_config_args"));
+        assert!(pure_dynamic_js.contains("export const __dyn_test_dynamic"));
+        assert!(pure_dynamic_js.contains("export const __dyn_test_addCommand_args"));
+        assert!(pure_dynamic_js.contains("export const __dyn_test_config_args"));
         assert!(
             pure_dynamic_js.contains(r#"return [{ value: "run", description: "Run project" }];"#)
         );
@@ -557,9 +618,9 @@ export default myCmd;
 
         let (modified_source, pure_dynamic_js, _func_ids) = extract_dynamics(source, "test.ts");
 
-        assert!(modified_source.contains("__dyn_myCmd_options_v_args"));
+        assert!(modified_source.contains("__dyn_test_myCmd_options_v_args"));
         assert!(modified_source.contains("__is_dynamic: true"));
-        assert!(pure_dynamic_js.contains("export const __dyn_myCmd_options_v_args"));
+        assert!(pure_dynamic_js.contains("export const __dyn_test_myCmd_options_v_args"));
     }
 
     #[test]
@@ -576,7 +637,7 @@ export default cmd;
 
         let (modified_source, _pure_dynamic_js, _func_ids) = extract_dynamics(source, "test.ts");
 
-        assert!(modified_source.contains("__dyn_cmd_options_args"));
+        assert!(modified_source.contains("__dyn_test_cmd_options_args"));
     }
 
     #[test]
@@ -596,10 +657,60 @@ export default cmd;
 
         let (modified_source, pure_dynamic_js, _func_ids) = extract_dynamics(source, "test.ts");
 
-        assert!(modified_source.contains("__dyn_cmd_options_v_args"));
-        assert!(modified_source.contains("__dyn_cmd_options_v_args_1"));
-        assert!(pure_dynamic_js.contains("export const __dyn_cmd_options_v_args"));
-        assert!(pure_dynamic_js.contains("export const __dyn_cmd_options_v_args_1"));
+        assert!(modified_source.contains("__dyn_test_cmd_options_v_args"));
+        assert!(modified_source.contains("__dyn_test_cmd_options_v_args_1"));
+        assert!(pure_dynamic_js.contains("export const __dyn_test_cmd_options_v_args"));
+        assert!(pure_dynamic_js.contains("export const __dyn_test_cmd_options_v_args_1"));
+    }
+
+    #[test]
+    fn test_dynamic_ids_namespaced_by_script() {
+        let source = r#"
+const pkgOrGlobal = dynamic(async () => [{ display: "pkg" }]);
+export default createCompletion({
+    cmd: { args: pkgOrGlobal },
+});
+        "#;
+
+        let (modified_a, dynamic_a, ids_a) =
+            extract_dynamics_with_namespace(source, "npm/index.ts", "npm");
+        let (modified_b, dynamic_b, ids_b) =
+            extract_dynamics_with_namespace(source, "pnpm/index.ts", "pnpm");
+
+        // 同名 helper 在不同脚本中必须得到不同的 ID
+        assert_eq!(ids_a, vec!["__dyn_npm_pkgOrGlobal"]);
+        assert_eq!(ids_b, vec!["__dyn_pnpm_pkgOrGlobal"]);
+        assert!(modified_a.contains(r#"id: "__dyn_npm_pkgOrGlobal""#));
+        assert!(modified_b.contains(r#"id: "__dyn_pnpm_pkgOrGlobal""#));
+        assert!(dynamic_a.contains("export const __dyn_npm_pkgOrGlobal"));
+        assert!(dynamic_b.contains("export const __dyn_pnpm_pkgOrGlobal"));
+    }
+
+    #[test]
+    fn test_dynamic_namespace_defaults_to_path_stem() {
+        let source = r#"
+const items = dynamic(async () => [{ display: "x" }]);
+export default createCompletion({ cmd: { args: items } });
+        "#;
+
+        let (_, dynamic_js, ids) = extract_dynamics(source, "npm/index.ts");
+        assert_eq!(ids, vec!["__dyn_npm_items"]);
+        assert!(dynamic_js.contains("export const __dyn_npm_items"));
+    }
+
+    #[test]
+    fn test_dynamic_namespace_is_identifier_safe() {
+        let source = r#"
+const items = dynamic(async () => [{ display: "x" }]);
+export default createCompletion({ cmd: { args: items } });
+        "#;
+
+        let (_, _, ids) = extract_dynamics_with_namespace(source, "my-tool/index.ts", "my-tool");
+        assert_eq!(ids, vec!["__dyn_my_tool_items"]);
+
+        // 纯符号命名空间回退为 script，避免生成非法/空白标识符
+        let (_, _, ids) = extract_dynamics_with_namespace(source, "---/index.ts", "---");
+        assert_eq!(ids, vec!["__dyn_script_items"]);
     }
 
     #[test]
@@ -668,10 +779,10 @@ export default createCompletion({
             pure_dynamic_js.contains("function getBranches"),
             "getBranches function should be included"
         );
-        // __dyn_branches 应该作为 export 存在
+        // __dyn_test_branches 应该作为 export 存在
         assert!(
-            pure_dynamic_js.contains("export const __dyn_branches = getBranches"),
-            "__dyn_branches export should exist"
+            pure_dynamic_js.contains("export const __dyn_test_branches = getBranches"),
+            "__dyn_test_branches export should exist"
         );
     }
 
@@ -710,8 +821,8 @@ export default createCompletion({
             !pure_dynamic_js.contains("const tags = dynamic("),
             "shadowed tags should not appear"
         );
-        assert!(pure_dynamic_js.contains("export const __dyn_branches = getBranches"));
-        assert!(pure_dynamic_js.contains("export const __dyn_tags = getTags"));
+        assert!(pure_dynamic_js.contains("export const __dyn_test_branches = getBranches"));
+        assert!(pure_dynamic_js.contains("export const __dyn_test_tags = getTags"));
     }
 
     #[test]
