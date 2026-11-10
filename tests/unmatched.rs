@@ -13,7 +13,7 @@ macro_rules! unmatched_snapshot {
             );
             Box::leak(Box::new(settings.bind_to_scope()));
         });
-        insta::assert_json_snapshot!($($tt)*)
+        insta::assert_json_snapshot!($($tt)*);
     }};
 }
 

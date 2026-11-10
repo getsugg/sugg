@@ -151,7 +151,7 @@ pub fn inject_globals(ctx: Ctx<'_>) {
                     #[cfg(not(target_os = "windows"))]
                     {
                         tokio::process::Command::new("sh")
-                            .args(&["-c", &command])
+                            .args(["-c", &command])
                             .output()
                             .await
                     }
