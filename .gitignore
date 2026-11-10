@@ -6,3 +6,5 @@
 .agents
 /AGENTS.md
 .vscode
+
+.ratoon/*
