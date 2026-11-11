@@ -21,7 +21,7 @@ pub async fn bundle_virtual(
         }]),
 
         inject: Some(vec![
-            // createCompletion 由 generate_import_stmt() 注入到每个用户模块
+            // createCompletion is injected into every user module by generate_import_stmt()
             InjectImport::named("createCompletion".into(), None, "virtual:env".into()),
         ]),
         ..Default::default()

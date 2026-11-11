@@ -87,7 +87,7 @@ mod tests {
     fn test_expired() {
         let dir = tempdir().unwrap();
         let cache = DiskCache::new(dir.path().to_path_buf());
-        // ttl=0 秒，写入后立即过期
+        // ttl=0 seconds; expires immediately after write
         cache.set("k", "v", 0).unwrap();
         assert_eq!(cache.get("k"), None);
     }

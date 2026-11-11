@@ -5,7 +5,7 @@ use std::path::Path;
 static ASSETS_INIT_DIR: Dir = include_dir!("$CARGO_MANIFEST_DIR/assets/init");
 static ASSETS_SHELL_DIR: Dir = include_dir!("$CARGO_MANIFEST_DIR/assets/shell");
 
-/// 将嵌入目录中的所有文件递归写出到 dest，返回被跳过（已存在）的文件路径列表
+/// Recursively write all files from an embedded directory to dest, returning skipped (already existing) paths
 fn extract_dir(
     dir: &Dir,
     dest: &Path,
@@ -47,13 +47,13 @@ pub fn run_init(shell_name: &str) -> Result<(), Box<dyn std::error::Error>> {
         .contents_utf8()
         .ok_or_else(|| format!("Bridge script for '{}' is not valid UTF-8", file_name))?;
 
-    // 将占位符替换为 sugg 可执行文件的绝对路径（位于 sugg-engine 所在目录下的 bin 子目录中）
-    // nushell 中反斜杠需转为正斜杠
+    // Replace the placeholder with the absolute path of the sugg executable (in the bin subdirectory of sugg-engine)
+    // Backslashes must become forward slashes in nushell
     let sugg_bin = std::env::current_exe()
         .ok()
         .map(|p| {
             let exe = if cfg!(windows) { "sugg.exe" } else { "sugg" };
-            // p 通常为 .../sugg/sugg-engine[.exe]，需要定位到 .../sugg/bin/sugg[.exe]
+            // p is usually .../sugg/sugg-engine[.exe]; we need to reach .../sugg/bin/sugg[.exe]
             p.parent()
                 .expect("current_exe should have a parent directory")
                 .join("bin")

@@ -1,23 +1,23 @@
-//! 部署脚本：编译 sugg + sugg-engine，安装到 sugg_root() 目录。
+//! Deploy script: build sugg + sugg-engine and install them into sugg_root().
 //!
-//! 布局：
-//!   sugg_root()/bin/                ← 加 PATH，只放 sugg.exe
-//!   sugg_root()/sugg-engine         ← 内部引擎，不放 bin/ 避免污染 PATH
+//! Layout:
+//!   sugg_root()/bin/                <- added to PATH, contains only sugg.exe
+//!   sugg_root()/sugg-engine         <- internal engine, kept out of bin/ to avoid polluting PATH
 //!
-//! 用法:
-//!   cargo deploy --release                # 编译 + 安装
-//!   cargo deploy --release --add-path     # 编译 + 安装 + 配置 PATH
-//!   cargo deploy --release --no-build     # 跳过编译（已经在 cargo test 中编译过了），直接安装
+//! Usage:
+//!   cargo deploy --release                # build + install
+//!   cargo deploy --release --add-path     # build + install + configure PATH
+//!   cargo deploy --release --no-build     # skip build (already built by cargo test), install directly
 //!   cargo deploy --release --no-build --add-path
 //!
-//! 安装目录（可通过 SUGG_HOME 环境变量覆盖）:
+//! Install directory (overridable via the SUGG_HOME env var):
 //!   ~/.sugg/
 
 use std::path::PathBuf;
 use std::process::Command;
 
 // =========================================================================
-// 本地复制的图标常量与路径函数（彻底切断对 sugg-core 的依赖）
+// Local copies of icon constants and path helpers (fully cuts the dependency on sugg-core)
 // =========================================================================
 const ICON_BUILD: &str = "🔧";
 const ICON_ERROR: &str = "❌";
@@ -43,7 +43,7 @@ fn main() {
     let skip_build = args.iter().any(|a| a == "--no-build");
     let profile = if is_release { "release" } else { "debug" };
 
-    // ── 1. 构建 sugg + sugg-engine（--no-build 跳过，直接从已有产物安装）──
+    // ── 1. Build sugg + sugg-engine (--no-build skips this, installing existing artifacts) ──
     if !skip_build {
         println!(
             "{} Building sugg and sugg-engine ({profile} mode)...",
@@ -62,7 +62,7 @@ fn main() {
         }
     }
 
-    // ── 2. 确定编译产物路径 ──
+    // ── 2. Determine build artifact paths ──
     let sugg_name = if cfg!(windows) { "sugg.exe" } else { "sugg" };
     let sugg_engine_name = if cfg!(windows) {
         "sugg-engine.exe"
@@ -70,7 +70,7 @@ fn main() {
         "sugg-engine"
     };
 
-    // 在 workspace 中，target dir 在 workspace root，不在 crate 内
+    // In a workspace the target dir lives at the workspace root, not inside the crate
     let workspace_root = manifest_dir.parent().unwrap().parent().unwrap();
     let target_dir = workspace_root.join("target").join(profile);
     let sugg_src = target_dir.join(sugg_name);
@@ -93,7 +93,7 @@ fn main() {
         std::process::exit(1);
     }
 
-    // ── 3. 安装 ──
+    // ── 3. Install ──
     let sugg_root = sugg_root();
 
     let bin_dir = sugg_root.join("bin");
@@ -128,7 +128,7 @@ fn main() {
     );
     println!();
 
-    // ── 4. PATH 配置（只加 bin/，不会污染 PATH）──
+    // ── 4. PATH configuration (only adds bin/, so PATH is not polluted) ──
     if add_path {
         add_dir_to_path(&bin_dir);
     } else {
@@ -142,11 +142,11 @@ fn main() {
     }
 }
 
-/// 将指定目录添加到系统 PATH 环境变量
+/// Add the given directory to the system PATH environment variable
 fn add_dir_to_path(bin_dir: &std::path::Path) {
     #[cfg(windows)]
     {
-        // Windows：通过 PowerShell 设置用户级 PATH
+        // Windows: set the user-level PATH via PowerShell
         let dir_str = bin_dir.to_string_lossy().replace('/', "\\");
         let output = Command::new("powershell")
             .args([

@@ -15,7 +15,7 @@ fn http_agent() -> &'static ureq::Agent {
     })
 }
 
-/// 极致性能的判断目录方法（避开全量 stat 系统调用）
+/// Extremely fast directory check (avoids full stat syscalls)
 #[inline]
 async fn is_dir_fast(entry: &tokio::fs::DirEntry) -> bool {
     if let Ok(file_type) = entry.file_type().await {
@@ -30,7 +30,7 @@ async fn is_dir_fast(entry: &tokio::fs::DirEntry) -> bool {
     false
 }
 
-/// 向 QuickJS 环境中注入全局函数
+/// Inject global functions into the QuickJS environment
 pub fn inject_globals(ctx: Ctx<'_>) {
     let globals = ctx.globals();
 
@@ -50,8 +50,8 @@ pub fn inject_globals(ctx: Ctx<'_>) {
     }
 
     // =========================================================================
-    // 终极 API: scanPath(input, baseDir?)
-    // 大一统方案：同时解决普通文件补全与 bun x 虚拟根目录补全
+    // Ultimate API: scanPath(input, baseDir?)
+    // Unified solution: handles both normal file completion and bun x virtual root completion
     // =========================================================================
     if let Err(e) = globals.set(
         "__scanPath",
@@ -175,7 +175,7 @@ pub fn inject_globals(ctx: Ctx<'_>) {
     }
 
     // =========================================================================
-    // execFile(cmd, args) —— 极速直接进程拉起，无 Shell 开销与注入风险
+    // execFile(cmd, args) -- fast direct process spawn, no Shell overhead or injection risk
     // =========================================================================
     if let Err(e) = globals.set(
         "__execFile",
@@ -207,7 +207,7 @@ pub fn inject_globals(ctx: Ctx<'_>) {
     }
 
     // =========================================================================
-    // __fetch_raw(config) — 底层 HTTP 请求，返回 JSON 序列化的响应
+    // __fetch_raw(config) - low-level HTTP request, returns a JSON-serialized response
     // =========================================================================
     if let Err(e) = globals.set(
         "__fetch_raw",
@@ -350,7 +350,7 @@ pub fn inject_globals(ctx: Ctx<'_>) {
     }
 
     // =========================================================================
-    // 注入底层磁盘缓存 API：__cache 对象（get / set / delete / take）
+    // Inject low-level disk cache API: __cache object (get / set / delete / take)
     // =========================================================================
     let cache_dir = crate::sugg_root().join("cache").join("cmd_cache");
     let disk_cache = std::sync::Arc::new(crate::cache::DiskCache::new(cache_dir));
@@ -444,7 +444,7 @@ mod tests {
             let result: String = promise.into_future().await.unwrap();
             assert!(
                 result.starts_with("rustc "),
-                "execFile 应返回 rustc 版本信息，实际得到: '{:?}'",
+                "execFile should return rustc version info, got: '{:?}'",
                 result
             );
 
@@ -504,11 +504,11 @@ mod tests {
             let parsed: serde_json::Value = serde_json::from_str(&result).unwrap();
             assert!(
                 !parsed["ok"].as_bool().unwrap(),
-                "不存在的命令应返回 ok=false"
+                "nonexistent command should return ok=false"
             );
             assert!(
                 !parsed["error"].as_str().unwrap_or("").is_empty(),
-                "应包含错误信息"
+                "should include an error message"
             );
         }
 

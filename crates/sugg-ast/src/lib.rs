@@ -11,20 +11,20 @@ use oxc::span::{SourceType, Span};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-// 常量
+// Constants
 
 pub const DYNAMIC_FUNC_PREFIX: &str = "__dyn_";
 pub const IS_DYNAMIC_MARKER: &str = "__is_dynamic";
 pub const DYNAMIC_ID_FIELD: &str = "id";
 
-/// 已知的所有 sugg API 名称列表，用于 analyze_dynamic_apis
+/// List of all known sugg API names, used by analyze_dynamic_apis
 pub const SUGG_APIS: &[&str] = &[
     "exec", "execFile", "scanPath", "readFile", "readJson", "fetch", "cache", "ui",
 ];
 
-// ─── 类型定义 ───
+// ─── Type definitions ───
 
-/// 动态调用的完整元信息
+/// Full metadata of a dynamic call
 #[derive(Debug, Clone)]
 pub struct DynamicInfo {
     pub full_span: Span,
@@ -39,7 +39,7 @@ pub struct ApiUsage {
     pub apis: Vec<String>,
 }
 
-// ─── AST 提取 ───
+// ─── AST extraction ───
 
 #[derive(Default)]
 pub struct DynamicExtractor {
@@ -140,8 +140,8 @@ impl<'a> Visit<'a> for DynamicExtractor {
     }
 }
 
-/// 通过 AST 剪枝收集顶层语句声明的所有 SymbolId
-/// 在遇到函数/箭头函数/块级作用域时停止深入，保护局部变量不被收集
+/// Collect all SymbolIds declared by top-level statements via AST pruning
+/// Stops descending at functions/arrow functions/block scopes to protect local variables from being collected
 struct TopLevelBindingCollector {
     symbols: Vec<SymbolId>,
 }
@@ -209,7 +209,7 @@ fn generate_minimal_dynamic_module_impl(
 ) -> String {
     let mut symbol_to_stmt_idx: HashMap<SymbolId, usize> = HashMap::new();
 
-    // 1. 收集每个顶层语句声明的符号
+    // 1. Collect symbols declared by each top-level statement
     for (i, stmt) in program.body.iter().enumerate() {
         let mut collector = TopLevelBindingCollector {
             symbols: Vec::new(),
@@ -274,7 +274,7 @@ fn generate_minimal_dynamic_module_impl(
     out
 }
 
-/// 生成最小动态模块：只保留 import 语句 + 动态函数依赖链所需的顶层声明 + 导出
+/// Generate a minimal dynamic module: keep only import statements + top-level declarations needed by the dynamic dependency chain + exports
 pub fn generate_minimal_dynamic_module(
     source: &str,
     path: &str,
@@ -288,9 +288,9 @@ pub fn generate_minimal_dynamic_module(
     generate_minimal_dynamic_module_impl(source, &program, &semantic, dynamics, id_map)
 }
 
-/// 从脚本路径推断命名空间（`npm/index.ts` → `npm`，`winget.ts` → `winget`）。
+/// Infer the namespace from the script path (`npm/index.ts` → `npm`, `winget.ts` → `winget`).
 ///
-/// 规则与引擎侧 `file_stem` 保持一致：`index.ts` 取父目录名。
+/// The rule matches the engine-side `file_stem`: `index.ts` uses the parent directory name.
 pub fn namespace_from_path(path: &str) -> String {
     let p = std::path::Path::new(path);
     let raw_stem = p
@@ -307,7 +307,7 @@ pub fn namespace_from_path(path: &str) -> String {
     }
 }
 
-/// 把命名空间清洗成可安全拼进 JS 标识符的形式。
+/// Sanitize a namespace into a form safe to splice into a JS identifier.
 fn sanitize_namespace(namespace: &str) -> String {
     let cleaned: String = namespace
         .chars()
@@ -320,10 +320,10 @@ fn sanitize_namespace(namespace: &str) -> String {
     }
 }
 
-/// 构造动态函数 ID。
+/// Build a dynamic function ID.
 ///
-/// 命名空间前缀保证不同脚本之间不会产生同名动态函数：
-/// `__dyn_<namespace>_<context>`。空命名空间保留旧行为（仅供单文件场景使用）。
+/// The namespace prefix ensures different scripts never produce a dynamic function with the same name:
+/// `__dyn_<namespace>_<context>`. An empty namespace keeps the legacy behavior (single-file scenarios only).
 fn make_dynamic_id(namespace: &str, context_name: &str, count: usize) -> String {
     let ns_prefix = if namespace.is_empty() {
         String::new()
@@ -340,16 +340,16 @@ fn make_dynamic_id(namespace: &str, context_name: &str, count: usize) -> String 
     }
 }
 
-/// 提取源码中的 dynamic() 调用和 createCompletion 调用，返回 (modified_source, pure_dynamic_js, func_ids)
+/// Extract dynamic() calls and createCompletion calls from source, returning (modified_source, pure_dynamic_js, func_ids)
 ///
-/// 命名空间取自 `path`（见 [`namespace_from_path`]），保证同一套补全脚本目录下
-/// 不同脚本的动态函数 ID 全局唯一。引擎在文件 stem 与路径推断不一致时应使用
-/// [`extract_dynamics_with_namespace`] 显式传入命名空间。
+/// The namespace comes from `path` (see [`namespace_from_path`]), ensuring dynamic function IDs are
+/// globally unique across scripts in the same completions directory. The engine should use
+/// [`extract_dynamics_with_namespace`] to pass the namespace explicitly when the file stem and path inference disagree.
 pub fn extract_dynamics(source: &str, path: &str) -> (String, String, Vec<String>) {
     extract_dynamics_with_namespace(source, path, &namespace_from_path(path))
 }
 
-/// 与 [`extract_dynamics`] 相同，但由调用方显式指定命名空间（通常为脚本 stem）。
+/// Same as [`extract_dynamics`], but the caller passes the namespace explicitly (usually the script stem).
 pub fn extract_dynamics_with_namespace(
     source: &str,
     path: &str,
@@ -408,7 +408,7 @@ pub fn extract_dynamics_with_namespace(
     (modified_source, pure_dynamic_js, func_ids)
 }
 
-// ─── API 审计 ───
+// ─── API audit ───
 
 pub fn analyze_dynamic_apis(dynamic_js: &str) -> Vec<ApiUsage> {
     struct ApiCollector {
@@ -476,9 +476,9 @@ pub fn analyze_dynamic_apis(dynamic_js: &str) -> Vec<ApiUsage> {
     collector.results
 }
 
-/// 从源码中提取所有本地 import/require 的 resolved 绝对路径。
-/// 只追踪以 `.` 开头的相对导入（`./foo`、`../bar`），忽略 bare specifier。
-/// `source_path` 是源文件的绝对路径，用于解析相对导入。
+/// Extract the resolved absolute paths of all local import/require in the source.
+/// Only tracks relative imports starting with `.` (`./foo`, `../bar`); bare specifiers are ignored.
+/// `source_path` is the absolute path of the source file, used to resolve relative imports.
 pub fn extract_local_imports(source: &str, source_path: &str) -> Vec<String> {
     let allocator = Allocator::default();
     let source_type = SourceType::from_path(source_path).unwrap_or_default();
@@ -677,7 +677,7 @@ export default createCompletion({
         let (modified_b, dynamic_b, ids_b) =
             extract_dynamics_with_namespace(source, "pnpm/index.ts", "pnpm");
 
-        // 同名 helper 在不同脚本中必须得到不同的 ID
+        // Helpers with the same name must get different IDs in different scripts
         assert_eq!(ids_a, vec!["__dyn_npm_pkgOrGlobal"]);
         assert_eq!(ids_b, vec!["__dyn_pnpm_pkgOrGlobal"]);
         assert!(modified_a.contains(r#"id: "__dyn_npm_pkgOrGlobal""#));
@@ -708,7 +708,7 @@ export default createCompletion({ cmd: { args: items } });
         let (_, _, ids) = extract_dynamics_with_namespace(source, "my-tool/index.ts", "my-tool");
         assert_eq!(ids, vec!["__dyn_my_tool_items"]);
 
-        // 纯符号命名空间回退为 script，避免生成非法/空白标识符
+        // A purely symbolic namespace falls back to script, avoiding illegal/blank identifiers
         let (_, _, ids) = extract_dynamics_with_namespace(source, "---/index.ts", "---");
         assert_eq!(ids, vec!["__dyn_script_items"]);
     }
@@ -743,9 +743,9 @@ export const __dyn_download = async (ctx) => {
         assert_eq!(results[2].apis, vec!["fetch"]);
     }
 
-    // 验证变量遮蔽不会被误追踪为顶层引用
-    // 用户在 dynamic 箭头函数体内 const [branches, files] = ...，
-    // ...branches 中的 branches 是局部变量，不应把顶层 const branches = dynamic(getBranches) 拉进来
+    // Verify that variable shadowing is not mistakenly tracked as a top-level reference
+    // The user writes const [branches, files] = ... inside a dynamic arrow function body,
+    // ...so branches is a local variable; top-level const branches = dynamic(getBranches) must not be pulled in
     #[test]
     fn test_shadowed_variable_not_included() {
         let source = r#"
@@ -769,17 +769,17 @@ export default createCompletion({
 
         let (_, pure_dynamic_js, _) = extract_dynamics(source, "test.ts");
 
-        // 顶层的 const branches = dynamic(getBranches) 不应该出现在动态 JS 中
+        // Top-level const branches = dynamic(getBranches) should not appear in dynamic JS
         assert!(
             !pure_dynamic_js.contains("const branches = dynamic("),
             "shadowed branches declaration should not appear in dynamic JS"
         );
-        // getBranches 函数应该存在（被 dynamic(getBranches) 引用）
+        // The getBranches function should be present (referenced by dynamic(getBranches))
         assert!(
             pure_dynamic_js.contains("function getBranches"),
             "getBranches function should be included"
         );
-        // __dyn_test_branches 应该作为 export 存在
+        // __dyn_test_branches should exist as an export
         assert!(
             pure_dynamic_js.contains("export const __dyn_test_branches = getBranches"),
             "__dyn_test_branches export should exist"

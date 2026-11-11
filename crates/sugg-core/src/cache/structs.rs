@@ -10,7 +10,7 @@ pub fn get_cache_path() -> std::path::PathBuf {
     crate::get_cache_path()
 }
 
-/// 补全建议的显示样式，与 TypeScript SuggestionStyle 一致
+/// Display style for a completion suggestion, matching TypeScript SuggestionStyle
 #[derive(
     Archive,
     Deserialize,
@@ -24,18 +24,18 @@ pub fn get_cache_path() -> std::path::PathBuf {
 )]
 #[rkyv(attr(derive(Debug)))]
 pub struct SuggestionStyle {
-    /// 前景色
+    /// Foreground color
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fg: Option<String>,
-    /// 背景色
+    /// Background color
     #[serde(skip_serializing_if = "Option::is_none")]
     pub bg: Option<String>,
-    /// 文本属性：bold, italic, underline, dim
+    /// Text attributes: bold, italic, underline, dim
     #[serde(skip_serializing_if = "Option::is_none")]
     pub attr: Option<Vec<String>>,
 }
 
-/// 用于存储 args 中的静态数组补全
+/// Stores static array completions in args
 #[derive(
     Archive,
     Deserialize,
@@ -61,7 +61,7 @@ pub struct OptionItem {
     pub labels: Vec<String>,
     pub description: String,
     pub style: Option<SuggestionStyle>,
-    /// 该选项消耗的 token 数：0 = bool 选项，1 = 单值（默认），N = 多值
+    /// Tokens consumed by this option: 0 = bool option, 1 = single value (default), N = multiple values
     pub args_count: u32,
     pub dynamic_func: Option<String>,
     pub static_args: Option<Vec<StaticSuggestion>>,
@@ -86,7 +86,7 @@ pub struct CommandNode {
     #[rkyv(omit_bounds)]
     pub subcommands: Vec<CommandNode>,
     pub options: Vec<OptionItem>,
-    /// 该节点消耗的位置参数 token 数：0 = 不接，1 = 单值（默认），N = 多值
+    /// Positional argument tokens consumed by this node: 0 = none, 1 = single value (default), N = multiple
     pub args_count: u32,
     pub dynamic_func: Option<String>,
     pub static_args: Option<Vec<StaticSuggestion>>,
@@ -96,9 +96,9 @@ pub struct CommandNode {
 #[rkyv(attr(derive(Debug)))]
 pub struct CompletionCache {
     pub root: CommandNode,
-    /// 每个脚本的 dynamic bundle bytecode，按脚本扫描顺序排列
+    /// dynamic bundle bytecode for each script, ordered by script scan order
     pub bytecodes: Vec<Vec<u8>>,
-    /// 动态函数 id → bytecodes 下标，用于运行时按函数名定位 module
+    /// dynamic function id -> bytecodes index, used at runtime to locate the module by function name
     pub dyn_index: Vec<(String, u32)>,
 }
 

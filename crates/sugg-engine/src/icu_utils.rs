@@ -1,11 +1,11 @@
 use icu::locale::Locale;
 use icu::locale::fallback::LocaleFallbacker;
 
-/// 基于 BCP 47 规范生成语言回退链（使用 ICU4X 标准实现）
+/// Generate a language fallback chain based on the BCP 47 spec (using the ICU4X standard implementation)
 ///
-/// # 示例
+/// # Example
 /// ```
-/// // en 始终兜底，"en-US" 等返回 ["en", "en-US"]
+/// // en is always the base fallback; "en-US" etc. return ["en", "en-US"]
 /// assert_eq!(sugg_engine::get_fallback_chain("en"),        vec!["en"]);
 /// assert_eq!(sugg_engine::get_fallback_chain("en-US"),     vec!["en", "en-US"]);
 /// ```
@@ -59,7 +59,7 @@ mod fallback_tests {
         assert!(chain.contains(&"en".to_string()));
         assert!(chain.contains(&"???".to_string()));
         let en_prefix: Vec<_> = chain.iter().filter(|s| s.starts_with("en")).collect();
-        assert_eq!(en_prefix, vec![&"en"], "不应生成 en-* 衍生项");
+        assert_eq!(en_prefix, vec![&"en"], "must not add en-* entries");
     }
 
     #[test]

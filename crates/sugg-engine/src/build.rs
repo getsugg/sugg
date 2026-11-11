@@ -96,7 +96,7 @@ pub(crate) async fn run_build_with_cache(
         .await
         .expect("ERROR: Failed to create QuickJS context");
 
-    // ── 哪些文件需要 QuickJS 处理（跳过缓存命中的） ──
+    // ── Which files need QuickJS processing (skip cache hits) ──
     let mut static_to_eval: Vec<(usize, String, String)> = Vec::new();
     let mut static_cached: Vec<(usize, CommandNode)> = Vec::new();
 
@@ -123,7 +123,7 @@ pub(crate) async fn run_build_with_cache(
         dyn_to_compile.push((idx, stem.clone(), code.clone()));
     }
 
-    // ── 批量 QuickJS：单文件静态评估 ──
+    // ── Batch QuickJS: per-file static evaluation ──
     let mut fresh_nodes: Vec<(usize, CommandNode)> = Vec::new();
     if !static_to_eval.is_empty() {
         let eval_result: Vec<(usize, CommandNode)> = ctx
@@ -176,7 +176,7 @@ pub(crate) async fn run_build_with_cache(
         }
     }
 
-    // ── 批量 QuickJS：字节码编译 ──
+    // ── Batch QuickJS: bytecode compilation ──
     let mut fresh_bytecodes: Vec<(usize, Vec<u8>)> = Vec::new();
     for (idx, stem, code) in &dyn_to_compile {
         let bc_result = ctx
@@ -204,7 +204,7 @@ pub(crate) async fn run_build_with_cache(
         }
     }
 
-    // ── 合并所有 CommandNode ──
+    // ── Merge all CommandNode ──
     let mut all_nodes: Vec<(usize, CommandNode)> = static_cached;
     all_nodes.extend(fresh_nodes);
     all_nodes.sort_by_key(|(idx, _)| *idx);
@@ -250,7 +250,7 @@ pub(crate) async fn run_build_with_cache(
         ..Default::default()
     };
 
-    // ── 构建 bytecodes + dyn_index ──
+    // ── Build bytecodes + dyn_index ──
     let mut bytecode_by_idx: Vec<Vec<u8>> = vec![Vec::new(); dynamic_results.len()];
     for (idx, bc) in dyn_cached {
         bytecode_by_idx[idx] = bc;
@@ -268,9 +268,9 @@ pub(crate) async fn run_build_with_cache(
     }
     cache.dyn_index.sort_by(|a, b| a.0.cmp(&b.0));
 
-    // 动态函数 ID 必须全局唯一：运行时按裸 ID 做 binary_search 定位字节码，
-    // 一旦重名就会静默执行到别的脚本的函数（例如 npm 的 pkgOrGlobal 跑到 pnpm 上）。
-    // 命名空间前缀已避免正常情况下的冲突，这里兜底校验清洗后仍可能出现的重名。
+    // Dynamic function IDs must be globally unique: at runtime a binary_search over the bare ID locates the bytecode,
+    // so a duplicate would silently execute another script's function (e.g. npm's pkgOrGlobal hitting pnpm).
+    // Namespace prefixes prevent conflicts in normal cases; this is a backstop for duplicates that survive sanitization.
     for pair in cache.dyn_index.windows(2) {
         if pair[0].0 == pair[1].0 {
             return Err(anyhow::anyhow!(
@@ -281,7 +281,7 @@ pub(crate) async fn run_build_with_cache(
         }
     }
 
-    // ── 序列化 ──
+    // ── Serialization ──
     let cache_path = cache_dir
         .as_ref()
         .map(|d| d.join(".completion_cache.bin"))

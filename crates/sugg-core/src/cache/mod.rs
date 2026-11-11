@@ -9,13 +9,13 @@ pub use structs::{
 use crate::Shell;
 use serde::Serialize;
 
-/// 补全单项：包含值、显示文本、描述和可选的显示样式
+/// Single completion item: value, display text, description and optional display style
 #[derive(Debug, Clone, Serialize)]
 pub struct CompletionItem {
     pub display: String,
     pub value: String,
     pub description: String,
-    /// 显示样式（前景色、背景色、文本属性）
+    /// Display style (foreground color, background color, text attributes)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub style: Option<SuggestionStyle>,
 }
@@ -50,7 +50,7 @@ struct NushellItem {
     style: Option<SuggestionStyle>,
 }
 
-/// 打印补全结果，根据 Shell 类型选择输出格式
+/// Print completion results, choosing the output format by Shell type
 pub fn print_results(items: Vec<CompletionItem>, shell: &Shell) {
     match shell {
         Shell::Nushell => {

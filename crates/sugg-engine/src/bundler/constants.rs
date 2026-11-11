@@ -1,20 +1,20 @@
-//! 虚拟模块标识符常量，统一管理避免拼写错误
+//! Virtual module identifier constants, centrally managed to avoid typos
 
-/// 环境虚拟模块标识符
+/// Environment virtual module identifier
 pub const VIRTUAL_ENV: &str = "virtual:env";
 
-/// 用户友好的裸导入名，解析为 env 虚拟模块
+/// User-friendly bare import name, resolved to the env virtual module
 pub const VIRTUAL_SUGG: &str = "sugg";
 
-/// i18n 翻译常量虚拟模块标识符
+/// i18n translation constants virtual module identifier
 pub const VIRTUAL_I18N: &str = "virtual:i18n";
 
-/// 静态入口虚拟模块标识符
+/// Static entry virtual module identifier
 pub const VIRTUAL_STATIC_ENTRY: &str = "virtual:static_entry";
 
-/// 动态入口虚拟模块标识符
+/// Dynamic entry virtual module identifier
 pub const VIRTUAL_DYNAMIC_ENTRY: &str = "virtual:dynamic_entry";
 
-// 动态函数相关常量已移至 sugg-ast
+// Dynamic function related constants moved to sugg-ast
 
 pub use sugg_ast::{DYNAMIC_FUNC_PREFIX, DYNAMIC_ID_FIELD, IS_DYNAMIC_MARKER};

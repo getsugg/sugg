@@ -1,10 +1,10 @@
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::{Mutex, OnceLock};
 
-// 日志模式：0 = 直接输出到 stderr（Engine 使用），1 = 存入内存供 UI 展示（补全使用）
+// Log mode: 0 = write directly to stderr (used by Engine), 1 = store in memory for UI display (completion)
 static LOG_MODE: AtomicU8 = AtomicU8::new(0);
 
-// 专供 UI 展示的内存日志队列
+// In-memory log queue dedicated to UI display
 static UI_LOGS: OnceLock<Mutex<Vec<(LogLevel, String)>>> = OnceLock::new();
 
 #[derive(Clone, Copy, Debug)]
@@ -44,18 +44,18 @@ impl LogLevel {
     }
 }
 
-/// 设置为 UI 补全模式：所有日志不再打印到 stderr，而是以补全菜单形式呈现
+/// Switch to UI completion mode: logs are no longer printed to stderr but rendered as a completion menu
 pub fn set_ui_mode() {
     LOG_MODE.store(1, Ordering::SeqCst);
 }
 
-/// 统一日志写入接口：由内部 LOG_MODE 决定路由
+/// Unified log write entry point: routing is decided by the internal LOG_MODE
 pub fn write_log(level: LogLevel, msg: &str) {
     if LOG_MODE.load(Ordering::SeqCst) == 0 {
-        // Engine 模式：直接输出到 stderr
+        // Engine mode: write directly to stderr
         eprintln!("{} {}", level.icon(), msg);
     } else {
-        // 补全 UI 模式：拦截内容，截断后进入队列
+        // Completion UI mode: intercept content, truncate, then enqueue
         let mutex = UI_LOGS.get_or_init(|| Mutex::new(Vec::new()));
         if let Ok(mut guard) = mutex.lock()
             && guard.len() < 8
@@ -66,7 +66,7 @@ pub fn write_log(level: LogLevel, msg: &str) {
     }
 }
 
-/// 获取收集到的 UI 日志
+/// Get collected UI logs
 pub fn get_ui_logs() -> Vec<(LogLevel, String)> {
     if let Some(mutex) = UI_LOGS.get()
         && let Ok(guard) = mutex.lock()

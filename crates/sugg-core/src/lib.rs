@@ -1,15 +1,15 @@
-//! Sugg Core - 核心公共库
+//! Sugg Core - core shared library
 //!
-//! 提供 CLI 和 Engine 共同依赖的基础设施：
-//! - `cache`: 缓存数据结构与序列化（rkyv 零拷贝）
-//! - `js`: JavaScript 运行时注入与代码生成
-//! - `logger`: 统一日志系统
+//! Shared infrastructure used by both CLI and Engine:
+//! - `cache`: cache data structures and serialization (rkyv zero-copy)
+//! - `js`: JavaScript runtime injection and code generation
+//! - `logger`: unified logging system
 
 pub mod cache;
 pub mod js;
 pub mod logger;
 
-/// 支持的 Shell 类型
+/// Supported Shell types
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Shell {
     Nushell,
@@ -49,7 +49,7 @@ impl Shell {
     }
 }
 
-/// 统一的 sugg 根目录：~/.sugg（可通过 SUGG_HOME 覆盖）
+/// Unified sugg root directory: ~/.sugg (overridable via SUGG_HOME)
 pub fn sugg_root() -> std::path::PathBuf {
     if let Ok(var) = std::env::var("SUGG_HOME") {
         return std::path::PathBuf::from(var);
@@ -59,24 +59,24 @@ pub fn sugg_root() -> std::path::PathBuf {
         .join(".sugg")
 }
 
-/// 缓存文件路径
+/// Cache file path
 pub fn get_cache_path() -> std::path::PathBuf {
     let dir = sugg_root().join("cache");
     std::fs::create_dir_all(&dir).ok();
     dir.join(".completion_cache.bin")
 }
 
-/// 默认补全脚本目录
+/// Default completions script directory
 pub fn default_completions_dir() -> std::path::PathBuf {
     sugg_root().join("completions")
 }
 
-/// 将路径转换为统一的正斜杠字符串（跨平台安全）
+/// Convert a path to a unified forward-slash string (cross-platform safe)
 pub fn path_to_slash(path: &std::path::Path) -> String {
     path.to_string_lossy().replace('\\', "/")
 }
 
-/// 错误日志宏
+/// Error logging macro
 #[macro_export]
 macro_rules! log_error {
     ($($arg:tt)*) => {{
@@ -85,7 +85,7 @@ macro_rules! log_error {
     }};
 }
 
-/// 警告日志宏
+/// Warning logging macro
 #[macro_export]
 macro_rules! log_warn {
     ($($arg:tt)*) => {{
@@ -94,7 +94,7 @@ macro_rules! log_warn {
     }};
 }
 
-/// 信息日志宏
+/// Info logging macro
 #[macro_export]
 macro_rules! log_info {
     ($($arg:tt)*) => {{
@@ -104,7 +104,7 @@ macro_rules! log_info {
 }
 
 // =========================================================================
-// 全局统一的 CLI 符号字典
+// Global unified CLI symbol dictionary
 // =========================================================================
 
 pub const ICON_SUCCESS: &str = "✅";
@@ -126,17 +126,17 @@ pub const ICON_SPARKLES: &str = "✨";
 pub const ICON_POINTER: &str = "👉";
 
 // =========================================================================
-// TerminalBox — 通用圆角边框渲染组件
+// TerminalBox - generic rounded border rendering component
 // =========================================================================
 
-/// 终端圆角卡片容器，支持自适应宽度和 Builder 模式链式构建
+/// Terminal rounded card container with adaptive width and Builder-style chaining
 pub struct TerminalBox {
     lines: Vec<String>,
     border_style: console::Style,
 }
 
 impl TerminalBox {
-    /// 创建新的 TerminalBox，默认边框颜色为青色
+    /// Create a new TerminalBox; border color defaults to cyan
     pub fn new() -> Self {
         Self {
             lines: Vec::new(),
@@ -144,25 +144,25 @@ impl TerminalBox {
         }
     }
 
-    /// 设置边框颜色
+    /// Set the border color
     pub fn border_color(mut self, style: console::Style) -> Self {
         self.border_style = style;
         self
     }
 
-    /// 追加一行内容
+    /// Append a line of content
     pub fn line(mut self, text: impl Into<String>) -> Self {
         self.lines.push(text.into());
         self
     }
 
-    /// 追加一个空行
+    /// Append an empty line
     pub fn empty_line(mut self) -> Self {
         self.lines.push(String::new());
         self
     }
 
-    /// 渲染并打印盒子到 stderr
+    /// Render and print the box to stderr
     pub fn print(&self) {
         let max_width = self
             .lines
@@ -179,14 +179,14 @@ impl TerminalBox {
         };
 
         let border = self.border_style.clone().for_stderr();
-        let horizontal = "─".repeat(effective_width + 4); // 左右各留 2 格内边距
+        let horizontal = "─".repeat(effective_width + 4); // 2 columns of padding on each side
 
         eprintln!();
         eprintln!("{}", border.apply_to(format!("  ╭{}╮", horizontal)));
 
         for line in &self.lines {
             let padded = console::pad_str(line, effective_width, console::Alignment::Left, None);
-            eprintln!("    {}", padded); // 2 框缩进 + 2 内边距
+            eprintln!("    {}", padded); // 2 frame indent + 2 padding
         }
 
         eprintln!("{}", border.apply_to(format!("  ╰{}╯", horizontal)));
@@ -204,15 +204,15 @@ impl Default for TerminalBox {
 mod display_tests {
     use super::*;
 
-    /// 验证 Style(for_stderr) 在 force_styling 下的行为
+    /// Verify Style(for_stderr) behavior under force_styling
     ///
-    /// 用 `force_styling` 而非全局 `set_colors_enabled_stderr`：
-    /// - 避免依赖 `console::colors_enabled_stderr()` 的全局状态（cargo test 并行测试会竞争）
-    /// - 避免依赖 stderr 实际是否为真实终端（cargo test 抓取 stderr 时不是 tty）
-    /// - `force_styling(true)` 强制覆盖所有自动检测
+    /// Use `force_styling` instead of global `set_colors_enabled_stderr`:
+    /// - Avoid depending on the global state of `console::colors_enabled_stderr()` (parallel cargo tests race)
+    /// - Avoid depending on whether stderr is a real terminal (it is not a tty when cargo test captures stderr)
+    /// - `force_styling(true)` forcibly overrides all auto-detection
     #[test]
     fn test_style_color_on_off_stderr() {
-        // ===== 关闭 =====
+        // ===== off =====
         let off = console::Style::new()
             .bold()
             .cyan()
@@ -221,12 +221,12 @@ mod display_tests {
         let output = off.apply_to("hello").to_string();
         assert!(
             !output.contains('\x1b'),
-            "force_styling(false) 时应抑制 ANSI 码: {:?}",
+            "force_styling(false) should suppress ANSI codes: {:?}",
             output
         );
-        assert_eq!(output, "hello", "force_styling(false) 时应输出纯文本");
+        assert_eq!(output, "hello", "force_styling(false) yields plain text");
 
-        // ===== 开启 =====
+        // ===== on =====
         let on = console::Style::new()
             .bold()
             .cyan()
@@ -235,19 +235,19 @@ mod display_tests {
         let output = on.apply_to("hello").to_string();
         assert!(
             output.contains('\x1b'),
-            "force_styling(true) 时应包含 ANSI 码"
+            "force_styling(true) should include ANSI codes"
         );
-        assert!(output.starts_with("\x1b["), "应以 ANSI 转义序列开头");
-        assert!(output.ends_with("\x1b[0m"), "应以 ANSI 重置结尾");
-        assert!(output.contains("hello"), "应保留原始文本");
+        assert!(output.starts_with("\x1b["), "should start with ANSI escape");
+        assert!(output.ends_with("\x1b[0m"), "should end with an ANSI reset");
+        assert!(output.contains("hello"), "should keep the original text");
     }
 
-    /// 验证 for_stdout / for_stderr 是独立的输出目标标记
+    /// Verify that for_stdout / for_stderr are independent output target markers
     ///
-    /// 同样用 `force_styling` 解耦：每侧显式控制颜色开关，断言两侧输出按各自配置走。
+    /// Also decoupled via `force_styling`: each side controls colors explicitly and follows its own config.
     #[test]
     fn test_for_stdout_independent_from_stderr() {
-        // 组合 1：stderr 关、stdout 开
+        // Combination 1: stderr off, stdout on
         let stderr_off = console::Style::new()
             .bold()
             .cyan()
@@ -260,14 +260,14 @@ mod display_tests {
             .force_styling(true);
         assert!(
             !stderr_off.apply_to("x").to_string().contains('\x1b'),
-            "stderr force_styling(false) 应抑制 ANSI 码"
+            "stderr force_styling(false) should suppress ANSI codes"
         );
         assert!(
             stdout_on.apply_to("x").to_string().contains('\x1b'),
-            "stdout force_styling(true) 应输出 ANSI 码"
+            "stdout force_styling(true) should output ANSI codes"
         );
 
-        // 组合 2：stderr 开、stdout 关
+        // Combination 2: stderr on, stdout off
         let stderr_on = console::Style::new()
             .bold()
             .cyan()
@@ -280,22 +280,22 @@ mod display_tests {
             .force_styling(false);
         assert!(
             stderr_on.apply_to("x").to_string().contains('\x1b'),
-            "stderr force_styling(true) 应输出 ANSI 码"
+            "stderr force_styling(true) should output ANSI codes"
         );
         assert!(
             !stdout_off.apply_to("x").to_string().contains('\x1b'),
-            "stdout force_styling(false) 应抑制 ANSI 码"
+            "stdout force_styling(false) should suppress ANSI codes"
         );
     }
 
-    /// 验证 Emoji 常量至少能渲染出内容（不 panic）
+    /// Verify that Emoji constants render at least some content (no panic)
     #[test]
     fn test_emoji_constants_render() {
         let s = ICON_SUCCESS.to_string();
-        assert!(!s.is_empty(), "ICON_SUCCESS 应渲染出内容");
+        assert!(!s.is_empty(), "ICON_SUCCESS should render content");
         let s = ICON_ERROR.to_string();
-        assert!(!s.is_empty(), "ICON_ERROR 应渲染出内容");
+        assert!(!s.is_empty(), "ICON_ERROR should render content");
         let s = ICON_PARTY.to_string();
-        assert!(!s.is_empty(), "ICON_PARTY 应渲染出内容");
+        assert!(!s.is_empty(), "ICON_PARTY should render content");
     }
 }

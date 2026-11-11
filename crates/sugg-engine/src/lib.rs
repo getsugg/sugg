@@ -1,9 +1,9 @@
-//! Sugg Engine - 引擎构建端
+//! Sugg Engine - engine build side
 //!
-//! 包含所有重型依赖（oxc, rolldown, icu）：
-//! - `ast`: AST 提取与分析
-//! - `bundler`: 虚拟模块插件与打包
-//! - `icu_utils`: ICU 语言回退链生成
+//! Contains all heavy dependencies (oxc, rolldown, icu):
+//! - `ast`: AST extraction and analysis
+//! - `bundler`: virtual module plugin and bundling
+//! - `icu_utils`: ICU language fallback chain generation
 
 pub use sugg_ast as ast;
 pub mod build;
@@ -26,27 +26,27 @@ use anyhow::Context;
 use sugg_core::cache::CommandNode;
 use sugg_core::log_warn;
 
-/// 单文件缓存，用于增量热更时跳过未变化文件的 AST 提取、rolldown 打包和 QuickJS 评估。
+/// Per-file cache used by incremental rebuilds to skip AST extraction, rolldown bundling and QuickJS evaluation for unchanged files.
 pub struct CachedFile {
     pub content_hash: u64,
     pub stem: String,
     pub mod_source: String,
     pub dyn_source: String,
     pub func_ids: Vec<String>,
-    /// 本地依赖文件的绝对路径 → 当前依赖文件的 content_hash
+    /// Absolute path of a local dependency file -> content_hash of that dependency file
     pub deps: HashMap<PathBuf, u64>,
-    /// 缓存的单文件静态 rolldown 输出
+    /// Cached per-file static rolldown output
     pub static_bundle: Option<String>,
-    /// 缓存的 QuickJS __parseConfig 结果
+    /// Cached QuickJS __parseConfig result
     pub command_node: Option<CommandNode>,
-    /// 缓存的单文件动态 rolldown 输出
+    /// Cached per-file dynamic rolldown output
     pub dyn_bundle: Option<String>,
-    /// 缓存的 QuickJS bytecode
+    /// Cached QuickJS bytecode
     pub bytecode: Option<Vec<u8>>,
 }
 
-/// 检查缓存的依赖路径 content_hash 是否与磁盘一致。
-/// 所有 dep 文件必须存在且 hash 匹配才算 unchanged。
+/// Check whether the content_hash of cached dependency paths still matches disk.
+/// Every dep file must exist and hash-match for the file to count as unchanged.
 fn deps_unchanged(deps: &HashMap<PathBuf, u64>) -> bool {
     for (dep_path, cached_hash) in deps {
         match std::fs::read_to_string(dep_path) {
@@ -63,8 +63,8 @@ fn deps_unchanged(deps: &HashMap<PathBuf, u64>) -> bool {
     true
 }
 
-/// 扫描 `dir_path` 下的补全脚本，用指定 `lang` 打包，返回 `(per_file_static, per_file_dynamic)`。
-/// 每个条目对应一个文件的打包结果，未变化文件从 `cache` 直接返回缓存产物。
+/// Scan completion scripts under `dir_path`, bundle with the given `lang`, return `(per_file_static, per_file_dynamic)`.
+/// Each entry is one file bundle result; unchanged files are returned directly from `cache`.
 pub async fn build_bundles(
     dir_path: &Path,
     lang: &str,
@@ -115,12 +115,12 @@ pub async fn build_bundles(
         Err(_) => return Ok((vec![], vec![])),
     };
 
-    // ── 第一遍：文件扫描 + AST 提取 ──
+    // ── Pass 1: file scan + AST extraction ──
     #[derive(Clone)]
     struct FileData {
         path: PathBuf,
         stem: String,
-        abs_dir: String, // 父目录绝对路径（转 slash），用于虚拟模块 ID 使相对导入可解析
+        abs_dir: String, // absolute parent dir (slashes converted), used in virtual module IDs so relative imports resolve
         mod_source: String,
         dyn_source: String,
         func_ids: Vec<String>,
@@ -190,7 +190,7 @@ pub async fn build_bundles(
             h.finish()
         };
 
-        // 全缓存命中：直接复用 static_bundle + dyn_bundle（含 deps 校验）
+        // Full cache hit: reuse static_bundle + dyn_bundle directly (including deps validation)
         if let Some(cached) = cache.get(&path)
             && cached.content_hash == content_hash
             && cached.static_bundle.is_some()
@@ -260,7 +260,7 @@ pub async fn build_bundles(
     let i18n_modules = generate_i18n_modules(&translations_by_ns);
     let env_code = generate_env_code("");
 
-    // ── 第二遍：并发打包 fresh 文件的 static 和 dynamic ──
+    // ── Pass 2: bundle static and dynamic concurrently for fresh files ──
     let mut static_set = tokio::task::JoinSet::new();
     for file in &fresh_files {
         let v_stat = format!("{}/__v_stat_{}.ts", file.abs_dir, file.stem);
@@ -288,7 +288,7 @@ pub async fn build_bundles(
         let (stem, code) = res.context("Static bundle join task failed")??;
         fresh_static_map.insert(stem.clone(), code);
     }
-    // 写回 cache
+    // Write back to cache
     for file in &fresh_files {
         if let Some(code) = fresh_static_map.get(&file.stem)
             && let Some(cached) = cache.get_mut(&file.path)
@@ -324,7 +324,7 @@ pub async fn build_bundles(
         let (stem, code, func_ids) = res.context("Dynamic bundle join task failed")??;
         fresh_dynamic_map.insert(stem.clone(), (code, func_ids));
     }
-    // 写回 cache
+    // Write back to cache
     for file in &fresh_files {
         if let Some((code, _)) = fresh_dynamic_map.get(&file.stem)
             && let Some(cached) = cache.get_mut(&file.path)
@@ -333,7 +333,7 @@ pub async fn build_bundles(
         }
     }
 
-    // ── 组装最终结果（cached + fresh） ──
+    // ── Assemble final results (cached + fresh) ──
     let mut static_results: Vec<(String, String)> = cached_static;
     for file in &fresh_files {
         if let Some(code) = fresh_static_map.get(&file.stem) {
@@ -351,7 +351,7 @@ pub async fn build_bundles(
     Ok((static_results, dynamic_results))
 }
 
-/// 扫描 i18n 目录下的 JSON 文件，只返回 file_stem 匹配回退链（忽略大小写）的 `(stem, path)` 列表。
+/// Scan JSON files under the i18n directory, returning only `(stem, path)` whose file_stem matches the fallback chain (case-insensitive).
 pub fn get_matching_i18n_files(
     i18n_dir: &Path,
     fallbacks: &[String],
@@ -380,7 +380,7 @@ pub fn get_matching_i18n_files(
     results
 }
 
-/// 扫描 `completions_dir` 下的所有子命令 i18n 目录，返回 `(namespace, i18n_dir_path)` 列表。
+/// Scan all subcommand i18n directories under `completions_dir`, returning a `(namespace, i18n_dir_path)` list.
 pub fn scan_i18n_dirs(completions_dir: &Path) -> Vec<(String, std::path::PathBuf)> {
     let mut result = Vec::new();
     if let Ok(entries) = std::fs::read_dir(completions_dir) {

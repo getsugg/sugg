@@ -1,13 +1,13 @@
-/// 生成注入到每个用户脚本顶部的 import 语句（旧式单 bundle 模式）。
-/// 不再使用——保留仅用于引用和测试。
+/// Generate the import statement injected at the top of every user script (legacy single-bundle mode).
+/// No longer used -- kept only for reference and tests.
 pub fn generate_import_stmt() -> String {
     "import { createCompletion, __parseConfig } from 'virtual:env';\n".to_string()
 }
 
-/// 生成单文件静态入口代码。
-/// 每个文件独立打包时，入口导入自己的配置模块和 __parseConfig，
-/// 输出 `[['<stem>', config]]` 供 __parseConfig 消费。
-/// `v_stat` 是配置虚拟模块的完整 ID（与 HashMap 键一致）。
+/// Generate single-file static entry code.
+/// When each file is bundled independently, the entry imports its own config module and __parseConfig,
+/// emitting `[['<stem>', config]]` for __parseConfig to consume.
+/// `v_stat` is the full ID of the config virtual module (matching the HashMap key).
 pub fn generate_per_file_entry(stem: &str, v_stat: &str) -> String {
     format!(
         "import {{ __parseConfig }} from 'virtual:env';\nexport {{ __parseConfig }};\n\
@@ -16,9 +16,9 @@ pub fn generate_per_file_entry(stem: &str, v_stat: &str) -> String {
     )
 }
 
-/// 生成 virtual:env 模块内容。
-/// 注入 `__SCRIPT_STEM` 常量，用于 `cache` API 按脚本隔离缓存命名空间。
-/// 静态 bundle 传 `""`（空 stem 不前置命名空间），dynamic bundle 传对应脚本 stem。
+/// Generate virtual:env module content.
+/// Injects the `__SCRIPT_STEM` constant, used by the `cache` API to isolate cache namespaces per script.
+/// Static bundle passes `""` (an empty stem adds no namespace prefix); dynamic bundle passes the script stem.
 pub fn generate_env_code(stem: &str) -> String {
     let stem_json = serde_json::to_string(stem).unwrap();
     format!(
@@ -28,9 +28,9 @@ pub fn generate_env_code(stem: &str) -> String {
     )
 }
 
-/// 生成 i18n 虚拟模块代码。
-/// 每个命名空间生成独立子模块 `virtual:i18n/<ns>`（平铺 export）。
-/// 用户代码通过 `import { key } from 'virtual:i18n/<ns>'` 访问。
+/// Generate i18n virtual module code.
+/// Each namespace produces an independent submodule `virtual:i18n/<ns>` (flat exports).
+/// User code accesses it via `import { key } from 'virtual:i18n/<ns>'`.
 pub fn generate_i18n_modules(
     translations_by_ns: &std::collections::HashMap<
         String,
