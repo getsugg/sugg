@@ -64,6 +64,10 @@ enum Commands {
         shell: Option<String>,
     },
     /// Install completion scripts from registry
+    ///
+    /// Completion scripts are JavaScript: once installed they run with your
+    /// privileges on every TAB press (exec, readFile, fetch). Use --no-build
+    /// to download only, review the files, then run `sugg reload`.
     Install {
         /// Script names to install (e.g. git npm bun)
         scripts: Vec<String>,
@@ -76,6 +80,9 @@ enum Commands {
         /// Force overwrite existing files
         #[arg(long)]
         force: bool,
+        /// Download only; do not rebuild the cache (run `sugg reload` yourself)
+        #[arg(long)]
+        no_build: bool,
         /// Preferred language(s) for i18n (e.g. --lang en --lang zh-CN)
         #[arg(long = "lang")]
         langs: Vec<String>,
@@ -224,6 +231,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             list,
             all,
             force,
+            no_build,
             langs,
             completions_dir,
         } => {
@@ -239,6 +247,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 list,
                 all,
                 force,
+                no_build,
                 &langs,
                 &dir,
                 sugg_engine::install::REGISTRY_URL,

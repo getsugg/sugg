@@ -28,7 +28,8 @@ Sugg runs completion scripts as JavaScript (compiled to QuickJS bytecode) inside
 
 - **Installing a completion script runs third-party code from the registry**
   (`getsugg/sugg-completions`). Scripts are code, not data — treat installing a
-  script like installing a package.
+  script like installing a package. `sugg install --no-build` downloads without
+  activating, so you can review the file before running `sugg reload`.
 - Completion scripts can execute commands (`exec`, `execFile`), read files
   (`readFile`, `readJson`, `scanPath`) and make network requests (`fetch`) with the
   privileges of your user account.

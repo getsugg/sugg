@@ -161,6 +161,7 @@ Sugg decouples completion evaluations from compilation to maintain near-zero ren
 ## Command Reference
 
 - `sugg init <shell>`: Print shell integration script.
+- `sugg install <name>`: Downloads completion scripts from the registry and compiles them.
 - `sugg reload`: Bundles TS/JS schemas into local binary cached graphs.
 - `sugg commands`: Lists all cached top-level CLI command schemas.
 - `sugg dev init`: Writes type declarations, guides, and `tsconfig.json` files.

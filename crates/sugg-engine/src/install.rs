@@ -37,6 +37,7 @@ pub async fn run_install(
     list: bool,
     all: bool,
     force: bool,
+    no_build: bool,
     langs: &[String],
     completions_dir: &Path,
     registry_url: &str,
@@ -185,6 +186,40 @@ pub async fn run_install(
         }
     }
     pb.finish_and_clear();
+
+    // Show where each script landed and remind the user that scripts are code.
+    // This is the only place where downloaded third-party JavaScript becomes
+    // active, so the summary doubles as the review pointer.
+    println!(
+        "\n{} Installed {} script(s):",
+        sugg_core::ICON_SUCCESS,
+        target_scripts.len()
+    );
+    for name in &target_scripts {
+        if let Some(entry) = registry.scripts.iter().find(|s| s.name == *name) {
+            let dest = completions_dir.join(&entry.source);
+            println!(
+                "   {:<10} {}  ->  {}",
+                name,
+                entry.description,
+                sugg_core::path_to_slash(&dest)
+            );
+        }
+    }
+    println!("   Source: {}", base);
+    println!(
+        "{} Completion scripts are JavaScript and run with your privileges \
+         (exec, execFile, readFile, fetch). Review the files above if unsure.",
+        sugg_core::ICON_INFO
+    );
+
+    if no_build {
+        println!(
+            "\n{} Downloaded only. Run `sugg reload` once you have reviewed the files.",
+            sugg_core::ICON_INFO
+        );
+        return Ok(());
+    }
 
     // Run reload with the first language
     println!("\n{} Rebuilding completion cache...", sugg_core::ICON_BUILD);

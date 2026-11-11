@@ -162,6 +162,7 @@ Sugg 将补全的解析阶段与构建阶段严格分离：
 ## 命令参考
 
 - `sugg init <shell>`: 打印指定 Shell 的集成脚本。
+- `sugg install <name>`: 从注册表下载补全脚本并编译。
 - `sugg reload`: 重新打包补全脚本并生成二进制缓存。
 - `sugg commands`: 打印当前已缓存的所有顶级命令。
 - `sugg dev init`: 生成开发环境文件（类型声明、指南及 `tsconfig.json`）。
